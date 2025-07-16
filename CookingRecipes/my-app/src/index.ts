@@ -1,15 +1,11 @@
-import { serve } from '@hono/node-server'
-import { Hono } from 'hono'
+import { Hono } from 'hono';
+import recipeRoutes from './routes/recipes.js';
 
-const app = new Hono()
+const app = new Hono();
 
-app.get('/', (c) => {
-  return c.text('Hello Hono!')
-})
+app.route('/recipes', recipeRoutes);
 
-serve({
-  fetch: app.fetch,
-  port: 3000
-}, (info) => {
-  console.log(`Server is running on http://localhost:${info.port}`)
-})
+// Example root
+app.get('/', (c) => c.text('API is running'));
+
+export default app;
