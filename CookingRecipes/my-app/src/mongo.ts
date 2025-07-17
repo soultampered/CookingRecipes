@@ -1,20 +1,14 @@
-import { MongoClient, Db } from 'mongodb';
+import { MongoClient } from 'mongodb';
 
-const uri = process.env.MONGODB_URI;
+const uri = process.env.MONGO_URI;
 
 if (!uri) {
-    throw new Error('MONGODB_URI not defined in .env');
+    throw new Error('MONGO_URI not defined');
 }
 
 const client = new MongoClient(uri);
 
-let db: Db;
-
-export const connectToDatabase = async (): Promise<Db> => {
-    if (!db) {
-        await client.connect();
-        db = client.db('recipe-app');
-        console.log('Connected to MongoDB');
-    }
-    return db;
+export const connectToDatabase = async () => {
+    await client.connect();
+    return client.db();
 };
