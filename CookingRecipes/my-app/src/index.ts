@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import recipeRoutes from './routes/recipes.js';
+import recipeRoutes from './routes/recipes.route.js';
 
 const app = new Hono();
 
