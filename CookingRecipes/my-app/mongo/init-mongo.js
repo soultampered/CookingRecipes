@@ -57,3 +57,73 @@ db.users.insertOne({
     updatedAt: new Date().toISOString()
 });
 
+db.createCollection("inventory");
+db.inventory.insertMany([
+    {
+        name: 'Carrots',
+        quantity: 5,
+        unit: 'pcs',
+        category: 'Produce',
+        expirationDate: new Date('2025-08-01'),
+        notes: 'Organic, from local market',
+    },
+    {
+        name: 'Chicken Breast',
+        quantity: 2,
+        unit: 'lbs',
+        category: 'Meat & Poultry',
+        expirationDate: new Date('2025-07-25'),
+    },
+    {
+        name: 'Milk',
+        quantity: 1,
+        unit: 'liter',
+        category: 'Dairy',
+        expirationDate: new Date('2025-07-21'),
+    },
+    {
+        name: 'Brown Rice',
+        quantity: 1,
+        unit: 'kg',
+        category: 'Grains & Pasta',
+    },
+    {
+        name: 'Olive Oil',
+        quantity: 500,
+        unit: 'ml',
+        category: 'Oils & Fats',
+    },
+    {
+        name: 'Salt',
+        quantity: 1,
+        unit: 'kg',
+        category: 'Spices & Seasonings',
+    },
+    {
+        name: 'Frozen Peas',
+        quantity: 1,
+        unit: 'bag',
+        category: 'Frozen',
+        expirationDate: new Date('2026-01-01'),
+    },
+    {
+        name: 'Tomato Sauce',
+        quantity: 2,
+        unit: 'can',
+        category: 'Canned & Jarred',
+        expirationDate: new Date('2025-12-15'),
+    },
+    {
+        name: 'Eggs',
+        quantity: 12,
+        unit: 'pcs',
+        category: 'Eggs',
+        expirationDate: new Date('2025-07-22'),
+    },
+    {
+        name: 'Black Pepper',
+        quantity: 100,
+        unit: 'g',
+        category: 'Spices & Seasonings',
+    },
+]);

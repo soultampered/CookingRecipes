@@ -1,5 +1,5 @@
-import { connectToDatabase } from "../mongo";
-import type { Recipe } from "../types/recipes.ts";
+import { connectToDatabase } from "../mongo.js";
+import type { Recipe } from "../types/recipe.js";
 import type { Collection } from "mongodb";
 
 export async function getRecipeCollection(): Promise<Collection<Recipe>> {

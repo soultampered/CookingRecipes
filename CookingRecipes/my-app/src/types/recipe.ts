@@ -28,4 +28,6 @@ export interface Recipe {
     createdAt?: string;
     updatedAt?: string;
     author: string;
+    nutrition: NutritionFacts[];
+    difficulty: DifficultyLevel;
 }
