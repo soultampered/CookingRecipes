@@ -3,7 +3,6 @@
 db = db.getSiblingDB('myapp');
 
 db.createCollection("recipes");
-
 db.recipes.insertMany([
     {
         title: "Classic Pancakes",
@@ -39,6 +38,22 @@ db.recipes.insertMany([
     }
 ]);
 
-
 db.createCollection("users");
-db.users.insertOne({ username: "admin", role: "owner" });
+db.users.insertOne({
+    username: "johndoe",
+    email: "john@example.com",
+    passwordHash: "$2b$10$fakehashedpasswordhere",
+    displayName: "John D.",
+    avatarUrl: "https://example.com/avatars/johndoe.jpg",
+    bio: "Foodie and weekend chef.",
+    savedRecipes: [],
+    createdRecipes: [],
+    preferences: {
+        dietaryRestrictions: ["vegetarian"],
+        preferredUnits: "metric",
+        theme: "dark"
+    },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+});
+

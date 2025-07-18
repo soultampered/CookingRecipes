@@ -9,7 +9,7 @@ export interface NutritionFacts {
     fat?: number;
     protein?: number;
     carbs?: number;
-    [key: string]: number | undefined // to add micronutrients if required
+    [key: string]: number | undefined // to add micronutrients
 }
 
 export type DifficultyLevel = "easy" | "medium" | "hard";
