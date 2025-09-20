@@ -1,3 +1,5 @@
+import type {ObjectId} from "mongodb";
+
 export interface Ingredient {
     name: string;
     quantity: number | string;
@@ -15,7 +17,7 @@ export interface NutritionFacts {
 export type DifficultyLevel = "easy" | "medium" | "hard";
 
 export interface Recipe {
-    _id?: string;
+    _id?: ObjectId;
     title: string;
     description?: string;
     ingredients: Ingredient[];
