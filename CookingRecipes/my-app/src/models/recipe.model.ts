@@ -1,43 +1,49 @@
-import { connectToDatabase } from "../mongo.js";
-import type { Recipe } from "../types/recipe.js";
-import { ObjectId } from "mongodb";
+// models/recipe.model.ts
+import { ObjectId } from 'mongodb';
+import { connectToDatabase } from '../mongo.js';
+import type { Recipe } from '../types/recipe.js';
 
-const COLLECTION_NAME = 'recipes';
-
-export class recipeModel {
-    static async getCollection() {
+export const recipeModel = {
+    findAll: async (): Promise<Recipe[]> => {
         const db = await connectToDatabase();
-        return db.collection<Recipe>(COLLECTION_NAME);
-    }
+        return db.collection<Recipe>('recipes').find().toArray();
+    },
 
-    static async findAll(): Promise<Recipe[]> {
-        const collection = await this.getCollection();
-        return collection.find().toArray();
-    }
+    findById: async (id: string): Promise<Recipe> => {
+        const db = await connectToDatabase();
+        const recipe = await db.collection<Recipe>('recipes').findOne({ _id: new ObjectId(id) });
 
-    static async findById(id: string): Promise<Recipe | null> {
-        const collection = await this.getCollection();
-        return collection.findOne({ _id: new ObjectId(id) });
-    }
+        if (!recipe) {
+            throw new Error(`Recipe with id "${id}" not found`);
+        }
+        return recipe;
+    },
 
-    static async create(recipe: Recipe): Promise<Recipe> {
-        const collection = await this.getCollection();
-        const result = await collection.insertOne(recipe);
-        return { ...recipe, _id: result.insertedId } as Recipe;
-    }
+    create: async (data: Recipe): Promise<Recipe> => {
+        const db = await connectToDatabase();
+        const now = new Date().toISOString();
+        const recipe: Recipe = { ...data, createdAt: now, updatedAt: now };
+        const result = await db.collection<Recipe>('recipes').insertOne(recipe);
+        return { ...recipe, _id: result.insertedId };
+    },
 
-    static async update(id: string, recipe: Partial<Recipe>): Promise<boolean> {
-        const collection = await this.getCollection();
-        const result = await collection.updateOne(
+    update: async (id: string, data: Partial<Recipe>): Promise<Recipe> => {
+        const db = await connectToDatabase();
+        const now = new Date().toISOString();
+        const result = await db.collection<Recipe>('recipes').findOneAndUpdate(
             { _id: new ObjectId(id) },
-            { $set: recipe }
+            { $set: { ...data, updatedAt: now } },
+            { returnDocument: 'after' }
         );
-        return result.modifiedCount > 0;
-    }
+        if (!result) {
+            throw new Error(`Recipe with id "${id}" not found`);
+        }
+        return result;
+    },
 
-    static async delete(id: string): Promise<boolean> {
-        const collection = await this.getCollection();
-        const result = await collection.deleteOne({ _id: new ObjectId(id) });
+    delete: async (id: string): Promise<boolean> => {
+        const db = await connectToDatabase();
+        const result = await db.collection<Recipe>('recipes').deleteOne({ _id: new ObjectId(id) });
         return result.deletedCount > 0;
-    }
-}
+    },
+};

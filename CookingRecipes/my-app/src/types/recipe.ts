@@ -17,7 +17,7 @@ export interface NutritionFacts {
 export type DifficultyLevel = "easy" | "medium" | "hard";
 
 export interface Recipe {
-    _id?: ObjectId;
+    _id: ObjectId;
     title: string;
     description?: string;
     ingredients: Ingredient[];
