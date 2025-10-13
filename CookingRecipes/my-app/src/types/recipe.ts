@@ -1,8 +1,9 @@
 import type {ObjectId} from "mongodb";
 
 export interface Ingredient {
+    _id: string;
     name: string;
-    quantity: number | string;
+    quantity: number;
     unit?: string;
 }
 

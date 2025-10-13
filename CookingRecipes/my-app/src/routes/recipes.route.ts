@@ -1,7 +1,8 @@
 
 import { Hono } from 'hono';
-import type {Recipe} from "../types/recipe.js";
-import { recipeService } from '../services/recipes.service.js';
+import type { Recipe } from "../types/recipe.js";
+import { recipeService } from "../services/recipes.service.js";
+import { recipeInventoryService } from "../services/recipeInventory.service.js"
 
 const recipeRoutes = new Hono();
 
@@ -66,6 +67,30 @@ recipeRoutes.delete('/recipes/:id', async (c) => {
         }
         return c.json({ error: 'Failed to delete recipe' }, 500);
     }
+});
+
+recipeRoutes.post('/recipes/:id/prepare', async (c) => {
+    try {
+        const result = await recipeInventoryService.deductIngredients(c.req.param('id'));
+        return c.json({ success: true, updatedInventory: result });
+    } catch (err) {
+        return c.json({ error: (err as Error).message }, 400);
+    }
+});
+
+
+recipeRoutes.get('/recipes/:id/missing/ingredients', async (c) => {
+    try {
+        const missing = await recipeInventoryService.getMissingIngredients(c.req.param('id'));
+        return c.json(missing);
+    } catch (err) {
+        return c.json({ error: (err as Error).message }, 400);
+    }
+});
+
+recipeRoutes.get('/recipes/suggestions', async (c) => {
+    const suggestions = await recipeInventoryService.suggestRecipes();
+    return c.json(suggestions);
 });
 
 export default recipeRoutes;

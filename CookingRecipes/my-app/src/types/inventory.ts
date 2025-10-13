@@ -1,3 +1,5 @@
+import type {ObjectId} from "mongodb";
+
 export const INVENTORY_CATEGORIES = [
     'Produce',
     'Meat & Poultry',
@@ -18,12 +20,14 @@ export const INVENTORY_CATEGORIES = [
 export type InventoryCategory = typeof INVENTORY_CATEGORIES[number];
 
 export type Unit = "g" | "ml" | "pcs" | "tbsp" | "tsp" | "cup";
-export interface InventoryItem {
-    _id: string;
+export interface Inventory {
+    _id: ObjectId;
     name: string;
     quantity: number;
     unit: Unit;
     expirationDte?: Date;
+    createdAt?: String;
+    updatedAt?: String;
     category?: InventoryCategory;
     userId: string;
     notes?: string;
