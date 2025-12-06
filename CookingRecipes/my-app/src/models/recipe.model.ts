@@ -1,4 +1,3 @@
-// models/recipe.model.ts
 import { ObjectId } from 'mongodb';
 import { connectToDatabase } from '../mongo.js';
 import type { Recipe } from '../types/recipe.js';
