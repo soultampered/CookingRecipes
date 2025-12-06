@@ -1,8 +1,8 @@
 // mongo/init-mongo.js
 
-db = db.getSiblingDB('myapp');
+db = db.getSiblingDB('recipe-app');
 
-db.createCollection("recipes");
+// --- RECIPES ---
 db.recipes.insertMany([
     {
         title: "Classic Pancakes",
@@ -33,12 +33,12 @@ db.recipes.insertMany([
             carbs: 40
         },
         difficultyLevel: "easy",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        createdAt: new Date(),
+        updatedAt: new Date()
     }
 ]);
 
-db.createCollection("users");
+// --- USERS ---
 db.users.insertOne({
     username: "johndoe",
     email: "john@example.com",
@@ -53,11 +53,11 @@ db.users.insertOne({
         preferredUnits: "metric",
         theme: "dark"
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    createdAt: new Date(),
+    updatedAt: new Date()
 });
 
-db.createCollection("inventory");
+// --- INVENTORY ---
 db.inventory.insertMany([
     {
         name: 'Carrots',
@@ -65,65 +65,65 @@ db.inventory.insertMany([
         unit: 'pcs',
         category: 'Produce',
         expirationDate: new Date('2025-08-01'),
-        notes: 'Organic, from local market',
+        notes: 'Organic, from local market'
     },
     {
         name: 'Chicken Breast',
         quantity: 2,
         unit: 'lbs',
         category: 'Meat & Poultry',
-        expirationDate: new Date('2025-07-25'),
+        expirationDate: new Date('2025-07-25')
     },
     {
         name: 'Milk',
         quantity: 1,
         unit: 'liter',
         category: 'Dairy',
-        expirationDate: new Date('2025-07-21'),
+        expirationDate: new Date('2025-07-21')
     },
     {
         name: 'Brown Rice',
         quantity: 1,
         unit: 'kg',
-        category: 'Grains & Pasta',
+        category: 'Grains & Pasta'
     },
     {
         name: 'Olive Oil',
         quantity: 500,
         unit: 'ml',
-        category: 'Oils & Fats',
+        category: 'Oils & Fats'
     },
     {
         name: 'Salt',
         quantity: 1,
         unit: 'kg',
-        category: 'Spices & Seasonings',
+        category: 'Spices & Seasonings'
     },
     {
         name: 'Frozen Peas',
         quantity: 1,
         unit: 'bag',
         category: 'Frozen',
-        expirationDate: new Date('2026-01-01'),
+        expirationDate: new Date('2026-01-01')
     },
     {
         name: 'Tomato Sauce',
         quantity: 2,
         unit: 'can',
         category: 'Canned & Jarred',
-        expirationDate: new Date('2025-12-15'),
+        expirationDate: new Date('2025-12-15')
     },
     {
         name: 'Eggs',
         quantity: 12,
         unit: 'pcs',
         category: 'Eggs',
-        expirationDate: new Date('2025-07-22'),
+        expirationDate: new Date('2025-07-22')
     },
     {
         name: 'Black Pepper',
         quantity: 100,
         unit: 'g',
-        category: 'Spices & Seasonings',
-    },
+        category: 'Spices & Seasonings'
+    }
 ]);
