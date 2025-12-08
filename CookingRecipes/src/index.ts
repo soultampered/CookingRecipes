@@ -3,7 +3,7 @@ import recipeRoutes from './routes/recipes.route.js';
 
 const app = new Hono();
 
-app.route('/recipes', recipeRoutes);
+app.route('/', recipeRoutes);
 
 // Example root
 app.get('/', (c) =>   c.html(`
