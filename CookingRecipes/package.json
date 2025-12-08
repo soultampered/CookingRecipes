@@ -1,5 +1,5 @@
 {
-  "name": "my-app",
+  "name": "cooking-recipes",
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
