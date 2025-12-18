@@ -1,7 +1,6 @@
 import { ObjectId } from "mongodb";
 import { connectToDatabase } from "../mongo.js";
 import type { ShoppingList, ShoppingListItem, NewShoppingList } from "../types/shoppingList.js";
-import {after} from "node:test";
 
 export const shoppingListModel = {
     findAll: async (): Promise<ShoppingList[]> => {
