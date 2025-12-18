@@ -10,7 +10,9 @@ export const recipeModel = {
 
     findById: async (id: string): Promise<Recipe> => {
         const db = await connectToDatabase();
-        const recipe = await db.collection<Recipe>('recipes').findOne({ _id: new ObjectId(id) });
+        const recipe = await db.collection<Recipe>('recipes').findOne({
+            _id: new ObjectId(id)
+        });
 
         if (!recipe) {
             throw new Error(`Recipe with id "${id}" not found`);
@@ -20,15 +22,19 @@ export const recipeModel = {
 
     create: async (data: Recipe): Promise<Recipe> => {
         const db = await connectToDatabase();
-        const now = new Date().toISOString();
-        const recipe: Recipe = { ...data, createdAt: now, updatedAt: now };
+        const now = new Date();
+        const recipe: Recipe = {
+            ...data,
+            createdAt: now,
+            updatedAt: now
+        };
         const result = await db.collection<Recipe>('recipes').insertOne(recipe);
         return { ...recipe, _id: result.insertedId };
     },
 
     update: async (id: string, data: Partial<Recipe>): Promise<Recipe> => {
         const db = await connectToDatabase();
-        const now = new Date().toISOString();
+        const now = new Date();
         const result = await db.collection<Recipe>('recipes').findOneAndUpdate(
             { _id: new ObjectId(id) },
             { $set: { ...data, updatedAt: now } },
@@ -42,7 +48,9 @@ export const recipeModel = {
 
     delete: async (id: string): Promise<boolean> => {
         const db = await connectToDatabase();
-        const result = await db.collection<Recipe>('recipes').deleteOne({ _id: new ObjectId(id) });
+        const result = await db.collection<Recipe>('recipes').deleteOne({
+            _id: new ObjectId(id)
+        });
         return result.deletedCount > 0;
     },
 };

@@ -1,5 +1,7 @@
+import type {ObjectId} from "mongodb";
+
 export interface User {
-    _id?: string;
+    _id?: ObjectId;
     username: string;
     email: string;
     password: string; // I think I'll need to hash this
@@ -13,6 +15,6 @@ export interface User {
         preferredUnits?: "metric" | "imperial";
         theme?: "light" | "dark"
     };
-    createdAt?: string;
-    updatedAt?: string;
+    createdAt?: Date;
+    updatedAt?: Date;
 }

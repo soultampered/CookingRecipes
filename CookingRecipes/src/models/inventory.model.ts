@@ -11,7 +11,9 @@ export const inventoryModel = {
 
     findById: async (id: string): Promise<Inventory> => {
         const db = await connectToDatabase();
-        const item = await db.collection<Inventory>("inventory").findOne({ _id: new ObjectId(id) });
+        const item = await db.collection<Inventory>("inventory").findOne({
+            _id: new ObjectId(id)
+        });
         if (!item) {
             throw new Error(`Inventory item with id "${id}" not found`);
         }
@@ -20,15 +22,22 @@ export const inventoryModel = {
 
     create: async (data: Inventory): Promise<Inventory> => {
         const db = await connectToDatabase();
-        const now = new Date().toISOString();
-        const item: Inventory = { ...data, createdAt: now, updatedAt: now };
+        const now = new Date();
+        const item: Inventory = {
+            ...data,
+            createdAt: now,
+            updatedAt: now
+        };
         const result = await db.collection<Inventory>("inventory").insertOne(item);
-        return { ...item, _id: result.insertedId };
+        return {
+            ...item,
+            _id: result.insertedId
+        };
     },
 
     update: async (id: string, data: Partial<Inventory>): Promise<Inventory> => {
         const db = await connectToDatabase();
-        const now = new Date().toISOString();
+        const now = new Date();
         const result = await db.collection<Inventory>("inventory").findOneAndUpdate(
             { _id: new ObjectId(id) },
             { $set: { ...data, updatedAt: now } },
@@ -42,7 +51,9 @@ export const inventoryModel = {
 
     delete: async (id: string): Promise<boolean> => {
         const db = await connectToDatabase();
-        const result = await db.collection<Inventory>("inventory").deleteOne({ _id: new ObjectId(id) });
+        const result = await db.collection<Inventory>("inventory").deleteOne({
+            _id: new ObjectId(id)
+        });
         return result.deletedCount > 0;
     },
 };

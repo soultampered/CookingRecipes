@@ -26,8 +26,8 @@ export interface Inventory {
     quantity: number;
     unit: Unit;
     expirationDte?: Date;
-    createdAt?: String;
-    updatedAt?: String;
+    createdAt?: Date;
+    updatedAt?: Date;
     category?: InventoryCategory;
     userId: string;
     notes?: string;

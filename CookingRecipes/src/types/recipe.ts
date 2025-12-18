@@ -1,7 +1,7 @@
 import type {ObjectId} from "mongodb";
 
 export interface Ingredient {
-    _id: string;
+    _id: ObjectId;
     name: string;
     quantity: number;
     unit?: string;
@@ -28,8 +28,8 @@ export interface Recipe {
     totalTimeMinutes?: number;
     servings?: number;
     tags?: string[];
-    createdAt?: string;
-    updatedAt?: string;
+    createdAt?: Date;
+    updatedAt?: Date;
     author: string;
     nutrition: NutritionFacts[];
     difficulty: DifficultyLevel;
