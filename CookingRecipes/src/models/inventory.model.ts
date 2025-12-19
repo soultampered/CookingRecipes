@@ -20,6 +20,18 @@ export const inventoryModel = {
         return item;
     },
 
+    findByIds: async (ids: string[]) => {
+        const db = await connectToDatabase();
+        const objectIds = ids.map(id => new ObjectId(id));
+        const items = await db.collection<Inventory>("inventory").find({
+            _id: { $in: objectIds }
+        }).toArray();
+        if (items.length === 0) {
+            return [];
+        }
+        return items;
+    },
+
     create: async (data: Inventory): Promise<Inventory> => {
         const db = await connectToDatabase();
         const now = new Date();

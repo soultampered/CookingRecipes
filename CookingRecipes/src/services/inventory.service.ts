@@ -17,6 +17,10 @@ export const inventoryService = {
         return item;
     },
 
+    async getInventoryItemsByIds(ids: string[]) {
+        return inventoryModel.findByIds(ids);
+    },
+
     async createInventory(data: Inventory) {
         if (!data.name || data.quantity == null) {
             throw new Error("INVALID_INPUT");
@@ -52,10 +56,8 @@ export const inventoryService = {
     },
 
     async bulkAdjust(items: { id: string; amount: number }[]) {
-        const results = [];
-        for (const { id, amount } of items) {
-            results.push(await this.adjustQuantity(id, amount));
-        }
-        return results;
+        return Promise.all(
+            items.map(({ id, amount }) => this.adjustQuantity(id, amount))
+        );
     },
 }

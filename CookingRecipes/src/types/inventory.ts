@@ -1,4 +1,5 @@
 import type {ObjectId} from "mongodb";
+import type { Unit } from "./unit.js"
 
 export const INVENTORY_CATEGORIES = [
     'Produce',
@@ -19,7 +20,6 @@ export const INVENTORY_CATEGORIES = [
 ] as const;
 export type InventoryCategory = typeof INVENTORY_CATEGORIES[number];
 
-export type Unit = "g" | "ml" | "pcs" | "tbsp" | "tsp" | "cup";
 export interface Inventory {
     _id: ObjectId;
     name: string;
@@ -31,4 +31,9 @@ export interface Inventory {
     category?: InventoryCategory;
     userId: string;
     notes?: string;
+}
+
+export interface InventoryAdjustment {
+    id: string;
+    amount: number;
 }

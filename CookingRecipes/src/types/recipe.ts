@@ -1,10 +1,10 @@
 import type {ObjectId} from "mongodb";
+import type { Unit } from  "./unit.js"
 
-export interface Ingredient {
-    _id: ObjectId;
-    name: string;
+export interface RecipeIngredient {
+    inventoryItemId: ObjectId;
     quantity: number;
-    unit?: string;
+    unit?: Unit;
 }
 
 export interface NutritionFacts {
@@ -21,7 +21,7 @@ export interface Recipe {
     _id: ObjectId;
     title: string;
     description?: string;
-    ingredients: Ingredient[];
+    ingredients: RecipeIngredient[];
     instructions: string[];
     prepTimeMinutes?: number;
     cookTimeMinutes?: number;
@@ -33,4 +33,10 @@ export interface Recipe {
     author: string;
     nutrition: NutritionFacts[];
     difficulty: DifficultyLevel;
+}
+
+export interface MissingIngredient {
+    name: string;
+    needed: number;
+    unit?: string;
 }

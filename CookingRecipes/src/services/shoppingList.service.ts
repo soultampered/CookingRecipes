@@ -4,12 +4,12 @@ import type { ShoppingList, ShoppingListItem } from "../types/shoppingList.js"
 
 
 export const shoppingListService = {
-    async getAllShoppingLists(userId: string) {
-        return shoppingListModel.findAll(userId);
+    async getAllShoppingLists() {
+        return shoppingListModel.findAll();
     },
 
     async getShoppingListById(id: string) {
-        const list = await shoppingListModel.ifndById(id);
+        const list = await shoppingListModel.findById(id);
         if (!list) throw new Error("NOT_FOUND");
         return list;
     },
@@ -41,14 +41,14 @@ export const shoppingListService = {
 
     async removeItem(listId: string, itemId: string) {
         const list = await this.getShoppingListById(listId);
-        const updatedItems = list.items.filter(i => i._id !== itemId);
+        const updatedItems = list.items.filter(item => item._id?.toString() !== itemId);
         return shoppingListModel.update(listId, { items: updatedItems });
     },
 
     async toggleItemChecked(listId: string, itemId: string) {
         const list = await this.getShoppingListById(listId);
-        const items = list.items.map(i =>
-            i._id === itemId ? { ...i, checked: !i.checked } : i
+        const items = list.items.map(item =>
+            item._id?.toString() === itemId ? { ...item, checked: !item.checked } : item
         );
         return shoppingListModel.update(listId, { items });
     },

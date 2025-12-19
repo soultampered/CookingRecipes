@@ -4,33 +4,35 @@ import { shoppingListService } from "../services/shoppingList.service.js"
 
 const shoppingListRoute = new Hono();
 
-shoppingListRoute.get('/shopping-lists', async (c) => {
+shoppingListRoute.get('/', async (c) => {
 
 });
 
-shoppingListRoute.post('/shopping-lists', async (c) => {
+shoppingListRoute.post('/', async (c) => {
 
 });
 
-shoppingListRoute.get('/shopping-lists/:id', async (c) => {
+shoppingListRoute.get('/:id', async (c) => {
 
 });
-shoppingListRoute.patch('/shopping-lists/:id', async (c) => {
-
-});
-
-shoppingListRoute.delete('/shopping-lists/:id', async (c) => {
+shoppingListRoute.patch('/:id', async (c) => {
 
 });
 
-shoppingListRoute.post('/shopping-lists/:id/items', async (c) => {
+shoppingListRoute.delete('/:id', async (c) => {
 
 });
 
-shoppingListRoute.delete('/shopping-lists/:id/items/itemId', async (c) => {
+shoppingListRoute.post('/:id/items', async (c) => {
 
 });
 
-shoppingListRoute.post('/shopping-lists/:id/checkout', async (c) => {
+shoppingListRoute.delete('/:id/items/itemId', async (c) => {
 
 });
+
+shoppingListRoute.post('/:id/checkout', async (c) => {
+
+});
+
+export default shoppingListRoute;

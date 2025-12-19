@@ -5,7 +5,7 @@ import { recipeInventoryService } from "../services/recipeInventory.service.js"
 
 const recipeRoutes = new Hono();
 
-recipeRoutes.post('/recipes', async (c) => {
+recipeRoutes.post('/', async (c) => {
     try {
         const body = await c.req.json<Recipe>();
         const newRecipe = await recipeService.createRecipe(body);
@@ -19,7 +19,7 @@ recipeRoutes.post('/recipes', async (c) => {
     }
 });
 
-recipeRoutes.get('/recipes', async (c) => {
+recipeRoutes.get('/', async (c) => {
     try {
         const recipes = await recipeService.getAllRecipes();
         return c.json(recipes, 200);
@@ -31,7 +31,7 @@ recipeRoutes.get('/recipes', async (c) => {
     }
 });
 
-recipeRoutes.get('/recipes/:id', async (c) => {
+recipeRoutes.get('/:id', async (c) => {
     try {
         const recipe = await recipeService.getRecipeById(c.req.param('id'));
         return c.json(recipe, 200);
@@ -43,7 +43,7 @@ recipeRoutes.get('/recipes/:id', async (c) => {
     }
 });
 
-recipeRoutes.patch('/recipes/:id', async (c) => {
+recipeRoutes.patch('/:id', async (c) => {
     try {
         const body = await c.req.json<Partial<Recipe>>();
         const updated = await recipeService.updateRecipe(c.req.param('id'), body);
@@ -56,7 +56,7 @@ recipeRoutes.patch('/recipes/:id', async (c) => {
     }
 });
 
-recipeRoutes.delete('/recipes/:id', async (c) => {
+recipeRoutes.delete('/:id', async (c) => {
     try {
         await recipeService.deleteRecipe(c.req.param('id'));
         return c.body(null, 204); // No content
@@ -68,7 +68,7 @@ recipeRoutes.delete('/recipes/:id', async (c) => {
     }
 });
 
-recipeRoutes.post('/recipes/:id/prepare', async (c) => {
+recipeRoutes.post('/:id/prepare', async (c) => {
     try {
         const result = await recipeInventoryService.deductIngredients(c.req.param('id'));
         return c.json({ success: true, updatedInventory: result });
@@ -78,7 +78,7 @@ recipeRoutes.post('/recipes/:id/prepare', async (c) => {
 });
 
 
-recipeRoutes.get('/recipes/:id/missing/ingredients', async (c) => {
+recipeRoutes.get('/:id/missing-ingredients', async (c) => {
     try {
         const missing = await recipeInventoryService.getMissingIngredients(c.req.param('id'));
         return c.json(missing);
@@ -87,7 +87,7 @@ recipeRoutes.get('/recipes/:id/missing/ingredients', async (c) => {
     }
 });
 
-recipeRoutes.get('/recipes/suggestions', async (c) => {
+recipeRoutes.get('/suggestions', async (c) => {
     const suggestions = await recipeInventoryService.suggestRecipes();
     return c.json(suggestions);
 });

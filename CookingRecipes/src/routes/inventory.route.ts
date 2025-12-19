@@ -4,7 +4,7 @@ import { inventoryService } from "../services/inventory.service.js";
 
 const inventoryRoutes = new Hono();
 
-inventoryRoutes.post('/inventory', async (c) => {
+inventoryRoutes.post('/', async (c) => {
     try {
         const body = await c.req.json<Inventory>();
         const newInventory = await inventoryService.createInventory(body);
@@ -18,7 +18,7 @@ inventoryRoutes.post('/inventory', async (c) => {
     }
 });
 
-inventoryRoutes.get('/inventory', async (c) => {
+inventoryRoutes.get('/', async (c) => {
     const userId = c.req.query('userId');
     const category = c.req.query('category');
     try {
@@ -32,7 +32,7 @@ inventoryRoutes.get('/inventory', async (c) => {
     }
 });
 
-inventoryRoutes.get('/inventory/:id', async (c) => {
+inventoryRoutes.get('/:id', async (c) => {
     try {
         const item = await inventoryService.getInventoryById(c.req.param('id'));
         return c.json(item);
@@ -44,7 +44,7 @@ inventoryRoutes.get('/inventory/:id', async (c) => {
     }
 });
 
-inventoryRoutes.put('/inventory/:id', async (c) => {
+inventoryRoutes.put('/:id', async (c) => {
     const data = await c.req.json<Partial<Inventory>>();
     try {
         const item = await inventoryService.updateInventory(c.req.param('id'), data);
@@ -57,7 +57,7 @@ inventoryRoutes.put('/inventory/:id', async (c) => {
     }
 });
 
-inventoryRoutes.delete('/inventory/:id', async (c) => {
+inventoryRoutes.delete('/:id', async (c) => {
     try {
         await inventoryService.deleteInventory(c.req.param('id'));
         return c.json({ success: true });
