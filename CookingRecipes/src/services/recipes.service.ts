@@ -13,18 +13,20 @@ export const recipeService = {
     },
 
     async createRecipe(recipe: Recipe) {
-        return recipeModel.create(recipe);
+        const newRecipe = await recipeModel.create(recipe);
+        if (!newRecipe) throw new Error('Recipe not created');
+        return newRecipe;
     },
 
     async updateRecipe(id: string, data: Partial<Recipe>) {
         const updated = await recipeModel.update(id, data);
-        if (!updated) throw new Error('NOT_FOUND');
+        if (!updated) throw new Error('Recipe not updated');
         return updated;
     },
 
     async deleteRecipe(id: string) {
         const deleted = await recipeModel.delete(id);
-        if (!deleted) throw new Error('NOT_FOUND');
+        if (!deleted) throw new Error('Could not delete recipe');
         return true;
     },
 };
