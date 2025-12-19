@@ -18,3 +18,8 @@ export interface User {
     createdAt?: Date;
     updatedAt?: Date;
 }
+
+export type NewUser = Omit<
+    User,
+    "_id" | "createdAt" | "updatedAt"
+>;
