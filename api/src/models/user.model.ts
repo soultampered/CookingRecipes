@@ -2,6 +2,11 @@ import { ObjectId } from "mongodb";
 import { connectToDatabase } from "../mongo.js";
 import type { User, NewUser } from "../types/user.js";
 
+export function stripPassword(user: User): Omit<User, "password"> {
+    const { password, ...rest } = user;
+    return rest;
+}
+
 export const userModel = {
     findById: async (id: string): Promise<User> => {
         const db = await connectToDatabase();
@@ -12,6 +17,13 @@ export const userModel = {
             throw new Error("No user found");
         }
         return user
+    },
+
+    findByUsernameOrEmail: async (identifier: string): Promise<User | null> => {
+        const db = await connectToDatabase();
+        return db.collection<User>("user").findOne({
+            $or: [{ username: identifier }, { email: identifier }]
+        });
     },
 
     create: async (data: NewUser): Promise<User> => {

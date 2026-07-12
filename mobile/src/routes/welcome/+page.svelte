@@ -1,82 +1,91 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { createUser, getUser } from '$lib/api/users';
+	import { login, register } from '$lib/api/auth';
 	import { session } from '$lib/state/session.svelte';
 	import { toast } from '$lib/state/toast.svelte';
 	import { ApiError } from '$lib/api/client';
 
+	let mode = $state<'login' | 'register'>('login');
+
+	let identifier = $state('');
+	let loginPassword = $state('');
+	let loggingIn = $state(false);
+
 	let username = $state('');
 	let email = $state('');
-	let password = $state('');
-	let creating = $state(false);
+	let registerPassword = $state('');
+	let registering = $state(false);
 
-	let showRestore = $state(false);
-	let restoreId = $state('');
-	let restoring = $state(false);
-
-	async function handleCreate(event: SubmitEvent) {
+	async function handleLogin(event: SubmitEvent) {
 		event.preventDefault();
-		creating = true;
+		loggingIn = true;
 		try {
-			const user = await createUser({ username, email, password });
-			await session.signIn(user);
+			const result = await login({ identifier, password: loginPassword });
+			await session.signIn(result);
+			await goto('/recipes');
+		} catch (err) {
+			toast.push(err instanceof ApiError ? err.message : 'Could not log in');
+		} finally {
+			loggingIn = false;
+		}
+	}
+
+	async function handleRegister(event: SubmitEvent) {
+		event.preventDefault();
+		registering = true;
+		try {
+			const result = await register({ username, email, password: registerPassword });
+			await session.signIn(result);
 			await goto('/recipes');
 		} catch (err) {
 			toast.push(err instanceof ApiError ? err.message : 'Could not create account');
 		} finally {
-			creating = false;
-		}
-	}
-
-	async function handleRestore(event: SubmitEvent) {
-		event.preventDefault();
-		restoring = true;
-		try {
-			const user = await getUser(restoreId.trim());
-			await session.signIn(user);
-			await goto('/recipes');
-		} catch (err) {
-			toast.push(err instanceof ApiError ? err.message : 'User not found');
-		} finally {
-			restoring = false;
+			registering = false;
 		}
 	}
 </script>
 
 <div class="welcome">
 	<h1>Welcome to Larder</h1>
-	<p class="hint">
-		There's no login system yet — creating an account here is what makes one. Do it once; the app
-		remembers you on this device from then on.
-	</p>
 
-	<form onsubmit={handleCreate}>
-		<label>
-			Username
-			<input type="text" bind:value={username} required />
-		</label>
-		<label>
-			Email
-			<input type="email" bind:value={email} required />
-		</label>
-		<label>
-			Password
-			<input type="password" bind:value={password} required />
-		</label>
-		<button type="submit" disabled={creating}>{creating ? 'Creating…' : 'Start cooking'}</button>
-	</form>
+	<div class="tabs">
+		<button type="button" class:active={mode === 'login'} onclick={() => (mode = 'login')}>
+			Log in
+		</button>
+		<button type="button" class:active={mode === 'register'} onclick={() => (mode = 'register')}>
+			Create account
+		</button>
+	</div>
 
-	<button type="button" class="link" onclick={() => (showRestore = !showRestore)}>
-		Already have an ID? Restore access
-	</button>
-
-	{#if showRestore}
-		<form onsubmit={handleRestore}>
+	{#if mode === 'login'}
+		<form onsubmit={handleLogin}>
 			<label>
-				User ID
-				<input type="text" bind:value={restoreId} required />
+				Username or email
+				<input type="text" bind:value={identifier} required />
 			</label>
-			<button type="submit" disabled={restoring}>{restoring ? 'Checking…' : 'Restore'}</button>
+			<label>
+				Password
+				<input type="password" bind:value={loginPassword} required />
+			</label>
+			<button type="submit" disabled={loggingIn}>{loggingIn ? 'Logging in…' : 'Log in'}</button>
+		</form>
+	{:else}
+		<form onsubmit={handleRegister}>
+			<label>
+				Username
+				<input type="text" bind:value={username} required />
+			</label>
+			<label>
+				Email
+				<input type="email" bind:value={email} required />
+			</label>
+			<label>
+				Password
+				<input type="password" bind:value={registerPassword} required />
+			</label>
+			<button type="submit" disabled={registering}>
+				{registering ? 'Creating…' : 'Create account'}
+			</button>
 		</form>
 	{/if}
 </div>
@@ -90,10 +99,25 @@
 		flex-direction: column;
 		gap: 1rem;
 	}
-	.hint {
+	.tabs {
+		display: flex;
+		border: 1px solid #ccc;
+		border-radius: 8px;
+		overflow: hidden;
+	}
+	.tabs button {
+		flex: 1;
+		padding: 0.6rem;
+		background: none;
+		border: none;
+		font-size: 0.85rem;
+		font-weight: 600;
 		color: #666;
-		font-size: 0.9rem;
-		line-height: 1.5;
+		cursor: pointer;
+	}
+	.tabs button.active {
+		background: #6e3550;
+		color: white;
 	}
 	form {
 		display: flex;
@@ -119,14 +143,5 @@
 		background: #6e3550;
 		color: white;
 		font-weight: 600;
-	}
-	button.link {
-		background: none;
-		border: none;
-		color: #6e3550;
-		font-size: 0.85rem;
-		text-decoration: underline;
-		cursor: pointer;
-		padding: 0;
 	}
 </style>

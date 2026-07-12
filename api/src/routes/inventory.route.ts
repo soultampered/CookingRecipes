@@ -1,13 +1,16 @@
 import { Hono } from "hono";
 import type { Inventory } from "../types/inventory.js";
 import { inventoryService } from "../services/inventory.service.js";
+import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
 
-const inventoryRoutes = new Hono();
+const inventoryRoutes = new Hono<{ Variables: AuthVariables }>();
+
+inventoryRoutes.use('*', authMiddleware);
 
 inventoryRoutes.post('/', async (c) => {
     try {
         const body = await c.req.json<Inventory>();
-        const newInventory = await inventoryService.createInventory(body);
+        const newInventory = await inventoryService.createInventory({ ...body, userId: c.get('userId') });
         return c.json(newInventory, 201);
     } catch (err) {
         if ((err as Error).message === 'DUPLICATE_NAME') {
@@ -19,7 +22,7 @@ inventoryRoutes.post('/', async (c) => {
 });
 
 inventoryRoutes.get('/', async (c) => {
-    const userId = c.req.query('userId');
+    const userId = c.get('userId');
     const category = c.req.query('category');
     try {
         const items = await inventoryService.getAllInventory(userId, category);

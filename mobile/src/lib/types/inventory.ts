@@ -33,4 +33,4 @@ export interface Inventory {
 	notes?: string;
 }
 
-export type NewInventory = Omit<Inventory, '_id' | 'createdAt' | 'updatedAt'>;
+export type NewInventory = Omit<Inventory, '_id' | 'createdAt' | 'updatedAt' | 'userId'>;

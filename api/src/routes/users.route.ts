@@ -1,26 +1,16 @@
 import { Hono } from "hono";
 import type { User } from "../types/user.js";
 import { usersService } from "../services/users.service.js";
-import {userModel} from "../models/index.js";
+import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
 
-const usersRoute = new Hono();
+const usersRoute = new Hono<{ Variables: AuthVariables }>();
 
-usersRoute.post('/', async (c) => {
-    try {
-        const body = await c.req.json<User>();
-        const newUser = await usersService.createUser(body);
-        return c.json(newUser, 201);
-
-    } catch (err) {
-        if ((err as Error).message === 'DUPLICATE_NAME') {
-            console.error(err);
-            return c.json({ error: 'User already exists' }, 400);
-        }
-        return c.json({ error: 'Failed to create recipe' }, 500);
-    }
-});
+usersRoute.use('*', authMiddleware);
 
 usersRoute.get('/:id', async (c) => {
+    if (c.get('userId') !== c.req.param('id')) {
+        return c.json({ error: 'Forbidden' }, 403);
+    }
     try {
         const userId = c.req.param('id');
         const user = await usersService.getUserById(userId);
@@ -34,6 +24,9 @@ usersRoute.get('/:id', async (c) => {
 });
 
 usersRoute.patch('/:id', async (c) => {
+    if (c.get('userId') !== c.req.param('id')) {
+        return c.json({ error: 'Forbidden' }, 403);
+    }
     try {
         const userId = c.req.param('id');
         const body = await c.req.json<Partial<User>>();
@@ -48,6 +41,9 @@ usersRoute.patch('/:id', async (c) => {
 });
 
 usersRoute.delete('/:id', async (c) => {
+    if (c.get('userId') !== c.req.param('id')) {
+        return c.json({ error: 'Forbidden' }, 403);
+    }
     try{
         const userId = c.req.param("id");
         await usersService.deleteUser(userId);

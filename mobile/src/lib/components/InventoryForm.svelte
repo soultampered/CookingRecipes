@@ -38,8 +38,7 @@
 			unit,
 			category: category || undefined,
 			expirationDte: expirationDte || undefined,
-			notes: notes || undefined,
-			userId: initial?.userId ?? ''
+			notes: notes || undefined
 		});
 	}
 </script>

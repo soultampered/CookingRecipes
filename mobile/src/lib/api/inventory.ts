@@ -1,9 +1,8 @@
 import { apiFetch } from './client';
 import type { Inventory, InventoryCategory, NewInventory } from '$lib/types/inventory';
 
-export function listInventory(filter: { userId?: string; category?: InventoryCategory } = {}) {
+export function listInventory(filter: { category?: InventoryCategory } = {}) {
 	const params = new URLSearchParams();
-	if (filter.userId) params.set('userId', filter.userId);
 	if (filter.category) params.set('category', filter.category);
 	const query = params.toString();
 	return apiFetch<Inventory[]>(`/inventory${query ? `?${query}` : ''}`);

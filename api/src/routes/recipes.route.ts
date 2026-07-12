@@ -2,8 +2,11 @@ import { Hono } from 'hono';
 import type { Recipe } from "../types/recipe.js";
 import { recipeService } from "../services/recipes.service.js";
 import { recipeInventoryService } from "../services/recipeInventory.service.js"
+import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
 
-const recipeRoutes = new Hono();
+const recipeRoutes = new Hono<{ Variables: AuthVariables }>();
+
+recipeRoutes.use('*', authMiddleware);
 
 recipeRoutes.post('/', async (c) => {
     try {

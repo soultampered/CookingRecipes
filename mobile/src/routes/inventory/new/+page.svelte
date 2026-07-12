@@ -4,7 +4,6 @@
 	import { createInventoryItem } from '$lib/api/inventory';
 	import { ApiError } from '$lib/api/client';
 	import { toast } from '$lib/state/toast.svelte';
-	import { session } from '$lib/state/session.svelte';
 	import type { NewInventory } from '$lib/types/inventory';
 
 	let submitting = $state(false);
@@ -12,7 +11,7 @@
 	async function handleSubmit(item: NewInventory) {
 		submitting = true;
 		try {
-			await createInventoryItem({ ...item, userId: session.userId ?? '' });
+			await createInventoryItem(item);
 			await goto('/inventory');
 		} catch (err) {
 			toast.push(err instanceof ApiError ? err.message : 'Could not create item');

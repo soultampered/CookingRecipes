@@ -1,7 +1,7 @@
 import { redirect } from '@sveltejs/kit';
-import { session } from '$lib/state/session.svelte';
+import { session, sessionRestored } from '$lib/state/session.svelte';
 
 export const load = async () => {
-	if (!session.ready) await session.restore();
-	throw redirect(302, session.userId ? '/recipes' : '/welcome');
+	await sessionRestored;
+	throw redirect(302, session.user ? '/recipes' : '/welcome');
 };

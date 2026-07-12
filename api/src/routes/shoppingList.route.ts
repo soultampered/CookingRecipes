@@ -1,8 +1,11 @@
 import { Hono } from 'hono';
 import type { ShoppingList } from "../types/shoppingList.js"
 import { shoppingListService } from "../services/shoppingList.service.js"
+import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
 
-const shoppingListRoute = new Hono();
+const shoppingListRoute = new Hono<{ Variables: AuthVariables }>();
+
+shoppingListRoute.use('*', authMiddleware);
 
 shoppingListRoute.get('/', async (c) => {
 

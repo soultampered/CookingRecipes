@@ -3,7 +3,6 @@ export interface User {
 	_id?: string;
 	username: string;
 	email: string;
-	password: string;
 	displayName?: string;
 	avatarUrl?: string;
 	bio?: string;
@@ -17,5 +16,3 @@ export interface User {
 	createdAt?: string;
 	updatedAt?: string;
 }
-
-export type NewUser = Omit<User, '_id' | 'createdAt' | 'updatedAt'>;
