@@ -19,11 +19,11 @@
 		text-align: center;
 	}
 	p {
-		color: #666;
+		color: var(--ink-soft);
 		font-size: 0.9rem;
 	}
 	a {
-		color: #6e3550;
+		color: var(--accent);
 		font-weight: 600;
 	}
 </style>

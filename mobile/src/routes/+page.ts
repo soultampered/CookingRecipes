@@ -3,5 +3,5 @@ import { session, sessionRestored } from '$lib/state/session.svelte';
 
 export const load = async () => {
 	await sessionRestored;
-	throw redirect(302, session.user ? '/recipes' : '/welcome');
+	throw redirect(302, session.user ? '/dashboard' : '/welcome');
 };

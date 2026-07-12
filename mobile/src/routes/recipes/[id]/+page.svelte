@@ -13,7 +13,7 @@
 	let missing = $state<MissingIngredient[] | null>(null);
 
 	function inventoryName(id: string) {
-		return data.inventoryItems.find((i) => i._id === id)?.name ?? id;
+		return data.inventoryNames[id] ?? 'Unknown ingredient';
 	}
 
 	async function handlePrepare() {
@@ -121,7 +121,7 @@
 		display: flex;
 		gap: 0.5rem;
 		font-size: 0.8rem;
-		color: #666;
+		color: var(--ink-soft);
 	}
 	.pill {
 		font-size: 0.7rem;
@@ -131,19 +131,19 @@
 		text-transform: capitalize;
 	}
 	.pill-easy {
-		background: #e7eedf;
-		color: #4c6b3f;
+		background: var(--good-soft);
+		color: var(--good);
 	}
 	.pill-medium {
-		background: #f5e9d3;
-		color: #9c6a0e;
+		background: var(--warn-soft);
+		color: var(--warn);
 	}
 	.pill-hard {
-		background: #f5e1de;
-		color: #a23629;
+		background: var(--bad-soft);
+		color: var(--bad);
 	}
 	.description {
-		color: #444;
+		color: var(--ink-soft);
 		font-size: 0.9rem;
 		line-height: 1.5;
 	}
@@ -151,7 +151,7 @@
 		font-size: 0.75rem;
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
-		color: #666;
+		color: var(--ink-soft);
 	}
 	.ingredients {
 		display: flex;
@@ -162,10 +162,10 @@
 		justify-content: space-between;
 		font-size: 0.9rem;
 		padding: 0.4rem 0;
-		border-bottom: 1px solid #eee;
+		border-bottom: 1px solid var(--line);
 	}
 	.qty {
-		color: #666;
+		color: var(--ink-soft);
 	}
 	.instructions {
 		padding-left: 1.1rem;
@@ -173,35 +173,36 @@
 		line-height: 1.6;
 	}
 	.btn-outline {
-		border: 1px solid #ccc;
+		border: 1px solid var(--line);
 		border-radius: 8px;
 		padding: 0.4rem 0.75rem;
 		font-size: 0.85rem;
 		text-decoration: none;
-		color: inherit;
+		color: var(--ink);
+		background: var(--paper-raised);
 		flex: 0 0 auto;
 	}
 	.primary {
 		padding: 0.75rem;
 		border-radius: 8px;
 		border: none;
-		background: #6e3550;
-		color: white;
+		background: var(--accent);
+		color: var(--paper-raised);
 		font-weight: 600;
 		cursor: pointer;
 	}
 	.danger {
 		padding: 0.65rem;
 		border-radius: 8px;
-		border: 1px solid #a23629;
-		background: none;
-		color: #a23629;
+		border: 1px solid var(--bad);
+		background: var(--paper-raised);
+		color: var(--bad);
 		font-weight: 600;
 		cursor: pointer;
 	}
 	.banner {
-		background: #f5e1de;
-		color: #a23629;
+		background: var(--bad-soft);
+		color: var(--bad);
 		border-radius: 8px;
 		padding: 0.7rem 0.8rem;
 		font-size: 0.85rem;

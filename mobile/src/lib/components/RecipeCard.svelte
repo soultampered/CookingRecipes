@@ -18,11 +18,12 @@
 <style>
 	.card {
 		display: block;
-		border: 1px solid #ddd;
+		border: 1px solid var(--line);
 		border-radius: 10px;
 		padding: 0.8rem 0.9rem;
 		text-decoration: none;
 		color: inherit;
+		background: var(--paper-raised);
 	}
 	.title {
 		font-weight: 600;
@@ -32,7 +33,7 @@
 		gap: 0.5rem;
 		align-items: center;
 		font-size: 0.8rem;
-		color: #666;
+		color: var(--ink-soft);
 		margin-top: 0.25rem;
 	}
 	.pill {
@@ -40,17 +41,18 @@
 		font-weight: 600;
 		padding: 0.1rem 0.5rem;
 		border-radius: 999px;
+		text-transform: capitalize;
 	}
 	.pill-easy {
-		background: #e7eedf;
-		color: #4c6b3f;
+		background: var(--good-soft);
+		color: var(--good);
 	}
 	.pill-medium {
-		background: #f5e9d3;
-		color: #9c6a0e;
+		background: var(--warn-soft);
+		color: var(--warn);
 	}
 	.pill-hard {
-		background: #f5e1de;
-		color: #a23629;
+		background: var(--bad-soft);
+		color: var(--bad);
 	}
 </style>

@@ -59,12 +59,13 @@
 		align-items: center;
 	}
 	.btn-outline {
-		border: 1px solid #ccc;
+		border: 1px solid var(--line);
 		border-radius: 8px;
 		padding: 0.4rem 0.75rem;
 		font-size: 0.85rem;
 		text-decoration: none;
-		color: inherit;
+		color: var(--ink);
+		background: var(--paper-raised);
 	}
 	.chiprow {
 		display: flex;
@@ -77,16 +78,16 @@
 		font-size: 0.78rem;
 		padding: 0.35rem 0.7rem;
 		border-radius: 999px;
-		border: 1px solid #ccc;
-		background: none;
-		color: #666;
+		border: 1px solid var(--line);
+		background: var(--paper-raised);
+		color: var(--ink-soft);
 		white-space: nowrap;
 		cursor: pointer;
 	}
 	.chip.active {
-		background: #1e1c19;
-		color: white;
-		border-color: #1e1c19;
+		background: var(--ink);
+		color: var(--paper-raised);
+		border-color: var(--ink);
 	}
 	.list {
 		display: flex;
@@ -97,7 +98,7 @@
 		align-items: center;
 		gap: 0.6rem;
 		padding: 0.6rem 0;
-		border-bottom: 1px solid #eee;
+		border-bottom: 1px solid var(--line);
 		text-decoration: none;
 		color: inherit;
 	}
@@ -105,11 +106,11 @@
 		width: 7px;
 		height: 7px;
 		border-radius: 50%;
-		background: #4c6b3f;
+		background: var(--good);
 		flex: 0 0 auto;
 	}
 	.dot.out {
-		background: #a23629;
+		background: var(--bad);
 	}
 	.name {
 		flex: 1;
@@ -118,11 +119,11 @@
 	}
 	.qty {
 		font-size: 0.85rem;
-		color: #666;
+		color: var(--ink-soft);
 		font-variant-numeric: tabular-nums;
 	}
 	.empty {
-		color: #666;
+		color: var(--ink-soft);
 		font-size: 0.9rem;
 	}
 </style>

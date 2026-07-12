@@ -173,10 +173,12 @@
 	textarea,
 	select {
 		padding: 0.55rem 0.65rem;
-		border: 1px solid #ccc;
+		border: 1px solid var(--line);
 		border-radius: 8px;
 		font-size: 0.95rem;
 		font-family: inherit;
+		background: var(--paper-raised);
+		color: var(--ink);
 	}
 	.row {
 		display: flex;
@@ -189,7 +191,7 @@
 		font-size: 0.75rem;
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
-		color: #666;
+		color: var(--ink-soft);
 		margin-top: 0.3rem;
 	}
 	.chiprow {
@@ -197,18 +199,19 @@
 		gap: 0.4rem;
 	}
 	.chip {
-		border: 1px solid #ccc;
+		border: 1px solid var(--line);
 		border-radius: 999px;
 		padding: 0.35rem 0.8rem;
 		font-size: 0.8rem;
-		background: none;
+		background: var(--paper-raised);
+		color: var(--ink);
 		cursor: pointer;
 		text-transform: capitalize;
 	}
 	.chip.active {
-		background: #1e1c19;
-		color: white;
-		border-color: #1e1c19;
+		background: var(--ink);
+		color: var(--paper-raised);
+		border-color: var(--ink);
 	}
 	.ingredient-row,
 	.instruction-row {
@@ -231,13 +234,13 @@
 	}
 	.step {
 		font-size: 0.8rem;
-		color: #666;
+		color: var(--ink-soft);
 		flex: 0 0 auto;
 	}
 	.remove {
 		border: none;
 		background: none;
-		color: #a23629;
+		color: var(--bad);
 		font-size: 1.1rem;
 		cursor: pointer;
 		flex: 0 0 auto;
@@ -247,22 +250,22 @@
 		align-self: flex-start;
 		border: none;
 		background: none;
-		color: #6e3550;
+		color: var(--accent);
 		font-size: 0.85rem;
 		cursor: pointer;
 		padding: 0;
 	}
 	.hint {
 		font-size: 0.8rem;
-		color: #666;
+		color: var(--ink-soft);
 	}
 	.primary {
 		margin-top: 0.5rem;
 		padding: 0.75rem;
 		border-radius: 8px;
 		border: none;
-		background: #6e3550;
-		color: white;
+		background: var(--accent);
+		color: var(--paper-raised);
 		font-weight: 600;
 		cursor: pointer;
 	}

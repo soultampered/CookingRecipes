@@ -42,8 +42,8 @@
 		width: 48px;
 		height: 48px;
 		border-radius: 50%;
-		background: #f4e9ee;
-		color: #6e3550;
+		background: var(--accent-soft);
+		color: var(--accent);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -54,13 +54,14 @@
 	}
 	.email {
 		font-size: 0.85rem;
-		color: #666;
+		color: var(--ink-soft);
 	}
 	.outline {
 		padding: 0.7rem;
 		border-radius: 8px;
-		border: 1px solid #ccc;
-		background: none;
+		border: 1px solid var(--line);
+		background: var(--paper-raised);
+		color: var(--ink);
 		font-weight: 600;
 		cursor: pointer;
 	}

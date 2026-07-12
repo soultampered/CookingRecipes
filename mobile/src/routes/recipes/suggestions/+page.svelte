@@ -30,7 +30,7 @@
 		gap: 0.6rem;
 	}
 	.sub {
-		color: #666;
+		color: var(--ink-soft);
 		font-size: 0.85rem;
 		margin: 0 0 0.5rem;
 	}
@@ -40,7 +40,7 @@
 		gap: 0.6rem;
 	}
 	.empty {
-		color: #666;
+		color: var(--ink-soft);
 		font-size: 0.9rem;
 	}
 </style>

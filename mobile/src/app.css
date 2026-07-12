@@ -1,0 +1,66 @@
+:root {
+	--ink: #1e1c19;
+	--ink-soft: #5b584f;
+	--paper: #eceeea;
+	--paper-raised: #ffffff;
+	--line: #d9dad2;
+	--accent: #6e3550;
+	--accent-soft: #f4e9ee;
+	--good: #4c6b3f;
+	--good-soft: #e7eedf;
+	--warn: #9c6a0e;
+	--warn-soft: #f5e9d3;
+	--bad: #a23629;
+	--bad-soft: #f5e1de;
+	--sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+	--mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', Menlo, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--ink: #ece8df;
+		--ink-soft: #b3afa3;
+		--paper: #181714;
+		--paper-raised: #232019;
+		--line: #38352c;
+		--accent: #e1a0be;
+		--accent-soft: #3a222c;
+		--good: #92c077;
+		--good-soft: #23301c;
+		--warn: #e8b95c;
+		--warn-soft: #3a2c15;
+		--bad: #e28b7c;
+		--bad-soft: #3a211d;
+	}
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	background: var(--paper);
+	color: var(--ink);
+	font-family: var(--sans);
+}
+
+h1,
+h2,
+h3 {
+	text-wrap: balance;
+	letter-spacing: -0.01em;
+}
+
+button,
+input,
+select,
+textarea {
+	font-family: inherit;
+	color: inherit;
+}
+
+a {
+	color: inherit;
+}

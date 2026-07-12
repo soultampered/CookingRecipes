@@ -42,15 +42,16 @@
 		gap: 0.6rem;
 	}
 	.empty {
-		color: #666;
+		color: var(--ink-soft);
 		font-size: 0.9rem;
 	}
 	.btn-outline {
-		border: 1px solid #ccc;
+		border: 1px solid var(--line);
 		border-radius: 8px;
 		padding: 0.4rem 0.75rem;
 		font-size: 0.85rem;
 		text-decoration: none;
-		color: inherit;
+		color: var(--ink);
+		background: var(--paper-raised);
 	}
 </style>

@@ -31,11 +31,11 @@
 		box-shadow: 0 8px 20px -8px rgba(0, 0, 0, 0.3);
 	}
 	.toast-error {
-		background: #a23629;
-		color: white;
+		background: var(--bad);
+		color: var(--paper-raised);
 	}
 	.toast-info {
-		background: #4c6b3f;
-		color: white;
+		background: var(--good);
+		color: var(--paper-raised);
 	}
 </style>

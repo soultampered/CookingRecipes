@@ -22,7 +22,7 @@
 		try {
 			const result = await login({ identifier, password: loginPassword });
 			await session.signIn(result);
-			await goto('/recipes');
+			await goto('/dashboard');
 		} catch (err) {
 			toast.push(err instanceof ApiError ? err.message : 'Could not log in');
 		} finally {
@@ -36,7 +36,7 @@
 		try {
 			const result = await register({ username, email, password: registerPassword });
 			await session.signIn(result);
-			await goto('/recipes');
+			await goto('/dashboard');
 		} catch (err) {
 			toast.push(err instanceof ApiError ? err.message : 'Could not create account');
 		} finally {
@@ -101,23 +101,23 @@
 	}
 	.tabs {
 		display: flex;
-		border: 1px solid #ccc;
+		border: 1px solid var(--line);
 		border-radius: 8px;
 		overflow: hidden;
 	}
 	.tabs button {
 		flex: 1;
 		padding: 0.6rem;
-		background: none;
+		background: var(--paper-raised);
 		border: none;
 		font-size: 0.85rem;
 		font-weight: 600;
-		color: #666;
+		color: var(--ink-soft);
 		cursor: pointer;
 	}
 	.tabs button.active {
-		background: #6e3550;
-		color: white;
+		background: var(--accent);
+		color: var(--paper-raised);
 	}
 	form {
 		display: flex;
@@ -132,16 +132,19 @@
 	}
 	input {
 		padding: 0.6rem 0.7rem;
-		border: 1px solid #ccc;
+		border: 1px solid var(--line);
 		border-radius: 8px;
 		font-size: 1rem;
+		background: var(--paper-raised);
+		color: var(--ink);
 	}
 	button[type='submit'] {
 		padding: 0.7rem;
 		border-radius: 8px;
 		border: none;
-		background: #6e3550;
-		color: white;
+		background: var(--accent);
+		color: var(--paper-raised);
 		font-weight: 600;
+		cursor: pointer;
 	}
 </style>

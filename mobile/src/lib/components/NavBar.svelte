@@ -2,6 +2,7 @@
 	import { page } from '$app/state';
 
 	const tabs = [
+		{ href: '/dashboard', label: 'Dashboard' },
 		{ href: '/recipes', label: 'Recipes' },
 		{ href: '/inventory', label: 'Inventory' },
 		{ href: '/recipes/suggestions', label: 'Suggestions' },
@@ -22,8 +23,8 @@
 		left: 0;
 		right: 0;
 		display: flex;
-		border-top: 1px solid #ddd;
-		background: white;
+		border-top: 1px solid var(--line);
+		background: var(--paper-raised);
 		padding: 0.5rem 0.25rem calc(0.75rem + env(safe-area-inset-bottom));
 		z-index: 10;
 	}
@@ -31,12 +32,12 @@
 		flex: 1;
 		text-align: center;
 		font-size: 0.72rem;
-		color: #666;
+		color: var(--ink-soft);
 		text-decoration: none;
 		padding: 0.3rem 0;
 	}
 	a.active {
-		color: #6e3550;
+		color: var(--accent);
 		font-weight: 700;
 	}
 </style>

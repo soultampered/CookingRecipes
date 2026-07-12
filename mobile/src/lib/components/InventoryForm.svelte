@@ -114,13 +114,15 @@
 	textarea,
 	select {
 		padding: 0.55rem 0.65rem;
-		border: 1px solid #ccc;
+		border: 1px solid var(--line);
 		border-radius: 8px;
 		font-size: 0.95rem;
 		font-family: inherit;
+		background: var(--paper-raised);
+		color: var(--ink);
 	}
 	.error {
-		color: #a23629;
+		color: var(--bad);
 		font-size: 0.85rem;
 		margin: 0;
 	}
@@ -129,8 +131,8 @@
 		padding: 0.75rem;
 		border-radius: 8px;
 		border: none;
-		background: #6e3550;
-		color: white;
+		background: var(--accent);
+		color: var(--paper-raised);
 		font-weight: 600;
 		cursor: pointer;
 	}

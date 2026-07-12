@@ -58,9 +58,9 @@
 	.danger {
 		padding: 0.65rem;
 		border-radius: 8px;
-		border: 1px solid #a23629;
-		background: none;
-		color: #a23629;
+		border: 1px solid var(--bad);
+		background: var(--paper-raised);
+		color: var(--bad);
 		font-weight: 600;
 		cursor: pointer;
 	}
