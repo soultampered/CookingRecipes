@@ -22,7 +22,7 @@
 		try {
 			const result = await login({ identifier, password: loginPassword });
 			await session.signIn(result);
-			await goto('/dashboard');
+			await goto(result.user.emailVerified ? '/dashboard' : '/verify-email');
 		} catch (err) {
 			toast.push(err instanceof ApiError ? err.message : 'Could not log in');
 		} finally {
@@ -36,7 +36,7 @@
 		try {
 			const result = await register({ username, email, password: registerPassword });
 			await session.signIn(result);
-			await goto('/dashboard');
+			await goto(result.user.emailVerified ? '/dashboard' : '/verify-email');
 		} catch (err) {
 			toast.push(err instanceof ApiError ? err.message : 'Could not create account');
 		} finally {

@@ -17,3 +17,11 @@ export function login(data: { identifier: string; password: string }) {
 export function getCurrentUser() {
 	return apiFetch<User>('/auth/me');
 }
+
+export function verifyEmail(code: string) {
+	return apiFetch<User>('/auth/verify-email', { method: 'POST', body: JSON.stringify({ code }) });
+}
+
+export function resendCode() {
+	return apiFetch<{ message: string }>('/auth/resend-code', { method: 'POST' });
+}

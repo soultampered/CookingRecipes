@@ -2,8 +2,10 @@ import { ObjectId } from "mongodb";
 import { connectToDatabase } from "../mongo.js";
 import type { User, NewUser } from "../types/user.js";
 
-export function stripPassword(user: User): Omit<User, "password"> {
-    const { password, ...rest } = user;
+export function stripPassword(
+    user: User
+): Omit<User, "password" | "verificationCode" | "verificationCodeExpiresAt"> {
+    const { password, verificationCode, verificationCodeExpiresAt, ...rest } = user;
     return rest;
 }
 

@@ -7,7 +7,11 @@
 
 	let { children } = $props();
 
-	let showNav = $derived(page.url.pathname !== '/welcome' && page.url.pathname !== '/');
+	let showNav = $derived(
+		page.url.pathname !== '/welcome' &&
+			page.url.pathname !== '/' &&
+			page.url.pathname !== '/verify-email'
+	);
 </script>
 
 <svelte:head>

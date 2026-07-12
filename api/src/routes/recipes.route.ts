@@ -3,10 +3,12 @@ import type { Recipe } from "../types/recipe.js";
 import { recipeService } from "../services/recipes.service.js";
 import { recipeInventoryService } from "../services/recipeInventory.service.js"
 import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
+import { requireVerified } from "../middleware/requireVerified.middleware.js";
 
 const recipeRoutes = new Hono<{ Variables: AuthVariables }>();
 
 recipeRoutes.use('*', authMiddleware);
+recipeRoutes.use('*', requireVerified);
 
 recipeRoutes.post('/', async (c) => {
     try {

@@ -40,4 +40,30 @@ authRoute.get("/me", authMiddleware, async (c) => {
     }
 });
 
+authRoute.post("/verify-email", authMiddleware, async (c) => {
+    try {
+        const { code } = await c.req.json<{ code: string }>();
+        const user = await authService.verifyEmail(c.get("userId"), code);
+        return c.json(user, 200);
+    } catch (err) {
+        const message = (err as Error).message;
+        if (message === "INVALID_CODE") {
+            return c.json({ error: "Incorrect verification code" }, 400);
+        }
+        if (message === "CODE_EXPIRED") {
+            return c.json({ error: "Verification code has expired, request a new one" }, 400);
+        }
+        return c.json({ error: "Failed to verify email" }, 500);
+    }
+});
+
+authRoute.post("/resend-code", authMiddleware, async (c) => {
+    try {
+        await authService.resendCode(c.get("userId"));
+        return c.json({ message: "Verification code sent" }, 200);
+    } catch {
+        return c.json({ error: "Failed to resend code" }, 500);
+    }
+});
+
 export default authRoute;

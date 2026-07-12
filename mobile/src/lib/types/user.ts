@@ -8,6 +8,7 @@ export interface User {
 	bio?: string;
 	savedRecipes?: string[];
 	createdRecipes?: string[];
+	emailVerified: boolean;
 	preferences?: {
 		dietaryRestrictions?: string[];
 		preferredUnits?: 'metric' | 'imperial';

@@ -2,10 +2,12 @@ import { Hono } from 'hono';
 import type { ShoppingList } from "../types/shoppingList.js"
 import { shoppingListService } from "../services/shoppingList.service.js"
 import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
+import { requireVerified } from "../middleware/requireVerified.middleware.js";
 
 const shoppingListRoute = new Hono<{ Variables: AuthVariables }>();
 
 shoppingListRoute.use('*', authMiddleware);
+shoppingListRoute.use('*', requireVerified);
 
 shoppingListRoute.get('/', async (c) => {
 

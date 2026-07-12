@@ -2,10 +2,12 @@ import { Hono } from "hono";
 import type { User } from "../types/user.js";
 import { usersService } from "../services/users.service.js";
 import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
+import { requireVerified } from "../middleware/requireVerified.middleware.js";
 
 const usersRoute = new Hono<{ Variables: AuthVariables }>();
 
 usersRoute.use('*', authMiddleware);
+usersRoute.use('*', requireVerified);
 
 usersRoute.get('/:id', async (c) => {
     if (c.get('userId') !== c.req.param('id')) {

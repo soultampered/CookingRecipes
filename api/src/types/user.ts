@@ -10,6 +10,9 @@ export interface User {
     bio?: string;
     savedRecipes?: string[];
     createdRecipes?: string[];
+    emailVerified: boolean;
+    verificationCode?: string | null;
+    verificationCodeExpiresAt?: Date | null;
     preferences?: {
         dietaryRestrictions?: string[];
         preferredUnits?: "metric" | "imperial";

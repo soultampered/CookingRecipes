@@ -2,10 +2,12 @@ import { Hono } from "hono";
 import type { Inventory } from "../types/inventory.js";
 import { inventoryService } from "../services/inventory.service.js";
 import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
+import { requireVerified } from "../middleware/requireVerified.middleware.js";
 
 const inventoryRoutes = new Hono<{ Variables: AuthVariables }>();
 
 inventoryRoutes.use('*', authMiddleware);
+inventoryRoutes.use('*', requireVerified);
 
 inventoryRoutes.post('/', async (c) => {
     try {
