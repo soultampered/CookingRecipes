@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { Hono } from 'hono'
-import recipeRoutes from '../../src/routes/recipes.route.js'
-import type { Recipe } from '../../src/types/recipe.js'
+import recipeRoutes from '../../api/src/routes/recipes.route.js'
+import type { Recipe } from '../../api/src/types/recipe.js'
 
 // Mock the models
-vi.mock('../../src/models/index.js', () => {
+vi.mock('../../api/src/models/index.js', () => {
     return {
         recipeModel: {
             findAll: vi.fn(async () => [{ _id: '1', name: 'Spaghetti Bolognese', ingredients: [] }]),
@@ -23,14 +23,14 @@ vi.mock('../../src/models/index.js', () => {
 })
 
 // Mock inventory service for recipeInventoryService
-vi.mock('../../src/services/inventory.service.js', () => ({
+vi.mock('../../api/src/services/inventory.service.js', () => ({
     inventoryService: {
         bulkAdjust: vi.fn(async (items: any[]) => items),
         getInventoryById: vi.fn(async (id: string) => ({ _id: id, name: 'Test Item', quantity: 5 })),
     }
 }))
 
-import { recipeInventoryService } from '../../src/services/recipeInventory.service.js'
+import { recipeInventoryService } from '../../api/src/services/recipeInventory.service.js'
 
 describe('Recipe routes', () => {
     let app: Hono

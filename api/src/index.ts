@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import recipeRoutes from './routes/recipes.route.js';
 import inventoryRoutes from "./routes/inventory.route.js";
 import shoppingListRoute from "./routes/shoppingList.route.js"
@@ -6,6 +7,8 @@ import suggestionsRoute from "./routes/suggestions.route.js";
 import usersRoute from "./routes/users.route.js";
 
 const app = new Hono();
+
+app.use('*', cors());
 
 app.route('/recipes', recipeRoutes);
 app.route('/inventory', inventoryRoutes);

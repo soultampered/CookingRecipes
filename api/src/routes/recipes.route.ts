@@ -31,6 +31,11 @@ recipeRoutes.get('/', async (c) => {
     }
 });
 
+recipeRoutes.get('/suggestions', async (c) => {
+    const suggestions = await recipeInventoryService.suggestRecipes();
+    return c.json(suggestions);
+});
+
 recipeRoutes.get('/:id', async (c) => {
     try {
         const recipe = await recipeService.getRecipeById(c.req.param('id'));
@@ -85,11 +90,6 @@ recipeRoutes.get('/:id/missing-ingredients', async (c) => {
     } catch (err) {
         return c.json({ error: (err as Error).message }, 400);
     }
-});
-
-recipeRoutes.get('/suggestions', async (c) => {
-    const suggestions = await recipeInventoryService.suggestRecipes();
-    return c.json(suggestions);
 });
 
 export default recipeRoutes;
