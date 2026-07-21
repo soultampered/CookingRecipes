@@ -7,9 +7,8 @@ import { requireVerified } from "../middleware/requireVerified.middleware.js";
 const usersRoute = new Hono<{ Variables: AuthVariables }>();
 
 usersRoute.use('*', authMiddleware);
-usersRoute.use('*', requireVerified);
 
-usersRoute.get('/:id', async (c) => {
+usersRoute.get('/:id', requireVerified, async (c) => {
     if (c.get('userId') !== c.req.param('id')) {
         return c.json({ error: 'Forbidden' }, 403);
     }
@@ -25,7 +24,7 @@ usersRoute.get('/:id', async (c) => {
     }
 });
 
-usersRoute.patch('/:id', async (c) => {
+usersRoute.patch('/:id', requireVerified, async (c) => {
     if (c.get('userId') !== c.req.param('id')) {
         return c.json({ error: 'Forbidden' }, 403);
     }

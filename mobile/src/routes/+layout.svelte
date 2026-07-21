@@ -4,8 +4,16 @@
 	import NavBar from '$lib/components/NavBar.svelte';
 	import Toast from '$lib/components/Toast.svelte';
 	import { page } from '$app/state';
+	import { onMount } from 'svelte';
+	import { SplashScreen } from '@capacitor/splash-screen';
+	import { theme } from '$lib/state/theme.svelte';
 
 	let { children } = $props();
+
+	onMount(() => {
+		theme.restore();
+		SplashScreen.hide();
+	});
 
 	const noNavRoutes = ['/', '/welcome', '/verify-email', '/forgot-password'];
 	let showNav = $derived(!noNavRoutes.includes(page.url.pathname));

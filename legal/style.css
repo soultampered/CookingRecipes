@@ -1,0 +1,86 @@
+:root {
+	--ink: #212623;
+	--ink-soft: #57635d;
+	--paper: #eff4f1;
+	--paper-raised: #ffffff;
+	--line: #d9e2dc;
+	--accent: #3f9c7c;
+	--sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--ink: #e6ebe8;
+		--ink-soft: #a8b3ae;
+		--paper: #141816;
+		--paper-raised: #1f2624;
+		--line: #2a3330;
+		--accent: #67c4a2;
+	}
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	background: var(--paper);
+	color: var(--ink);
+	font-family: var(--sans);
+}
+
+.page {
+	max-width: 680px;
+	margin: 0 auto;
+	padding: 48px 24px 80px;
+	line-height: 1.6;
+}
+
+h1 {
+	font-size: 28px;
+	letter-spacing: -0.01em;
+	margin: 0 0 6px;
+}
+
+.updated {
+	font-size: 13px;
+	color: var(--ink-soft);
+	margin: 0 0 36px;
+}
+
+h2 {
+	font-size: 18px;
+	margin: 34px 0 10px;
+	letter-spacing: -0.01em;
+}
+
+p,
+li {
+	font-size: 15px;
+	color: var(--ink);
+}
+
+ul {
+	padding-left: 22px;
+}
+
+a {
+	color: var(--accent);
+}
+
+.nav {
+	display: flex;
+	gap: 16px;
+	margin-bottom: 8px;
+	font-size: 13px;
+}
+
+.card {
+	border: 1px solid var(--line);
+	border-radius: 10px;
+	padding: 14px 16px;
+	background: var(--paper-raised);
+	margin: 18px 0;
+}

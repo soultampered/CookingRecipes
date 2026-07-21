@@ -1,11 +1,11 @@
 :root {
-	--ink: #1e1c19;
-	--ink-soft: #5b584f;
-	--paper: #eceeea;
+	--ink: #212623;
+	--ink-soft: #57635d;
+	--paper: #eff4f1;
 	--paper-raised: #ffffff;
-	--line: #d9dad2;
-	--accent: #6e3550;
-	--accent-soft: #f4e9ee;
+	--line: #d9e2dc;
+	--accent: #3f9c7c;
+	--accent-soft: #dcefe6;
 	--good: #4c6b3f;
 	--good-soft: #e7eedf;
 	--warn: #9c6a0e;
@@ -18,13 +18,13 @@
 
 @media (prefers-color-scheme: dark) {
 	:root {
-		--ink: #ece8df;
-		--ink-soft: #b3afa3;
-		--paper: #181714;
-		--paper-raised: #232019;
-		--line: #38352c;
-		--accent: #e1a0be;
-		--accent-soft: #3a222c;
+		--ink: #e6ebe8;
+		--ink-soft: #a8b3ae;
+		--paper: #141816;
+		--paper-raised: #1f2624;
+		--line: #2a3330;
+		--accent: #67c4a2;
+		--accent-soft: #1e332b;
 		--good: #92c077;
 		--good-soft: #23301c;
 		--warn: #e8b95c;
@@ -32,6 +32,41 @@
 		--bad: #e28b7c;
 		--bad-soft: #3a211d;
 	}
+}
+
+/* Manual override via the in-app theme toggle — wins over the OS preference above,
+   in both directions, since a user picking "Light" on a dark system (or vice versa)
+   must not get silently overridden by the media query. */
+:root[data-theme='dark'] {
+	--ink: #e6ebe8;
+	--ink-soft: #a8b3ae;
+	--paper: #141816;
+	--paper-raised: #1f2624;
+	--line: #2a3330;
+	--accent: #67c4a2;
+	--accent-soft: #1e332b;
+	--good: #92c077;
+	--good-soft: #23301c;
+	--warn: #e8b95c;
+	--warn-soft: #3a2c15;
+	--bad: #e28b7c;
+	--bad-soft: #3a211d;
+}
+
+:root[data-theme='light'] {
+	--ink: #212623;
+	--ink-soft: #57635d;
+	--paper: #eff4f1;
+	--paper-raised: #ffffff;
+	--line: #d9e2dc;
+	--accent: #3f9c7c;
+	--accent-soft: #dcefe6;
+	--good: #4c6b3f;
+	--good-soft: #e7eedf;
+	--warn: #9c6a0e;
+	--warn-soft: #f5e9d3;
+	--bad: #a23629;
+	--bad-soft: #f5e1de;
 }
 
 * {
