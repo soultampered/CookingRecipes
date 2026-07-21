@@ -2,7 +2,8 @@ import { apiFetch } from './client';
 import type { User } from '$lib/types/user';
 
 export interface AuthResponse {
-	token: string;
+	accessToken: string;
+	refreshToken: string;
 	user: User;
 }
 
@@ -24,4 +25,25 @@ export function verifyEmail(code: string) {
 
 export function resendCode() {
 	return apiFetch<{ message: string }>('/auth/resend-code', { method: 'POST' });
+}
+
+export function requestPasswordReset(identifier: string) {
+	return apiFetch<{ message: string }>('/auth/forgot-password', {
+		method: 'POST',
+		body: JSON.stringify({ identifier })
+	});
+}
+
+export function resetPassword(data: { identifier: string; code: string; newPassword: string }) {
+	return apiFetch<{ message: string }>('/auth/reset-password', {
+		method: 'POST',
+		body: JSON.stringify(data)
+	});
+}
+
+export function logout(refreshToken: string) {
+	return apiFetch<{ message: string }>('/auth/logout', {
+		method: 'POST',
+		body: JSON.stringify({ refreshToken })
+	});
 }

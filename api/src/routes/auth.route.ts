@@ -57,13 +57,57 @@ authRoute.post("/verify-email", authMiddleware, async (c) => {
     }
 });
 
+authRoute.post("/forgot-password", async (c) => {
+    const { identifier } = await c.req.json<{ identifier: string }>();
+    await authService.requestPasswordReset(identifier);
+    // Always the same response, regardless of what actually happened server-side —
+    // see the comment on authService.requestPasswordReset for why.
+    return c.json({ message: "If that account exists, a reset code has been sent" }, 200);
+});
+
+authRoute.post("/reset-password", async (c) => {
+    try {
+        const { identifier, code, newPassword } = await c.req.json<{
+            identifier: string;
+            code: string;
+            newPassword: string;
+        }>();
+        await authService.resetPassword(identifier, code, newPassword);
+        return c.json({ message: "Password reset successful" }, 200);
+    } catch {
+        return c.json({ error: "Invalid or expired code" }, 400);
+    }
+});
+
 authRoute.post("/resend-code", authMiddleware, async (c) => {
     try {
         await authService.resendCode(c.get("userId"));
         return c.json({ message: "Verification code sent" }, 200);
-    } catch {
+    } catch (err) {
+        if ((err as Error).message === "COOLDOWN_ACTIVE") {
+            return c.json({ error: "Please wait a bit before requesting another code" }, 429);
+        }
         return c.json({ error: "Failed to resend code" }, 500);
     }
+});
+
+authRoute.post("/refresh", async (c) => {
+    try {
+        const { refreshToken } = await c.req.json<{ refreshToken: string }>();
+        const result = await authService.refreshAccessToken(refreshToken);
+        return c.json(result, 200);
+    } catch {
+        // INVALID_REFRESH_TOKEN and TOKEN_REUSE_DETECTED look identical from here —
+        // only the server log (in authService) distinguishes them, so a possibly-malicious
+        // caller can't tell which case triggered.
+        return c.json({ error: "Invalid or expired refresh token" }, 401);
+    }
+});
+
+authRoute.post("/logout", authMiddleware, async (c) => {
+    const { refreshToken } = await c.req.json<{ refreshToken: string }>();
+    await authService.revokeRefreshToken(c.get("userId"), refreshToken);
+    return c.json({ message: "Logged out" }, 200);
 });
 
 export default authRoute;

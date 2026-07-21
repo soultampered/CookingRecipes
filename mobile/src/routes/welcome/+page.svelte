@@ -4,6 +4,13 @@
 	import { session } from '$lib/state/session.svelte';
 	import { toast } from '$lib/state/toast.svelte';
 	import { ApiError } from '$lib/api/client';
+	import type { User } from '$lib/types/user';
+
+	function postAuthRedirect(user: User) {
+		if (user.mustResetPassword) return goto('/forgot-password?required=1');
+		if (!user.emailVerified) return goto('/verify-email');
+		return goto('/dashboard');
+	}
 
 	let mode = $state<'login' | 'register'>('login');
 
@@ -22,7 +29,7 @@
 		try {
 			const result = await login({ identifier, password: loginPassword });
 			await session.signIn(result);
-			await goto(result.user.emailVerified ? '/dashboard' : '/verify-email');
+			await postAuthRedirect(result.user);
 		} catch (err) {
 			toast.push(err instanceof ApiError ? err.message : 'Could not log in');
 		} finally {
@@ -36,7 +43,7 @@
 		try {
 			const result = await register({ username, email, password: registerPassword });
 			await session.signIn(result);
-			await goto(result.user.emailVerified ? '/dashboard' : '/verify-email');
+			await postAuthRedirect(result.user);
 		} catch (err) {
 			toast.push(err instanceof ApiError ? err.message : 'Could not create account');
 		} finally {
@@ -69,6 +76,7 @@
 			</label>
 			<button type="submit" disabled={loggingIn}>{loggingIn ? 'Logging in…' : 'Log in'}</button>
 		</form>
+		<a class="link" href="/forgot-password">Forgot password?</a>
 	{:else}
 		<form onsubmit={handleRegister}>
 			<label>
@@ -146,5 +154,11 @@
 		color: var(--paper-raised);
 		font-weight: 600;
 		cursor: pointer;
+	}
+	.link {
+		align-self: center;
+		color: var(--accent);
+		font-size: 0.85rem;
+		text-decoration: underline;
 	}
 </style>

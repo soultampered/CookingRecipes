@@ -1,11 +1,10 @@
-import { shoppingListModel } from "../models/index.js"
-import type { ShoppingList, ShoppingListItem } from "../types/shoppingList.js"
-
-
+import { ObjectId } from "mongodb";
+import { shoppingListModel } from "../models/index.js";
+import type { ShoppingList, ShoppingListItem } from "../types/shoppingList.js";
 
 export const shoppingListService = {
-    async getAllShoppingLists() {
-        return shoppingListModel.findAll();
+    async getAllShoppingLists(userId: string) {
+        return shoppingListModel.findAllByUserId(userId);
     },
 
     async getShoppingListById(id: string) {
@@ -35,21 +34,21 @@ export const shoppingListService = {
 
     async addItem(listId: string, item: ShoppingListItem) {
         const list = await this.getShoppingListById(listId);
-        list.items.push(item);
+        list.items.push({ ...item, _id: new ObjectId() });
         return shoppingListModel.update(listId, { items: list.items });
     },
 
     async removeItem(listId: string, itemId: string) {
         const list = await this.getShoppingListById(listId);
-        const updatedItems = list.items.filter(item => item._id?.toString() !== itemId);
+        const updatedItems = list.items.filter((item) => item._id?.toString() !== itemId);
         return shoppingListModel.update(listId, { items: updatedItems });
     },
 
     async toggleItemChecked(listId: string, itemId: string) {
         const list = await this.getShoppingListById(listId);
-        const items = list.items.map(item =>
+        const items = list.items.map((item) =>
             item._id?.toString() === itemId ? { ...item, checked: !item.checked } : item
         );
         return shoppingListModel.update(listId, { items });
-    },
-}
+    }
+};

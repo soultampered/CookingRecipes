@@ -1,49 +1,86 @@
+import { goto } from '$app/navigation';
 import { Preferences } from '@capacitor/preferences';
 import type { User } from '$lib/types/user';
 import { getCurrentUser } from '$lib/api/auth';
-import { setAuthToken } from '$lib/api/client';
+import { setAuthToken, setRefreshToken } from '$lib/api/client';
 import { markAuthReady } from './authReady';
+import { onForceLogout, onTokensRefreshed } from './authEvents';
 
-const STORAGE_KEY = 'larder.token';
+const TOKEN_KEY = 'larder.token';
+const REFRESH_TOKEN_KEY = 'larder.refreshToken';
 
 class SessionState {
 	token = $state<string | null>(null);
+	refreshToken = $state<string | null>(null);
 	user = $state<User | null>(null);
 	ready = $state(false);
 
 	async restore() {
-		const { value } = await Preferences.get({ key: STORAGE_KEY });
-		if (!value) {
+		const [{ value: token }, { value: refreshToken }] = await Promise.all([
+			Preferences.get({ key: TOKEN_KEY }),
+			Preferences.get({ key: REFRESH_TOKEN_KEY })
+		]);
+		if (!token || !refreshToken) {
 			this.ready = true;
 			markAuthReady();
 			return;
 		}
-		// Attach the token and unblock any waiting apiFetch calls before validating it —
+		// Attach both tokens and unblock any waiting apiFetch calls before validating them —
 		// validation itself goes through apiFetch, which awaits this same readiness signal.
-		setAuthToken(value);
+		setAuthToken(token);
+		setRefreshToken(refreshToken);
 		markAuthReady();
 		try {
 			this.user = await getCurrentUser();
-			this.token = value;
+			this.token = token;
+			this.refreshToken = refreshToken;
 		} catch {
 			setAuthToken(null);
-			await Preferences.remove({ key: STORAGE_KEY });
+			setRefreshToken(null);
+			await Promise.all([
+				Preferences.remove({ key: TOKEN_KEY }),
+				Preferences.remove({ key: REFRESH_TOKEN_KEY })
+			]);
 		}
 		this.ready = true;
 	}
 
-	async signIn({ token, user }: { token: string; user: User }) {
-		this.token = token;
+	async signIn({
+		accessToken,
+		refreshToken,
+		user
+	}: {
+		accessToken: string;
+		refreshToken: string;
+		user: User;
+	}) {
+		this.token = accessToken;
+		this.refreshToken = refreshToken;
 		this.user = user;
-		setAuthToken(token);
-		await Preferences.set({ key: STORAGE_KEY, value: token });
+		setAuthToken(accessToken);
+		setRefreshToken(refreshToken);
+		await Promise.all([
+			Preferences.set({ key: TOKEN_KEY, value: accessToken }),
+			Preferences.set({ key: REFRESH_TOKEN_KEY, value: refreshToken })
+		]);
+	}
+
+	// Updates only the reactive user, no token/Preferences writes — for cases like
+	// verify-email where the tokens don't change, only the user record does.
+	setUser(user: User) {
+		this.user = user;
 	}
 
 	async signOut() {
 		this.token = null;
+		this.refreshToken = null;
 		this.user = null;
 		setAuthToken(null);
-		await Preferences.remove({ key: STORAGE_KEY });
+		setRefreshToken(null);
+		await Promise.all([
+			Preferences.remove({ key: TOKEN_KEY }),
+			Preferences.remove({ key: REFRESH_TOKEN_KEY })
+		]);
 	}
 }
 
@@ -52,3 +89,18 @@ export const session = new SessionState();
 // Runs once per app boot, regardless of which route is entered first (including a hard
 // reload on a deep route) — every apiFetch call awaits `authReady`, which this resolves.
 export const sessionRestored = session.restore();
+
+onForceLogout(() => {
+	// Clear local state and always navigate to /welcome — without this, a session dying
+	// while the user is already deep in the app (not on the root route) would just leave
+	// them stranded on a page whose data requests now silently fail.
+	session.signOut();
+	goto('/welcome');
+});
+
+onTokensRefreshed(({ accessToken, refreshToken }) => {
+	session.token = accessToken;
+	session.refreshToken = refreshToken;
+	Preferences.set({ key: TOKEN_KEY, value: accessToken });
+	Preferences.set({ key: REFRESH_TOKEN_KEY, value: refreshToken });
+});

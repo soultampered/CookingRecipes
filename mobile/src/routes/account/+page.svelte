@@ -1,10 +1,18 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { logout } from '$lib/api/auth';
 	import { session } from '$lib/state/session.svelte';
 
 	async function handleLogout() {
-		await session.signOut();
-		await goto('/welcome');
+		try {
+			if (session.refreshToken) await logout(session.refreshToken);
+		} catch {
+			// A failed revoke call must not trap the user on their own device — still clear
+			// local state and redirect regardless.
+		} finally {
+			await session.signOut();
+			await goto('/welcome');
+		}
 	}
 </script>
 

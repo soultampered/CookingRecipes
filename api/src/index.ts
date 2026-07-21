@@ -3,7 +3,6 @@ import { cors } from 'hono/cors';
 import recipeRoutes from './routes/recipes.route.js';
 import inventoryRoutes from "./routes/inventory.route.js";
 import shoppingListRoute from "./routes/shoppingList.route.js"
-import suggestionsRoute from "./routes/suggestions.route.js";
 import usersRoute from "./routes/users.route.js";
 import authRoute from "./routes/auth.route.js";
 
@@ -15,7 +14,6 @@ app.route('/auth', authRoute);
 app.route('/recipes', recipeRoutes);
 app.route('/inventory', inventoryRoutes);
 app.route('/shopping-lists', shoppingListRoute);
-app.route('/suggestions', suggestionsRoute);
 app.route('/users', usersRoute);
 
 // Example root

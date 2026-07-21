@@ -17,7 +17,10 @@ export const authMiddleware: MiddlewareHandler<{ Variables: AuthVariables }> = a
         const payload = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
         c.set("userId", payload.userId);
         await next();
-    } catch {
-        return c.json({ error: "Invalid or expired token" }, 401);
+    } catch (err) {
+        if ((err as Error).name === "TokenExpiredError") {
+            return c.json({ error: "Access token expired", code: "TOKEN_EXPIRED" }, 401);
+        }
+        return c.json({ error: "Invalid token", code: "TOKEN_INVALID" }, 401);
     }
 };

@@ -14,7 +14,7 @@
 		verifying = true;
 		try {
 			const user = await verifyEmail(code);
-			await session.signIn({ token: session.token!, user });
+			session.setUser(user);
 			await goto('/dashboard');
 		} catch (err) {
 			toast.push(err instanceof ApiError ? err.message : 'Could not verify code');

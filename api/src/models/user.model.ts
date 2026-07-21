@@ -4,10 +4,28 @@ import type { User, NewUser } from "../types/user.js";
 
 export function stripPassword(
     user: User
-): Omit<User, "password" | "verificationCode" | "verificationCodeExpiresAt"> {
-    const { password, verificationCode, verificationCodeExpiresAt, ...rest } = user;
+): Omit<
+    User,
+    | "password"
+    | "verificationCode"
+    | "verificationCodeExpiresAt"
+    | "resetCode"
+    | "resetCodeExpiresAt"
+    | "refreshTokens"
+> {
+    const {
+        password,
+        verificationCode,
+        verificationCodeExpiresAt,
+        resetCode,
+        resetCodeExpiresAt,
+        refreshTokens,
+        ...rest
+    } = user;
     return rest;
 }
+
+type RefreshTokenEntry = NonNullable<User["refreshTokens"]>[number];
 
 export const userModel = {
     findById: async (id: string): Promise<User> => {
@@ -64,6 +82,35 @@ export const userModel = {
             _id: new ObjectId(id)
         });
         return user.deletedCount > 0;
+    },
+
+    findByRefreshToken: async (token: string): Promise<User | null> => {
+        const db = await connectToDatabase();
+        return db.collection<User>("user").findOne({ "refreshTokens.token": token });
+    },
+
+    addRefreshToken: async (userId: string, entry: RefreshTokenEntry): Promise<void> => {
+        const db = await connectToDatabase();
+        await db.collection<User>("user").updateOne(
+            { _id: new ObjectId(userId) },
+            { $push: { refreshTokens: entry }, $set: { updatedAt: new Date() } }
+        );
+    },
+
+    markRefreshTokenUsed: async (userId: string, token: string): Promise<void> => {
+        const db = await connectToDatabase();
+        await db.collection<User>("user").updateOne(
+            { _id: new ObjectId(userId), "refreshTokens.token": token },
+            { $set: { "refreshTokens.$.used": true, updatedAt: new Date() } }
+        );
+    },
+
+    removeRefreshTokenFamily: async (userId: string, familyId: string): Promise<void> => {
+        const db = await connectToDatabase();
+        await db.collection<User>("user").updateOne(
+            { _id: new ObjectId(userId) },
+            { $pull: { refreshTokens: { familyId } }, $set: { updatedAt: new Date() } }
+        );
     }
 
 }

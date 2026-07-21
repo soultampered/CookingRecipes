@@ -4,6 +4,12 @@
 	let { data }: PageProps = $props();
 
 	let outOfStockCount = $derived(data.inventory.filter((i) => i.quantity === 0).length);
+	let uncheckedCount = $derived(
+		data.shoppingLists.reduce(
+			(total, list) => total + list.items.filter((i) => !i.checked).length,
+			0
+		)
+	);
 </script>
 
 <div class="page">
@@ -54,6 +60,20 @@
 			<p class="preview warn">{outOfStockCount} item{outOfStockCount > 1 ? 's' : ''} out of stock</p>
 		{:else}
 			<p class="preview good">Everything's stocked.</p>
+		{/if}
+	</a>
+
+	<a class="card" href="/shopping-lists">
+		<div class="card-header">
+			<span class="card-title">Shopping Lists</span>
+			<span class="stat">{data.shoppingLists.length}</span>
+		</div>
+		{#if data.shoppingLists.length === 0}
+			<p class="empty">No lists yet.</p>
+		{:else if uncheckedCount > 0}
+			<p class="preview warn">{uncheckedCount} item{uncheckedCount > 1 ? 's' : ''} left to get</p>
+		{:else}
+			<p class="preview good">All caught up.</p>
 		{/if}
 	</a>
 </div>
