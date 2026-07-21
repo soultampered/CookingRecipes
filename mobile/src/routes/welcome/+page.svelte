@@ -53,7 +53,7 @@
 </script>
 
 <div class="welcome">
-	<h1>Welcome to Larder</h1>
+	<h1>Welcome to Stokpot</h1>
 
 	<div class="tabs">
 		<button type="button" class:active={mode === 'login'} onclick={() => (mode = 'login')}>

@@ -6,8 +6,8 @@ import { setAuthToken, setRefreshToken } from '$lib/api/client';
 import { markAuthReady } from './authReady';
 import { onForceLogout, onTokensRefreshed } from './authEvents';
 
-const TOKEN_KEY = 'larder.token';
-const REFRESH_TOKEN_KEY = 'larder.refreshToken';
+const TOKEN_KEY = 'stokpot.token';
+const REFRESH_TOKEN_KEY = 'stokpot.refreshToken';
 
 class SessionState {
 	token = $state<string | null>(null);
