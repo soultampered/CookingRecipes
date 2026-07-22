@@ -1,0 +1,53 @@
+diff --git a/node_modules/@capacitor/preferences/ios/Sources/PreferencesPlugin/PreferencesPlugin.swift b/node_modules/@capacitor/preferences/ios/Sources/PreferencesPlugin/PreferencesPlugin.swift
+index d7ea0ae..3291adf 100644
+--- a/node_modules/@capacitor/preferences/ios/Sources/PreferencesPlugin/PreferencesPlugin.swift
++++ b/node_modules/@capacitor/preferences/ios/Sources/PreferencesPlugin/PreferencesPlugin.swift
+@@ -18,10 +18,10 @@ public class PreferencesPlugin: CAPPlugin, CAPBridgedPlugin {
+     private var preferences = Preferences(with: PreferencesConfiguration())
+ 
+     @objc func configure(_ call: CAPPluginCall) {
+-        let group = call.getString("group")
++        let group = call.getString("group", "")
+         let configuration: PreferencesConfiguration
+ 
+-        if let group = group {
++        if !group.isEmpty {
+             if group == "NativeStorage" {
+                 configuration = PreferencesConfiguration(for: .cordovaNativeStorage)
+             } else {
+@@ -36,8 +36,9 @@ public class PreferencesPlugin: CAPPlugin, CAPBridgedPlugin {
+     }
+ 
+     @objc func get(_ call: CAPPluginCall) {
+-        guard let key = call.getString("key") else {
+-            call.reject("Must provide a key")
++        let key = call.getString("key", "")
++        guard !key.isEmpty else {
++            call.resolve(["error": "Must provide a key"])
+             return
+         }
+ 
+@@ -49,8 +50,9 @@ public class PreferencesPlugin: CAPPlugin, CAPBridgedPlugin {
+     }
+ 
+     @objc func set(_ call: CAPPluginCall) {
+-        guard let key = call.getString("key") else {
+-            call.reject("Must provide a key")
++        let key = call.getString("key", "")
++        guard !key.isEmpty else {
++            call.resolve(["error": "Must provide a key"])
+             return
+         }
+         let value = call.getString("value", "")
+@@ -60,8 +62,9 @@ public class PreferencesPlugin: CAPPlugin, CAPBridgedPlugin {
+     }
+ 
+     @objc func remove(_ call: CAPPluginCall) {
+-        guard let key = call.getString("key") else {
+-            call.reject("Must provide a key")
++        let key = call.getString("key", "")
++        guard !key.isEmpty else {
++            call.resolve(["error": "Must provide a key"])
+             return
+         }
+ 
