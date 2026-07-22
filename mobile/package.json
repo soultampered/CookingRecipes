@@ -16,7 +16,6 @@
 		"cap:android": "npm run build && cap sync android && cap open android"
 	},
 	"devDependencies": {
-		"@capacitor/assets": "^3.0.5",
 		"@capacitor/cli": "8.4.2",
 		"@sveltejs/adapter-static": "^3.0.10",
 		"@sveltejs/kit": "^2.63.0",
