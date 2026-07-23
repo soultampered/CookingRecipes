@@ -11,16 +11,6 @@
 
 	onMount(() => {
 		theme.restore();
-
-		// iOS/WKWebView sometimes leaves fixed-position elements (the nav bar) displaced
-		// after the on-screen keyboard dismisses, since the visual viewport doesn't always
-		// recompute until a scroll event fires. Forcing one on every blur is the standard
-		// workaround for this.
-		const resetScrollAfterKeyboard = () => {
-			setTimeout(() => window.scrollTo(0, 0), 50);
-		};
-		document.addEventListener('focusout', resetScrollAfterKeyboard);
-		return () => document.removeEventListener('focusout', resetScrollAfterKeyboard);
 	});
 
 	const noNavRoutes = ['/', '/welcome', '/verify-email', '/forgot-password'];
@@ -31,18 +21,39 @@
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
-<main class:with-nav={showNav}>
-	{@render children()}
-</main>
+<div class="app-shell">
+	<main>
+		{@render children()}
+	</main>
 
-{#if showNav}
-	<NavBar />
-{/if}
+	{#if showNav}
+		<NavBar />
+	{/if}
+</div>
 
 <Toast />
 
 <style>
-	main.with-nav {
-		padding-bottom: 4.5rem;
+	.app-shell {
+		/* The nav bar used to be `position: fixed`, which iOS/WKWebView can leave visually
+		   displaced after the on-screen keyboard dismisses (a well-documented WebKit quirk —
+		   the visual viewport and the layout viewport fixed-position is computed against can
+		   desync, and it doesn't reliably reset). Structuring the nav as a normal flex-column
+		   sibling of the scrollable content area — instead of floating it relative to the
+		   viewport — sidesteps the whole bug category: it's never "fixed" to anything that can
+		   desync in the first place. */
+		height: 100vh;
+		height: 100dvh;
+		display: flex;
+		flex-direction: column;
+		/* Keeps content clear of the notch/Dynamic Island/status bar on every screen — the
+		   WKWebView draws edge-to-edge, so without this, headers render straight under it. */
+		padding-top: env(safe-area-inset-top);
+	}
+	main {
+		flex: 1 1 auto;
+		min-height: 0;
+		overflow-y: auto;
+		-webkit-overflow-scrolling: touch;
 	}
 </style>

@@ -22,15 +22,11 @@
 
 <style>
 	nav {
-		position: fixed;
-		bottom: 0;
-		left: 0;
-		right: 0;
+		flex: 0 0 auto;
 		display: flex;
 		border-top: 1px solid var(--line);
 		background: var(--paper-raised);
 		padding: 0.4rem 0.1rem calc(0.6rem + env(safe-area-inset-bottom));
-		z-index: 10;
 	}
 	a {
 		flex: 1;

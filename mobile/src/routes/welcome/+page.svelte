@@ -101,12 +101,11 @@
 <style>
 	.welcome {
 		max-width: 360px;
-		min-height: 100vh;
+		min-height: 100%;
 		margin: 0 auto;
-		padding: 2rem 1.25rem;
+		padding: 12vh 1.25rem 2rem;
 		display: flex;
 		flex-direction: column;
-		justify-content: center;
 		gap: 1rem;
 	}
 	.tabs {
