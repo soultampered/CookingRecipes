@@ -95,6 +95,11 @@
 
 	<button type="button" class="outline" onclick={handleLogout}>Log out</button>
 
+	<div class="legal-links">
+		<a href="https://stokpot.ca/privacy" target="_blank" rel="noopener">Privacy Policy</a>
+		<a href="https://stokpot.ca/terms" target="_blank" rel="noopener">Terms of Service</a>
+	</div>
+
 	<div class="danger-zone">
 		{#if !confirmingDelete}
 			<button type="button" class="danger-link" onclick={() => (confirmingDelete = true)}>
@@ -236,6 +241,17 @@
 		margin: 0;
 		font-size: 0.8rem;
 		color: var(--ink-soft);
+	}
+	.legal-links {
+		display: flex;
+		gap: 1rem;
+		justify-content: center;
+		margin-top: 0.5rem;
+	}
+	.legal-links a {
+		font-size: 0.8rem;
+		color: var(--ink-soft);
+		text-decoration: underline;
 	}
 	.danger-zone {
 		margin-top: 1.5rem;
