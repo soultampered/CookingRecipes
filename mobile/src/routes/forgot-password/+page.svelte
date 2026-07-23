@@ -66,6 +66,7 @@
 				{requesting ? 'Sending…' : 'Send reset code'}
 			</button>
 		</form>
+		<a class="link" href="/welcome">Back to Login</a>
 	{:else}
 		<p class="hint">Enter the code we sent you, plus a new password.</p>
 		<form onsubmit={handleReset}>
@@ -91,6 +92,7 @@
 		<button type="button" class="link" onclick={() => (stage = 'request')}>
 			Didn't get a code? Try again
 		</button>
+		<a class="link" href="/welcome">Back to Login</a>
 	{/if}
 </div>
 

@@ -95,6 +95,12 @@
 				{registering ? 'Creating…' : 'Create account'}
 			</button>
 		</form>
+		<p class="legal">
+			By creating an account you agree to our
+			<a href="https://stokpot.ca/terms" target="_blank">Terms</a>
+			and
+			<a href="https://stokpot.ca/privacy" target="_blank">Privacy Policy</a>.
+		</p>
 	{/if}
 </div>
 
@@ -161,5 +167,14 @@
 		color: var(--accent);
 		font-size: 0.85rem;
 		text-decoration: underline;
+	}
+	.legal {
+		text-align: center;
+		font-size: 0.78rem;
+		color: var(--ink-soft);
+		line-height: 1.5;
+	}
+	.legal a {
+		color: var(--accent);
 	}
 </style>

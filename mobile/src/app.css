@@ -79,6 +79,17 @@ body {
 	background: var(--paper);
 	color: var(--ink);
 	font-family: var(--sans);
+	/* Locks the outer document itself from ever scrolling, in either direction. Without
+	   this, WKWebView's own native scroll view backs the whole page — it can rubber-band
+	   sideways, and iOS auto-scrolls it to keep a focused input above the keyboard, which
+	   drags everything (including the nav bar) along with it, no matter how the app's own
+	   flex layout is structured. Pinning html/body forces all scrolling to happen only
+	   inside elements that opt in (e.g. `main`), so the outer page — and anything anchored
+	   to it — can never move. */
+	position: fixed;
+	inset: 0;
+	overflow: hidden;
+	overscroll-behavior: none;
 }
 
 h1,

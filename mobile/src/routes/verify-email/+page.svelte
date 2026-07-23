@@ -23,6 +23,11 @@
 		}
 	}
 
+	async function handleBack() {
+		await session.signOut();
+		await goto('/welcome');
+	}
+
 	async function handleResend() {
 		resending = true;
 		try {
@@ -61,6 +66,8 @@
 	<button type="button" class="link" onclick={handleResend} disabled={resending}>
 		{resending ? 'Sending…' : 'Resend code'}
 	</button>
+
+	<button type="button" class="link" onclick={handleBack}>Back to Login</button>
 </div>
 
 <style>
