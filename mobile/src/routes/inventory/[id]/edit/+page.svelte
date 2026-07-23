@@ -39,6 +39,7 @@
 </script>
 
 <div class="page">
+	<a class="back" href="/inventory">‹ Inventory</a>
 	<h1>Edit Item</h1>
 	<InventoryForm initial={data.item} submitLabel="Save changes" {submitting} onSubmit={handleSubmit} />
 	<button type="button" class="danger" onclick={handleDelete} disabled={deleting}>
@@ -54,6 +55,12 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.9rem;
+	}
+	.back {
+		align-self: flex-start;
+		font-size: 0.85rem;
+		color: var(--accent);
+		text-decoration: none;
 	}
 	.danger {
 		padding: 0.65rem;

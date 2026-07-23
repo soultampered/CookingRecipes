@@ -40,6 +40,7 @@ inventoryRoutes.get('/', async (c) => {
 inventoryRoutes.get('/:id', async (c) => {
     try {
         const item = await inventoryService.getInventoryById(c.req.param('id'));
+        if (item.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
         return c.json(item);
     } catch (err) {
         if ((err as Error).message === "NOT_FOUND") {
@@ -50,8 +51,10 @@ inventoryRoutes.get('/:id', async (c) => {
 });
 
 inventoryRoutes.put('/:id', async (c) => {
-    const data = await c.req.json<Partial<Inventory>>();
     try {
+        const existing = await inventoryService.getInventoryById(c.req.param('id'));
+        if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
+        const data = await c.req.json<Partial<Inventory>>();
         const item = await inventoryService.updateInventory(c.req.param('id'), data);
         return c.json(item);
     } catch (err) {
@@ -64,6 +67,8 @@ inventoryRoutes.put('/:id', async (c) => {
 
 inventoryRoutes.delete('/:id', async (c) => {
     try {
+        const existing = await inventoryService.getInventoryById(c.req.param('id'));
+        if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
         await inventoryService.deleteInventory(c.req.param('id'));
         return c.json({ success: true });
     } catch (err) {

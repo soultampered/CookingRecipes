@@ -19,6 +19,7 @@ export type DifficultyLevel = "easy" | "medium" | "hard";
 
 export interface Recipe {
     _id: ObjectId;
+    userId: string;
     title: string;
     description?: string;
     ingredients: RecipeIngredient[];

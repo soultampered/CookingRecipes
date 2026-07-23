@@ -53,7 +53,7 @@
 </script>
 
 <div class="welcome">
-	<h1>Welcome to Stokpot</h1>
+	<h1>Stokpot</h1>
 
 	<div class="tabs">
 		<button type="button" class:active={mode === 'login'} onclick={() => (mode = 'login')}>
@@ -101,10 +101,12 @@
 <style>
 	.welcome {
 		max-width: 360px;
+		min-height: 100vh;
 		margin: 0 auto;
 		padding: 2rem 1.25rem;
 		display: flex;
 		flex-direction: column;
+		justify-content: center;
 		gap: 1rem;
 	}
 	.tabs {

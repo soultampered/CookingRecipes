@@ -48,6 +48,7 @@
 </script>
 
 <div class="page">
+	<a class="back" href="/recipes">‹ Recipes</a>
 	<div class="header">
 		<div>
 			<h1>{data.recipe.title}</h1>
@@ -107,6 +108,12 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.9rem;
+	}
+	.back {
+		align-self: flex-start;
+		font-size: 0.85rem;
+		color: var(--accent);
+		text-decoration: none;
 	}
 	.header {
 		display: flex;

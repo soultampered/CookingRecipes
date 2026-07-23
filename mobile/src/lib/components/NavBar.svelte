@@ -6,7 +6,6 @@
 		{ href: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
 		{ href: '/recipes', label: 'Recipes', icon: 'recipes' },
 		{ href: '/inventory', label: 'Inventory', icon: 'inventory' },
-		{ href: '/recipes/suggestions', label: 'Suggestions', icon: 'suggestions' },
 		{ href: '/shopping-lists', label: 'Shopping', icon: 'shopping' },
 		{ href: '/account', label: 'Account', icon: 'account' }
 	];

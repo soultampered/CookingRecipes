@@ -8,7 +8,10 @@
 <div class="page">
 	<div class="header">
 		<h1>Recipes</h1>
-		<a class="btn-outline" href="/recipes/new">+ New recipe</a>
+		<div class="actions">
+			<a class="btn-outline" href="/recipes/suggestions">Suggestions</a>
+			<a class="btn-outline" href="/recipes/new">+ New recipe</a>
+		</div>
 	</div>
 
 	{#if data.recipes.length === 0}
@@ -35,6 +38,11 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+		gap: 0.6rem;
+	}
+	.actions {
+		display: flex;
+		gap: 0.5rem;
 	}
 	.list {
 		display: flex;

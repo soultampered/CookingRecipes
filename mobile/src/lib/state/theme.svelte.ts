@@ -1,4 +1,5 @@
 import { Preferences } from '@capacitor/preferences';
+import { palette } from './palette.svelte';
 
 export type Theme = 'light' | 'dark';
 
@@ -21,12 +22,14 @@ class ThemeState {
 			// reflect its current resolution in the toggle's displayed position.
 			this.current = systemTheme();
 		}
+		await palette.restore(this.current);
 	}
 
 	async toggle() {
 		this.current = this.current === 'dark' ? 'light' : 'dark';
 		document.documentElement.setAttribute('data-theme', this.current);
 		await Preferences.set({ key: THEME_KEY, value: this.current });
+		palette.applyForMode(this.current);
 	}
 }
 

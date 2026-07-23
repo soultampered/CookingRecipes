@@ -2,8 +2,8 @@ import { recipeModel } from '../models/index.js';
 import type { Recipe } from '../types/recipe.js';
 
 export const recipeService = {
-    async getAllRecipes() {
-        return recipeModel.findAll();
+    async getAllRecipes(userId: string) {
+        return recipeModel.findAll(userId);
     },
 
     async getRecipeById(id: string) {

@@ -6,6 +6,7 @@
 </script>
 
 <div class="page">
+	<a class="back" href="/recipes">‹ Recipes</a>
 	<h1>Suggestions</h1>
 	<p class="sub">Fully in stock — ready to cook right now.</p>
 
@@ -28,6 +29,12 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.6rem;
+	}
+	.back {
+		align-self: flex-start;
+		font-size: 0.85rem;
+		color: var(--accent);
+		text-decoration: none;
 	}
 	.sub {
 		color: var(--ink-soft);

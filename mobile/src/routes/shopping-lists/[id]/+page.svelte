@@ -59,6 +59,7 @@
 </script>
 
 <div class="page">
+	<a class="back" href="/shopping-lists">‹ Shopping Lists</a>
 	<h1>{data.list.name}</h1>
 
 	{#if data.list.items.length === 0}
@@ -99,6 +100,12 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.9rem;
+	}
+	.back {
+		align-self: flex-start;
+		font-size: 0.85rem;
+		color: var(--accent);
+		text-decoration: none;
 	}
 	.items {
 		display: flex;

@@ -3,9 +3,9 @@ import { connectToDatabase } from '../mongo.js';
 import type { Recipe } from '../types/recipe.js';
 
 export const recipeModel = {
-    findAll: async (): Promise<Recipe[]> => {
+    findAll: async (userId: string): Promise<Recipe[]> => {
         const db = await connectToDatabase();
-        return db.collection<Recipe>('recipes').find().toArray();
+        return db.collection<Recipe>('recipes').find({ userId }).toArray();
     },
 
     findById: async (id: string): Promise<Recipe> => {

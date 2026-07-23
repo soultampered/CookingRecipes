@@ -22,6 +22,7 @@
 </script>
 
 <div class="page">
+	<a class="back" href="/shopping-lists">‹ Shopping Lists</a>
 	<h1>New List</h1>
 	<form onsubmit={handleSubmit}>
 		<label>
@@ -39,6 +40,13 @@
 		max-width: 480px;
 		margin: 0 auto;
 		padding: 1.25rem;
+	}
+	.back {
+		display: inline-block;
+		margin-bottom: 0.5rem;
+		font-size: 0.85rem;
+		color: var(--accent);
+		text-decoration: none;
 	}
 	form {
 		display: flex;

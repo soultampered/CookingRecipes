@@ -43,9 +43,9 @@ export const recipeInventoryService = {
         return missing;
     },
 
-    async suggestRecipes() {
-        const recipes = await recipeService.getAllRecipes();
-        const inventory = await inventoryService.getAllInventory();
+    async suggestRecipes(userId: string) {
+        const recipes = await recipeService.getAllRecipes(userId);
+        const inventory = await inventoryService.getAllInventory(userId);
         const inventoryMap = new Map(inventory.map(item => [item._id.toString(), item]));
 
         return recipes.filter(recipe =>

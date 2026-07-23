@@ -4,6 +4,8 @@
 	import { deleteUser } from '$lib/api/users';
 	import { session } from '$lib/state/session.svelte';
 	import { theme } from '$lib/state/theme.svelte';
+	import { palette } from '$lib/state/palette.svelte';
+	import { PALETTES } from '$lib/theme/palettes';
 	import { toast } from '$lib/state/toast.svelte';
 	import { ApiError } from '$lib/api/client';
 
@@ -63,6 +65,32 @@
 		>
 			<span class="knob"></span>
 		</button>
+	</div>
+
+	<div class="section palette-section">
+		<span class="section-label">Color palette</span>
+		<div class="swatch-grid">
+			{#each PALETTES as p (p.name)}
+				{@const colors = p[theme.current]}
+				<button
+					type="button"
+					class="swatch-btn"
+					class:selected={palette.current === p.name}
+					style:background={colors.paper}
+					style:border-color={colors.line}
+					onclick={() => palette.set(p.name, theme.current)}
+					aria-label={p.name}
+					title={p.name}
+				>
+					<span class="dot" style:background={colors.ink}></span>
+					<span class="dot" style:background={colors.accent}></span>
+					{#if palette.current === p.name}
+						<span class="check" style:background={colors.accent} style:color={colors.paper}>✓</span>
+					{/if}
+				</button>
+			{/each}
+		</div>
+		<p class="palette-name">{palette.current}</p>
 	</div>
 
 	<button type="button" class="outline" onclick={handleLogout}>Log out</button>
@@ -159,6 +187,55 @@
 		height: 22px;
 		border-radius: 50%;
 		background: var(--paper-raised);
+	}
+	.palette-section {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 0.6rem;
+	}
+	.swatch-grid {
+		display: grid;
+		grid-template-columns: repeat(5, 1fr);
+		gap: 0.5rem;
+	}
+	.swatch-btn {
+		position: relative;
+		aspect-ratio: 1;
+		border-radius: 10px;
+		border: 1px solid var(--line);
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.2rem;
+		padding: 0;
+	}
+	.swatch-btn.selected {
+		box-shadow: 0 0 0 2px var(--accent);
+	}
+	.dot {
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+		flex: 0 0 auto;
+	}
+	.check {
+		position: absolute;
+		top: -6px;
+		right: -6px;
+		width: 18px;
+		height: 18px;
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 0.6rem;
+		font-weight: 700;
+	}
+	.palette-name {
+		margin: 0;
+		font-size: 0.8rem;
+		color: var(--ink-soft);
 	}
 	.danger-zone {
 		margin-top: 1.5rem;

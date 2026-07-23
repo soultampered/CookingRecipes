@@ -22,6 +22,7 @@
 </script>
 
 <div class="page">
+	<a class="back" href="/inventory">‹ Inventory</a>
 	<h1>New Item</h1>
 	<InventoryForm submitLabel="Save item" {submitting} onSubmit={handleSubmit} />
 </div>
@@ -31,5 +32,12 @@
 		max-width: 480px;
 		margin: 0 auto;
 		padding: 1.25rem;
+	}
+	.back {
+		display: inline-block;
+		margin-bottom: 0.5rem;
+		font-size: 0.85rem;
+		color: var(--accent);
+		text-decoration: none;
 	}
 </style>

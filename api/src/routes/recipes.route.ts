@@ -13,7 +13,7 @@ recipeRoutes.use('*', requireVerified);
 recipeRoutes.post('/', async (c) => {
     try {
         const body = await c.req.json<Recipe>();
-        const newRecipe = await recipeService.createRecipe(body);
+        const newRecipe = await recipeService.createRecipe({ ...body, userId: c.get('userId') });
         return c.json(newRecipe, 201);
     } catch (err) {
         if ((err as Error).message === 'DUPLICATE_NAME') {
@@ -26,7 +26,7 @@ recipeRoutes.post('/', async (c) => {
 
 recipeRoutes.get('/', async (c) => {
     try {
-        const recipes = await recipeService.getAllRecipes();
+        const recipes = await recipeService.getAllRecipes(c.get('userId'));
         return c.json(recipes, 200);
     } catch (err) {
         if ((err as Error).message === 'NOT_FOUND') {
@@ -37,13 +37,14 @@ recipeRoutes.get('/', async (c) => {
 });
 
 recipeRoutes.get('/suggestions', async (c) => {
-    const suggestions = await recipeInventoryService.suggestRecipes();
+    const suggestions = await recipeInventoryService.suggestRecipes(c.get('userId'));
     return c.json(suggestions);
 });
 
 recipeRoutes.get('/:id', async (c) => {
     try {
         const recipe = await recipeService.getRecipeById(c.req.param('id'));
+        if (recipe.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
         return c.json(recipe, 200);
     } catch (err) {
         if ((err as Error).message === 'NOT_FOUND') {
@@ -55,6 +56,8 @@ recipeRoutes.get('/:id', async (c) => {
 
 recipeRoutes.patch('/:id', async (c) => {
     try {
+        const existing = await recipeService.getRecipeById(c.req.param('id'));
+        if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
         const body = await c.req.json<Partial<Recipe>>();
         const updated = await recipeService.updateRecipe(c.req.param('id'), body);
         return c.json(updated, 200);
@@ -68,6 +71,8 @@ recipeRoutes.patch('/:id', async (c) => {
 
 recipeRoutes.delete('/:id', async (c) => {
     try {
+        const existing = await recipeService.getRecipeById(c.req.param('id'));
+        if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
         await recipeService.deleteRecipe(c.req.param('id'));
         return c.body(null, 204); // No content
     } catch (err) {
@@ -80,6 +85,8 @@ recipeRoutes.delete('/:id', async (c) => {
 
 recipeRoutes.post('/:id/prepare', async (c) => {
     try {
+        const existing = await recipeService.getRecipeById(c.req.param('id'));
+        if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
         const result = await recipeInventoryService.deductIngredients(c.req.param('id'));
         return c.json({ success: true, updatedInventory: result });
     } catch (err) {
@@ -90,6 +97,8 @@ recipeRoutes.post('/:id/prepare', async (c) => {
 
 recipeRoutes.get('/:id/missing-ingredients', async (c) => {
     try {
+        const existing = await recipeService.getRecipeById(c.req.param('id'));
+        if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
         const missing = await recipeInventoryService.getMissingIngredients(c.req.param('id'));
         return c.json(missing);
     } catch (err) {

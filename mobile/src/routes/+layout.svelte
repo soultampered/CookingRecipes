@@ -11,6 +11,16 @@
 
 	onMount(() => {
 		theme.restore();
+
+		// iOS/WKWebView sometimes leaves fixed-position elements (the nav bar) displaced
+		// after the on-screen keyboard dismisses, since the visual viewport doesn't always
+		// recompute until a scroll event fires. Forcing one on every blur is the standard
+		// workaround for this.
+		const resetScrollAfterKeyboard = () => {
+			setTimeout(() => window.scrollTo(0, 0), 50);
+		};
+		document.addEventListener('focusout', resetScrollAfterKeyboard);
+		return () => document.removeEventListener('focusout', resetScrollAfterKeyboard);
 	});
 
 	const noNavRoutes = ['/', '/welcome', '/verify-email', '/forgot-password'];
