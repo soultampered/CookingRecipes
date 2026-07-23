@@ -6,11 +6,22 @@
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { theme } from '$lib/state/theme.svelte';
+	import { Capacitor } from '@capacitor/core';
+	import { Keyboard } from '@capacitor/keyboard';
 
 	let { children } = $props();
 
 	onMount(() => {
 		theme.restore();
+
+		// The CSS-level html/body scroll-lock (app.css) stops the *page* from ever
+		// scrolling, but iOS's automatic keyboard avoidance repositions the WKWebView's
+		// native UIScrollView content offset directly at the OS layer — that bypasses CSS
+		// entirely, which is why the nav bar could still drift after the keyboard dismissed.
+		// Disabling the webview's own scroll natively closes that gap.
+		if (Capacitor.getPlatform() === 'ios') {
+			Keyboard.setScroll({ isDisabled: true });
+		}
 	});
 
 	const noNavRoutes = ['/', '/welcome', '/verify-email', '/forgot-password'];

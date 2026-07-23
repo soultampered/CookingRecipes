@@ -24,12 +24,13 @@
 	nav {
 		flex: 0 0 auto;
 		display: flex;
+		justify-content: center;
 		border-top: 1px solid var(--line);
 		background: var(--paper-raised);
 		padding: 0.4rem 0.1rem calc(0.6rem + env(safe-area-inset-bottom));
 	}
 	a {
-		flex: 1;
+		flex: 0 1 84px;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
