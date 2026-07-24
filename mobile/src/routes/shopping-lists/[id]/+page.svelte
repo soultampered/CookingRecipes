@@ -120,7 +120,11 @@
 	}
 	.item-name {
 		flex: 1;
+		min-width: 0;
 		font-size: 0.9rem;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 	.item-name.checked {
 		color: var(--ink-soft);
@@ -151,6 +155,7 @@
 	}
 	form input[type='text'] {
 		flex: 2;
+		min-width: 0;
 	}
 	form input[type='number'] {
 		flex: 1;
@@ -160,7 +165,7 @@
 		padding: 0.55rem 0.65rem;
 		border: 1px solid var(--line);
 		border-radius: 8px;
-		font-size: 0.9rem;
+		font-size: 1rem;
 		background: var(--paper-raised);
 		color: var(--ink);
 	}

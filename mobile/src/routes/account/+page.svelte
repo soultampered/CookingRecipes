@@ -45,7 +45,7 @@
 	{#if session.user}
 		<div class="profile">
 			<div class="avatar">{session.user.username.charAt(0).toUpperCase()}</div>
-			<div>
+			<div class="profile-text">
 				<div class="username">{session.user.username}</div>
 				<div class="email">{session.user.email}</div>
 			</div>
@@ -144,12 +144,22 @@
 		justify-content: center;
 		font-weight: 700;
 	}
+	.profile-text {
+		flex: 1;
+		min-width: 0;
+	}
 	.username {
 		font-weight: 600;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 	.email {
 		font-size: 0.85rem;
 		color: var(--ink-soft);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 	.outline {
 		padding: 0.7rem;

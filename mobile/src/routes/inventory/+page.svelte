@@ -114,8 +114,12 @@
 	}
 	.name {
 		flex: 1;
+		min-width: 0;
 		font-weight: 600;
 		font-size: 0.9rem;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 	.qty {
 		font-size: 0.85rem;

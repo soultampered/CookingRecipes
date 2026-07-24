@@ -175,7 +175,7 @@
 		padding: 0.55rem 0.65rem;
 		border: 1px solid var(--line);
 		border-radius: 8px;
-		font-size: 0.95rem;
+		font-size: 1rem;
 		font-family: inherit;
 		background: var(--paper-raised);
 		color: var(--ink);
@@ -186,6 +186,7 @@
 	}
 	.row label {
 		flex: 1;
+		min-width: 0;
 	}
 	.field-label {
 		font-size: 0.75rem;
@@ -221,6 +222,7 @@
 	}
 	.ingredient-row select:first-child {
 		flex: 2;
+		min-width: 0;
 	}
 	.ingredient-row input {
 		flex: 1;
@@ -228,9 +230,11 @@
 	}
 	.ingredient-row select:last-of-type {
 		flex: 1;
+		min-width: 0;
 	}
 	.instruction-row textarea {
 		flex: 1;
+		min-width: 0;
 	}
 	.step {
 		font-size: 0.8rem;

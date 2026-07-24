@@ -109,6 +109,7 @@
 	}
 	.row label {
 		flex: 1;
+		min-width: 0;
 	}
 	input,
 	textarea,
@@ -116,7 +117,7 @@
 		padding: 0.55rem 0.65rem;
 		border: 1px solid var(--line);
 		border-radius: 8px;
-		font-size: 0.95rem;
+		font-size: 1rem;
 		font-family: inherit;
 		background: var(--paper-raised);
 		color: var(--ink);
