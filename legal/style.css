@@ -5,6 +5,9 @@
 	--paper-raised: #ffffff;
 	--line: #d9e2dc;
 	--accent: #3f9c7c;
+	--danger: #a23629;
+	--danger-soft: #f5e1de;
+	--danger-line: #e3b2a8;
 	--sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
@@ -16,6 +19,9 @@
 		--paper-raised: #1f2624;
 		--line: #2a3330;
 		--accent: #67c4a2;
+		--danger: #e18d7c;
+		--danger-soft: #3a2420;
+		--danger-line: #5c352d;
 	}
 }
 
@@ -83,4 +89,184 @@ a {
 	padding: 14px 16px;
 	background: var(--paper-raised);
 	margin: 18px 0;
+}
+
+/* Form / delete-account flow */
+
+.form-card {
+	border: 1px solid var(--line);
+	border-radius: 12px;
+	padding: 22px 22px 24px;
+	background: var(--paper-raised);
+}
+
+.form-card + .form-card {
+	margin-top: 18px;
+}
+
+.step-label {
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--ink-soft);
+	margin: 0 0 4px;
+}
+
+.step-title {
+	font-size: 17px;
+	font-weight: 600;
+	margin: 0 0 16px;
+}
+
+label {
+	display: block;
+	font-size: 13px;
+	color: var(--ink-soft);
+	margin: 14px 0 6px;
+}
+
+label:first-of-type {
+	margin-top: 0;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="email"] {
+	width: 100%;
+	padding: 10px 12px;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	font-size: 15px;
+	font-family: inherit;
+	background: var(--paper);
+	color: var(--ink);
+}
+
+input:focus {
+	outline: 2px solid var(--accent);
+	outline-offset: 1px;
+}
+
+.form-error {
+	font-size: 13px;
+	color: var(--danger);
+	margin: 10px 0 0;
+	display: none;
+}
+
+.form-error.show {
+	display: block;
+}
+
+button {
+	font-family: inherit;
+	font-size: 15px;
+	font-weight: 600;
+	border-radius: 8px;
+	padding: 11px 16px;
+	cursor: pointer;
+	border: none;
+	width: 100%;
+	margin-top: 18px;
+}
+
+.btn-primary {
+	background: var(--accent);
+	color: var(--paper-raised);
+}
+
+.btn-primary:disabled,
+.btn-danger:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+.btn-danger {
+	background: var(--danger);
+	color: var(--paper-raised);
+}
+
+.btn-text {
+	background: none;
+	width: auto;
+	padding: 0;
+	margin-top: 14px;
+	color: var(--ink-soft);
+	font-weight: 500;
+	font-size: 13px;
+	text-decoration: underline;
+}
+
+.identity {
+	font-size: 13px;
+	color: var(--ink-soft);
+	margin: 0 0 16px;
+}
+
+.identity strong {
+	color: var(--ink);
+}
+
+.warning {
+	background: var(--danger-soft);
+	border: 1px solid var(--danger-line);
+	border-radius: 10px;
+	padding: 16px 18px;
+	margin: 0 0 4px;
+}
+
+.warning p {
+	margin: 0 0 10px;
+	font-size: 14px;
+	color: var(--ink);
+}
+
+.warning p:last-child {
+	margin-bottom: 0;
+}
+
+.warning ul {
+	margin: 8px 0;
+	padding-left: 20px;
+	font-size: 14px;
+}
+
+.warning li {
+	margin: 3px 0;
+}
+
+.warning .emphasis {
+	font-weight: 700;
+	color: var(--danger);
+}
+
+.confirm-label {
+	font-size: 13px;
+	color: var(--ink);
+	margin: 20px 0 6px;
+}
+
+.confirm-label code {
+	background: var(--paper);
+	border: 1px solid var(--line);
+	border-radius: 4px;
+	padding: 1px 6px;
+	font-size: 13px;
+}
+
+.hidden {
+	display: none;
+}
+
+.success-icon {
+	width: 40px;
+	height: 40px;
+	border-radius: 50%;
+	background: var(--danger-soft);
+	color: var(--danger);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 20px;
+	margin-bottom: 14px;
 }

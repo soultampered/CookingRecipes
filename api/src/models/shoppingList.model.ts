@@ -54,5 +54,11 @@ export const shoppingListModel = {
             _id: new ObjectId(id)
         });
         return list.deletedCount > 0;
+    },
+
+    deleteAllByUserId: async (userId: string): Promise<number> => {
+        const db = await connectToDatabase();
+        const result = await db.collection<ShoppingList>("shoppingLists").deleteMany({ userId });
+        return result.deletedCount;
     }
 };

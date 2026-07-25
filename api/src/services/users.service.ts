@@ -1,4 +1,7 @@
 import { userModel, stripPassword } from "../models/user.model.js";
+import { recipeModel } from "../models/recipe.model.js";
+import { inventoryModel } from "../models/inventory.model.js";
+import { shoppingListModel } from "../models/shoppingList.model.js";
 import type { User } from "../types/user.js"
 
 export const usersService = {
@@ -15,6 +18,14 @@ export const usersService = {
     },
 
     async deleteUser(id: string) {
+        // Account deletion must remove all of a user's data, not just their login —
+        // recipes/inventory/shopping lists otherwise stay orphaned in the database
+        // under a userId that no longer resolves to anyone.
+        await Promise.all([
+            recipeModel.deleteAllByUserId(id),
+            inventoryModel.deleteAllByUserId(id),
+            shoppingListModel.deleteAllByUserId(id),
+        ]);
         const deleted = await userModel.delete(id);
         if (!deleted) throw new Error("Could not delete user")
         return true;

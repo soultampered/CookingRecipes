@@ -53,4 +53,10 @@ export const recipeModel = {
         });
         return result.deletedCount > 0;
     },
+
+    deleteAllByUserId: async (userId: string): Promise<number> => {
+        const db = await connectToDatabase();
+        const result = await db.collection<Recipe>('recipes').deleteMany({ userId });
+        return result.deletedCount;
+    },
 };

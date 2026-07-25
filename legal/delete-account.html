@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Delete Account — Stokpot</title>
+	<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+	<div class="page">
+		<div class="nav"><a href="/">Stokpot</a> · <a href="privacy.html">Privacy Policy</a> · <a href="terms.html">Terms of Service</a></div>
+		<h1>Delete your account</h1>
+		<p class="updated">Log in to permanently delete your Stokpot account and all of its data.</p>
+
+		<!-- STEP 1: LOGIN -->
+		<div class="form-card" id="step-login">
+			<p class="step-label">Step 1 of 2</p>
+			<p class="step-title">Log in to continue</p>
+
+			<label for="identifier">Username or email</label>
+			<input type="text" id="identifier" autocomplete="username" />
+
+			<label for="password">Password</label>
+			<input type="password" id="password" autocomplete="current-password" />
+
+			<p class="form-error" id="login-error"></p>
+
+			<button class="btn-primary" id="login-btn">Log in</button>
+		</div>
+
+		<!-- STEP 2: CONFIRM DELETE -->
+		<div class="form-card hidden" id="step-confirm">
+			<p class="step-label">Step 2 of 2</p>
+			<p class="step-title">Confirm deletion</p>
+
+			<p class="identity">Logged in as <strong id="confirm-username"></strong>. <button class="btn-text" id="not-you" style="margin:0; display:inline;">Not you?</button></p>
+
+			<div class="warning">
+				<p><span class="emphasis">This action is permanent and cannot be undone.</span> Deleting your account will immediately and completely remove:</p>
+				<ul>
+					<li>Your account and login credentials</li>
+					<li>Every recipe you've created</li>
+					<li>Your entire inventory</li>
+					<li>All shopping lists</li>
+				</ul>
+				<p>This data is erased from our database, not just hidden — we have no physical way to recover it afterward, for you or for us.</p>
+			</div>
+
+			<p class="confirm-label">Type <code>DELETE</code> to confirm.</p>
+			<input type="text" id="confirm-text" autocomplete="off" />
+
+			<p class="form-error" id="delete-error"></p>
+
+			<button class="btn-danger" id="delete-btn" disabled>Permanently delete my account</button>
+			<button class="btn-text" id="cancel-btn">Cancel, take me back</button>
+		</div>
+
+		<!-- STEP 3: SUCCESS -->
+		<div class="form-card hidden" id="step-success">
+			<div class="success-icon">✓</div>
+			<p class="step-title" style="margin-bottom: 8px;">Account deleted</p>
+			<p style="font-size: 14px; color: var(--ink-soft); margin: 0;">
+				Your Stokpot account and all associated data have been permanently deleted.
+				You can close this page.
+			</p>
+		</div>
+
+		<p style="margin-top: 40px; font-size: 13px; color: var(--ink-soft);">
+			Questions? <a href="mailto:support@stokpot.ca">support@stokpot.ca</a>
+		</p>
+	</div>
+
+	<script>
+		const API_BASE = 'https://cookingrecipes-gu7z.onrender.com';
+
+		const stepLogin = document.getElementById('step-login');
+		const stepConfirm = document.getElementById('step-confirm');
+		const stepSuccess = document.getElementById('step-success');
+
+		const identifier = document.getElementById('identifier');
+		const password = document.getElementById('password');
+		const loginBtn = document.getElementById('login-btn');
+		const loginError = document.getElementById('login-error');
+
+		const confirmUsername = document.getElementById('confirm-username');
+		const confirmText = document.getElementById('confirm-text');
+		const deleteBtn = document.getElementById('delete-btn');
+		const deleteError = document.getElementById('delete-error');
+		const cancelBtn = document.getElementById('cancel-btn');
+		const notYou = document.getElementById('not-you');
+
+		let session = null; // { accessToken, userId }
+
+		function showError(el, message) {
+			el.textContent = message;
+			el.classList.add('show');
+		}
+
+		function hideError(el) {
+			el.classList.remove('show');
+		}
+
+		async function handleLogin() {
+			hideError(loginError);
+			if (!identifier.value.trim() || !password.value) {
+				showError(loginError, 'Enter your username or email and password.');
+				return;
+			}
+
+			loginBtn.disabled = true;
+			loginBtn.textContent = 'Logging in…';
+			try {
+				const res = await fetch(`${API_BASE}/auth/login`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ identifier: identifier.value.trim(), password: password.value })
+				});
+				const data = await res.json();
+				if (!res.ok) {
+					showError(loginError, data.error || 'Could not log in.');
+					return;
+				}
+				session = { accessToken: data.accessToken, userId: data.user._id };
+				confirmUsername.textContent = data.user.username;
+				stepLogin.classList.add('hidden');
+				stepConfirm.classList.remove('hidden');
+			} catch (err) {
+				showError(loginError, 'Network error — could not reach the server. Try again.');
+			} finally {
+				loginBtn.disabled = false;
+				loginBtn.textContent = 'Log in';
+			}
+		}
+
+		function handleConfirmInput() {
+			deleteBtn.disabled = confirmText.value !== 'DELETE';
+		}
+
+		async function handleDelete() {
+			if (confirmText.value !== 'DELETE' || !session) return;
+			hideError(deleteError);
+
+			deleteBtn.disabled = true;
+			deleteBtn.textContent = 'Deleting…';
+			try {
+				const res = await fetch(`${API_BASE}/users/${session.userId}`, {
+					method: 'DELETE',
+					headers: { Authorization: `Bearer ${session.accessToken}` }
+				});
+				if (!res.ok && res.status !== 204) {
+					const data = await res.json().catch(() => ({}));
+					showError(deleteError, data.error || 'Could not delete account. Try again.');
+					deleteBtn.disabled = false;
+					deleteBtn.textContent = 'Permanently delete my account';
+					return;
+				}
+				stepConfirm.classList.add('hidden');
+				stepSuccess.classList.remove('hidden');
+			} catch (err) {
+				showError(deleteError, 'Network error — could not reach the server. Try again.');
+				deleteBtn.disabled = false;
+				deleteBtn.textContent = 'Permanently delete my account';
+			}
+		}
+
+		function resetToLogin() {
+			session = null;
+			stepConfirm.classList.add('hidden');
+			stepSuccess.classList.add('hidden');
+			stepLogin.classList.remove('hidden');
+			hideError(loginError);
+			hideError(deleteError);
+			confirmText.value = '';
+			deleteBtn.disabled = true;
+			identifier.value = '';
+			password.value = '';
+		}
+
+		loginBtn.addEventListener('click', handleLogin);
+		password.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleLogin(); });
+		confirmText.addEventListener('input', handleConfirmInput);
+		deleteBtn.addEventListener('click', handleDelete);
+		cancelBtn.addEventListener('click', resetToLogin);
+		notYou.addEventListener('click', resetToLogin);
+	</script>
+</body>
+</html>

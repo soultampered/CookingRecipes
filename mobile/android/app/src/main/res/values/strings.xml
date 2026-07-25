@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Stokpot</string>
+    <string name="title_activity_main">Stokpot</string>
+    <string name="package_name">ca.stokpot.app</string>
+    <string name="custom_url_scheme">ca.stokpot.app</string>
+</resources>
