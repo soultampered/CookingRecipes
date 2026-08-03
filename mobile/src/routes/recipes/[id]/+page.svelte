@@ -3,6 +3,7 @@
 	import { deleteRecipe, getMissingIngredients, prepareRecipe } from '$lib/api/recipes';
 	import { ApiError } from '$lib/api/client';
 	import { toast } from '$lib/state/toast.svelte';
+	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import type { MissingIngredient } from '$lib/types/recipe';
 	import type { PageProps } from './$types';
 
@@ -10,6 +11,7 @@
 
 	let preparing = $state(false);
 	let deleting = $state(false);
+	let confirmingDelete = $state(false);
 	let missing = $state<MissingIngredient[] | null>(null);
 
 	function inventoryName(id: string) {
@@ -34,15 +36,15 @@
 		}
 	}
 
-	async function handleDelete() {
+	async function confirmDelete() {
 		deleting = true;
 		try {
 			await deleteRecipe(data.recipe._id);
 			await goto('/recipes');
 		} catch (err) {
 			toast.push(err instanceof ApiError ? err.message : 'Could not delete recipe');
-		} finally {
 			deleting = false;
+			confirmingDelete = false;
 		}
 	}
 </script>
@@ -95,10 +97,22 @@
 		</div>
 	{/if}
 
-	<button type="button" class="danger" onclick={handleDelete} disabled={deleting}>
-		{deleting ? 'Deleting…' : 'Delete recipe'}
-	</button>
+	<div class="danger-zone">
+		<button type="button" class="danger-link" onclick={() => (confirmingDelete = true)}>
+			Delete recipe
+		</button>
+	</div>
 </div>
+
+<ConfirmModal
+	open={confirmingDelete}
+	title="Delete recipe?"
+	message={`This will permanently delete "${data.recipe.title}".`}
+	confirmLabel="Delete recipe"
+	confirming={deleting}
+	onConfirm={confirmDelete}
+	onCancel={() => (confirmingDelete = false)}
+/>
 
 <style>
 	.page {
@@ -198,14 +212,20 @@
 		font-weight: 600;
 		cursor: pointer;
 	}
-	.danger {
-		padding: 0.65rem;
-		border-radius: 8px;
-		border: 1px solid var(--bad);
-		background: var(--paper-raised);
+	.danger-zone {
+		margin-top: 0.6rem;
+		padding-top: 1.25rem;
+		border-top: 1px solid var(--line);
+		display: flex;
+	}
+	.danger-link {
+		border: none;
+		background: none;
 		color: var(--bad);
-		font-weight: 600;
+		font-size: 0.85rem;
+		text-decoration: underline;
 		cursor: pointer;
+		padding: 0;
 	}
 	.banner {
 		background: var(--bad-soft);

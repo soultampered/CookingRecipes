@@ -3,6 +3,7 @@
 	import { addItem, deleteShoppingList, removeItem, toggleItemChecked } from '$lib/api/shoppingLists';
 	import { ApiError } from '$lib/api/client';
 	import { toast } from '$lib/state/toast.svelte';
+	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -11,6 +12,8 @@
 	let itemQuantity = $state(1);
 	let adding = $state(false);
 	let deleting = $state(false);
+	let removingItemId = $state<string | null>(null);
+	let confirmingDeleteList = $state(false);
 
 	async function handleAddItem(event: SubmitEvent) {
 		event.preventDefault();
@@ -36,24 +39,28 @@
 		}
 	}
 
-	async function handleRemove(itemId: string) {
+	async function confirmRemove() {
+		const itemId = removingItemId;
+		if (!itemId) return;
 		try {
 			await removeItem(data.list._id!, itemId);
 			await invalidate(`app:shopping-list:${data.list._id}`);
 		} catch (err) {
 			toast.push(err instanceof ApiError ? err.message : 'Could not remove item');
+		} finally {
+			removingItemId = null;
 		}
 	}
 
-	async function handleDeleteList() {
+	async function confirmDeleteList() {
 		deleting = true;
 		try {
 			await deleteShoppingList(data.list._id!);
 			await goto('/shopping-lists');
 		} catch (err) {
 			toast.push(err instanceof ApiError ? err.message : 'Could not delete list');
-		} finally {
 			deleting = false;
+			confirmingDeleteList = false;
 		}
 	}
 </script>
@@ -75,7 +82,7 @@
 					/>
 					<span class="item-name" class:checked={item.checked}>{item.name}</span>
 					<span class="item-qty">{item.quantity}</span>
-					<button type="button" class="remove" onclick={() => handleRemove(item._id!)}>×</button>
+					<button type="button" class="remove" onclick={() => (removingItemId = item._id!)}>×</button>
 				</div>
 			{/each}
 		</div>
@@ -87,10 +94,32 @@
 		<button type="submit" disabled={adding}>{adding ? 'Adding…' : '+ Add'}</button>
 	</form>
 
-	<button type="button" class="danger" onclick={handleDeleteList} disabled={deleting}>
-		{deleting ? 'Deleting…' : 'Delete list'}
-	</button>
+	<div class="danger-zone">
+		<button type="button" class="danger-link" onclick={() => (confirmingDeleteList = true)}>
+			Delete list
+		</button>
+	</div>
 </div>
+
+<ConfirmModal
+	open={removingItemId !== null}
+	title="Remove item?"
+	message={`Remove "${data.list.items.find((i) => i._id === removingItemId)?.name ?? ''}" from this list?`}
+	confirmLabel="Remove"
+	confirmingLabel="Removing…"
+	onConfirm={confirmRemove}
+	onCancel={() => (removingItemId = null)}
+/>
+
+<ConfirmModal
+	open={confirmingDeleteList}
+	title="Delete list?"
+	message={`This will permanently delete "${data.list.name}" and all its items.`}
+	confirmLabel="Delete list"
+	confirming={deleting}
+	onConfirm={confirmDeleteList}
+	onCancel={() => (confirmingDeleteList = false)}
+/>
 
 <style>
 	.page {
@@ -179,14 +208,19 @@
 		cursor: pointer;
 		flex: 0 0 auto;
 	}
-	.danger {
-		margin-top: 0.5rem;
-		padding: 0.65rem;
-		border-radius: 8px;
-		border: 1px solid var(--bad);
-		background: var(--paper-raised);
+	.danger-zone {
+		margin-top: 1.5rem;
+		padding-top: 1.25rem;
+		border-top: 1px solid var(--line);
+		display: flex;
+	}
+	.danger-link {
+		border: none;
+		background: none;
 		color: var(--bad);
-		font-weight: 600;
+		font-size: 0.85rem;
+		text-decoration: underline;
 		cursor: pointer;
+		padding: 0;
 	}
 </style>
