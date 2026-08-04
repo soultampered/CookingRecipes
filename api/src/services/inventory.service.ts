@@ -50,9 +50,9 @@ export const inventoryService = {
         return await inventoryModel.update(id, { quantity: newQuantity });
     },
 
-    async checkStock(itemName: string) {
-        const allItems = await inventoryModel.findAll();
-        return allItems.find(i => i.name.toLowerCase() === itemName.toLowerCase()) ?? null;
+    async checkStock(userId: string, itemName: string) {
+        const items = await inventoryModel.findAll(userId);
+        return items.find(i => i.name.toLowerCase() === itemName.toLowerCase()) ?? null;
     },
 
     async bulkAdjust(items: { id: string; amount: number }[]) {

@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { ShoppingList, ShoppingListItem } from "../types/shoppingList.js"
 import { shoppingListService } from "../services/shoppingList.service.js"
+import { shoppingListInventoryService } from "../services/shoppingListInventory.service.js"
 import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
 import { requireVerified } from "../middleware/requireVerified.middleware.js";
 
@@ -110,6 +111,18 @@ shoppingListRoute.patch('/:id/items/:itemId', async (c) => {
         const existing = await shoppingListService.getShoppingListById(c.req.param('id'));
         if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
         const updated = await shoppingListService.toggleItemChecked(c.req.param('id'), c.req.param('itemId'));
+
+        const item = updated.items.find((i) => i._id?.toString() === c.req.param('itemId'));
+        if (item?.checked) {
+            try {
+                await shoppingListInventoryService.addCheckedItemToInventory(c.get('userId'), item);
+            } catch (err) {
+                // Don't fail the checkbox toggle over the inventory side effect — the item is
+                // already checked either way, and this is a convenience sync, not the source of truth.
+                console.error('Failed to sync checked item to inventory:', err);
+            }
+        }
+
         return c.json(updated, 200);
     } catch (err) {
         if ((err as Error).message === 'NOT_FOUND') {
