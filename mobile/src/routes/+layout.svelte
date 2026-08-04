@@ -19,6 +19,10 @@
 	let keyboardInset = $state(0);
 
 	onMount(() => {
+		// The boot splash in app.html is static HTML shown while the root load() blocks on
+		// session restore — remove it now that the app has actually mounted and rendered.
+		document.getElementById('boot-splash')?.remove();
+
 		theme.restore();
 
 		if (Capacitor.getPlatform() !== 'ios') return;
