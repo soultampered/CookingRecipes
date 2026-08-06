@@ -1,6 +1,12 @@
 <script lang="ts">
 	import { goto, invalidate } from '$app/navigation';
-	import { addItem, deleteShoppingList, removeItem, toggleItemChecked } from '$lib/api/shoppingLists';
+	import {
+		addItem,
+		deleteShoppingList,
+		removeItem,
+		toggleItemChecked,
+		updateShoppingList
+	} from '$lib/api/shoppingLists';
 	import { ApiError } from '$lib/api/client';
 	import { toast } from '$lib/state/toast.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
@@ -14,6 +20,9 @@
 	let deleting = $state(false);
 	let removingItemId = $state<string | null>(null);
 	let confirmingDeleteList = $state(false);
+	let editingName = $state(false);
+	let nameDraft = $state(data.list.name);
+	let savingName = $state(false);
 
 	async function handleAddItem(event: SubmitEvent) {
 		event.preventDefault();
@@ -52,6 +61,33 @@
 		}
 	}
 
+	function focusOnMount(node: HTMLInputElement) {
+		node.focus();
+	}
+
+	function startEditName() {
+		nameDraft = data.list.name;
+		editingName = true;
+	}
+
+	async function saveName() {
+		const trimmed = nameDraft.trim();
+		if (!trimmed || trimmed === data.list.name) {
+			editingName = false;
+			return;
+		}
+		savingName = true;
+		try {
+			await updateShoppingList(data.list._id!, { name: trimmed });
+			await invalidate(`app:shopping-list:${data.list._id}`);
+			editingName = false;
+		} catch (err) {
+			toast.push(err instanceof ApiError ? err.message : 'Could not rename list');
+		} finally {
+			savingName = false;
+		}
+	}
+
 	async function confirmDeleteList() {
 		deleting = true;
 		try {
@@ -67,7 +103,34 @@
 
 <div class="page">
 	<a class="back" href="/shopping-lists">‹ Shopping Lists</a>
-	<h1>{data.list.name}</h1>
+
+	{#if editingName}
+		<form
+			class="rename-form"
+			onsubmit={(e) => {
+				e.preventDefault();
+				saveName();
+			}}
+		>
+			<input type="text" bind:value={nameDraft} maxlength="100" required use:focusOnMount />
+			<button type="submit" disabled={savingName}>{savingName ? 'Saving…' : 'Save'}</button>
+			<button
+				type="button"
+				class="outline"
+				onclick={() => (editingName = false)}
+				disabled={savingName}
+			>
+				Cancel
+			</button>
+		</form>
+	{:else}
+		<div class="title-row">
+			<h1>{data.list.name}</h1>
+			<button type="button" class="edit-btn" onclick={startEditName} aria-label="Rename list">
+				✎
+			</button>
+		</div>
+	{/if}
 
 	{#if data.list.items.length === 0}
 		<p class="empty">No items yet.</p>
@@ -135,6 +198,52 @@
 		font-size: 0.85rem;
 		color: var(--accent);
 		text-decoration: none;
+	}
+	.title-row {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+	.title-row h1 {
+		margin: 0;
+		flex: 1;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.edit-btn {
+		border: none;
+		background: none;
+		color: var(--ink-soft);
+		font-size: 1rem;
+		cursor: pointer;
+		flex: 0 0 auto;
+		padding: 0.2rem 0.3rem;
+	}
+	.rename-form {
+		display: flex;
+		gap: 0.5rem;
+	}
+	.rename-form input {
+		flex: 1;
+		min-width: 0;
+	}
+	.rename-form button {
+		flex: 0 0 auto;
+		padding: 0.55rem 0.75rem;
+		border-radius: 8px;
+		border: none;
+		background: var(--accent);
+		color: var(--paper-raised);
+		font-weight: 600;
+		cursor: pointer;
+		font-size: 0.85rem;
+	}
+	.rename-form button.outline {
+		border: 1px solid var(--line);
+		background: var(--paper-raised);
+		color: var(--ink);
 	}
 	.items {
 		display: flex;
