@@ -1,5 +1,6 @@
 import { inventoryModel } from "../models/index.js";
 import type { Inventory } from "../types/inventory.js"
+import { categorizeItemName } from "./foodCategory.service.js";
 
 export const inventoryService = {
     async getAllInventory(userId?: string, category?: string) {
@@ -25,11 +26,16 @@ export const inventoryService = {
         if (!data.name || data.quantity == null) {
             throw new Error("INVALID_INPUT");
         }
-        return inventoryModel.create(data);
+        // Category is always derived from the name, never client-supplied — see STO-18.
+        const category = await categorizeItemName(data.name);
+        return inventoryModel.create({ ...data, category });
     },
 
     async updateInventory(id: string, data: Partial<Inventory>) {
-        const updated = await inventoryModel.update(id, data);
+        // Keep category in sync with name if the item is being renamed; otherwise leave
+        // the existing (already-derived) category alone.
+        const patch = data.name ? { ...data, category: await categorizeItemName(data.name) } : data;
+        const updated = await inventoryModel.update(id, patch);
         if (!updated) throw new Error("NOT_FOUND");
         return updated;
     },

@@ -1,6 +1,5 @@
 <script lang="ts">
-	import type { InventoryCategory, NewInventory } from '$lib/types/inventory';
-	import { INVENTORY_CATEGORIES } from '$lib/types/inventory';
+	import type { NewInventory } from '$lib/types/inventory';
 	import { UNITS, type Unit } from '$lib/types/unit';
 
 	let {
@@ -18,7 +17,6 @@
 	let name = $state(initial?.name ?? '');
 	let quantity = $state(initial?.quantity ?? 0);
 	let unit = $state<Unit>(initial?.unit ?? 'g');
-	let category = $state<InventoryCategory | ''>(initial?.category ?? '');
 	let expirationDte = $state(initial?.expirationDte?.slice(0, 10) ?? '');
 	let notes = $state(initial?.notes ?? '');
 	let error = $state('');
@@ -36,7 +34,6 @@
 			name: name.trim(),
 			quantity,
 			unit,
-			category: category || undefined,
 			expirationDte: expirationDte || undefined,
 			notes: notes || undefined
 		});
@@ -65,16 +62,6 @@
 			</select>
 		</label>
 	</div>
-
-	<label>
-		Category
-		<select bind:value={category}>
-			<option value="">None</option>
-			{#each INVENTORY_CATEGORIES as c}
-				<option value={c}>{c}</option>
-			{/each}
-		</select>
-	</label>
 
 	<label>
 		Expiration

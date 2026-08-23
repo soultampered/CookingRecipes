@@ -1,6 +1,7 @@
 import { ObjectId } from "mongodb";
 import { shoppingListModel } from "../models/index.js";
 import type { ShoppingList, ShoppingListItem } from "../types/shoppingList.js";
+import { categorizeItemName } from "./foodCategory.service.js";
 
 export const shoppingListService = {
     async getAllShoppingLists(userId: string) {
@@ -34,7 +35,9 @@ export const shoppingListService = {
 
     async addItem(listId: string, item: ShoppingListItem) {
         const list = await this.getShoppingListById(listId);
-        list.items.push({ ...item, _id: new ObjectId() });
+        // Category is always derived from the name, never client-supplied — see STO-18.
+        const category = await categorizeItemName(item.name);
+        list.items.push({ ...item, category, _id: new ObjectId() });
         return shoppingListModel.update(listId, { items: list.items });
     },
 

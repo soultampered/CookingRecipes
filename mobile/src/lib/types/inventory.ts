@@ -8,6 +8,7 @@ export const INVENTORY_CATEGORIES = [
 	'Dairy',
 	'Eggs',
 	'Grains & Pasta',
+	'Bakery',
 	'Baking',
 	'Spices & Seasonings',
 	'Canned & Jarred',

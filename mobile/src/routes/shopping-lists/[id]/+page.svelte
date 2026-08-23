@@ -10,6 +10,8 @@
 	import { ApiError } from '$lib/api/client';
 	import { toast } from '$lib/state/toast.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
+	import { INVENTORY_CATEGORIES } from '$lib/types/inventory';
+	import type { ShoppingListItem } from '$lib/types/shoppingList';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -28,6 +30,7 @@
 		event.preventDefault();
 		adding = true;
 		try {
+			// Category is derived server-side from the item name — see STO-18.
 			await addItem(data.list._id!, { name: itemName, quantity: itemQuantity });
 			itemName = '';
 			itemQuantity = 1;
@@ -38,6 +41,22 @@
 			adding = false;
 		}
 	}
+
+	// Fixed category order first (matches inventory's grouping), uncategorized items last.
+	let groupedItems = $derived.by(() => {
+		const groups = new Map<string, ShoppingListItem[]>();
+		for (const item of data.list.items) {
+			const key = item.category ?? '';
+			if (!groups.has(key)) groups.set(key, []);
+			groups.get(key)!.push(item);
+		}
+		const ordered: [string, ShoppingListItem[]][] = [];
+		for (const category of INVENTORY_CATEGORIES) {
+			if (groups.has(category)) ordered.push([category, groups.get(category)!]);
+		}
+		if (groups.has('')) ordered.push(['', groups.get('')!]);
+		return ordered;
+	});
 
 	async function handleToggle(itemId: string) {
 		try {
@@ -135,23 +154,28 @@
 	{#if data.list.items.length === 0}
 		<p class="empty">No items yet.</p>
 	{:else}
-		<div class="items">
-			{#each data.list.items as item (item._id)}
-				<div class="item-row">
-					<input
-						type="checkbox"
-						checked={item.checked}
-						onchange={() => handleToggle(item._id!)}
-					/>
-					<span class="item-name" class:checked={item.checked}>{item.name}</span>
-					<span class="item-qty">{item.quantity}</span>
-					<button type="button" class="remove" onclick={() => (removingItemId = item._id!)}>×</button>
-				</div>
-			{/each}
-		</div>
+		{#each groupedItems as [category, items] (category || '__uncategorized')}
+			{#if groupedItems.length > 1}
+				<div class="category-header">{category || 'Other'}</div>
+			{/if}
+			<div class="items">
+				{#each items as item (item._id)}
+					<div class="item-row">
+						<input
+							type="checkbox"
+							checked={item.checked}
+							onchange={() => handleToggle(item._id!)}
+						/>
+						<span class="item-name" class:checked={item.checked}>{item.name}</span>
+						<span class="item-qty">{item.quantity}</span>
+						<button type="button" class="remove" onclick={() => (removingItemId = item._id!)}>×</button>
+					</div>
+				{/each}
+			</div>
+		{/each}
 	{/if}
 
-	<form onsubmit={handleAddItem}>
+	<form class="add-item-form" onsubmit={handleAddItem}>
 		<input type="text" placeholder="Item name" bind:value={itemName} required />
 		<input type="number" min="1" bind:value={itemQuantity} />
 		<button type="submit" disabled={adding}>{adding ? 'Adding…' : '+ Add'}</button>
@@ -245,6 +269,17 @@
 		background: var(--paper-raised);
 		color: var(--ink);
 	}
+	.category-header {
+		font-size: 0.75rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		color: var(--ink-soft);
+		margin-top: 0.6rem;
+	}
+	.category-header:first-of-type {
+		margin-top: 0;
+	}
 	.items {
 		display: flex;
 		flex-direction: column;
@@ -286,16 +321,16 @@
 		color: var(--ink-soft);
 		font-size: 0.9rem;
 	}
-	form {
+	.add-item-form {
 		display: flex;
 		gap: 0.5rem;
 		margin-top: 0.4rem;
 	}
-	form input[type='text'] {
+	.add-item-form input[type='text'] {
 		flex: 2;
 		min-width: 0;
 	}
-	form input[type='number'] {
+	.add-item-form input[type='number'] {
 		flex: 1;
 		min-width: 0;
 	}
@@ -307,7 +342,7 @@
 		background: var(--paper-raised);
 		color: var(--ink);
 	}
-	form button {
+	.add-item-form button {
 		padding: 0.55rem 0.9rem;
 		border-radius: 8px;
 		border: none;
