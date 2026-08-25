@@ -8,30 +8,66 @@
 		inventoryItems,
 		submitLabel,
 		submitting,
-		onSubmit
+		onSubmit,
+		dirty = $bindable(false)
 	}: {
 		initial?: Partial<NewRecipe>;
 		inventoryItems: Inventory[];
 		submitLabel: string;
 		submitting: boolean;
 		onSubmit: (data: NewRecipe) => void;
+		dirty?: boolean;
 	} = $props();
 
-	let title = $state(initial?.title ?? '');
-	let description = $state(initial?.description ?? '');
-	let author = $state(initial?.author ?? '');
-	let difficulty = $state<DifficultyLevel>(initial?.difficulty ?? 'easy');
-	let servings = $state(initial?.servings ?? 4);
-	let prepTimeMinutes = $state(initial?.prepTimeMinutes);
-	let cookTimeMinutes = $state(initial?.cookTimeMinutes);
-	let instructions = $state<string[]>(initial?.instructions?.length ? [...initial.instructions] : ['']);
-	let ingredients = $state<RecipeIngredient[]>(
-		initial?.ingredients?.length
-			? initial.ingredients.map((i) => ({ ...i }))
-			: inventoryItems.length
-				? [{ inventoryItemId: inventoryItems[0]._id, quantity: 1, unit: inventoryItems[0].unit }]
-				: []
-	);
+	const initialTitle = initial?.title ?? '';
+	const initialDescription = initial?.description ?? '';
+	const initialAuthor = initial?.author ?? '';
+	const initialDifficulty = initial?.difficulty ?? 'easy';
+	const initialServings = initial?.servings ?? 4;
+	const initialPrepTime = initial?.prepTimeMinutes;
+	const initialCookTime = initial?.cookTimeMinutes;
+	const initialInstructions = initial?.instructions?.length ? [...initial.instructions] : [''];
+	const initialIngredients = initial?.ingredients?.length
+		? initial.ingredients.map((i) => ({ ...i }))
+		: inventoryItems.length
+			? [{ inventoryItemId: inventoryItems[0]._id, quantity: 1, unit: inventoryItems[0].unit }]
+			: [];
+	const initialSnapshot = JSON.stringify({
+		title: initialTitle,
+		description: initialDescription,
+		author: initialAuthor,
+		difficulty: initialDifficulty,
+		servings: initialServings,
+		prepTimeMinutes: initialPrepTime,
+		cookTimeMinutes: initialCookTime,
+		instructions: initialInstructions,
+		ingredients: initialIngredients
+	});
+
+	let title = $state(initialTitle);
+	let description = $state(initialDescription);
+	let author = $state(initialAuthor);
+	let difficulty = $state<DifficultyLevel>(initialDifficulty);
+	let servings = $state(initialServings);
+	let prepTimeMinutes = $state(initialPrepTime);
+	let cookTimeMinutes = $state(initialCookTime);
+	let instructions = $state<string[]>(initialInstructions);
+	let ingredients = $state<RecipeIngredient[]>(initialIngredients);
+
+	$effect(() => {
+		dirty =
+			JSON.stringify({
+				title,
+				description,
+				author,
+				difficulty,
+				servings,
+				prepTimeMinutes,
+				cookTimeMinutes,
+				instructions,
+				ingredients
+			}) !== initialSnapshot;
+	});
 
 	function addIngredient() {
 		if (!inventoryItems.length) return;

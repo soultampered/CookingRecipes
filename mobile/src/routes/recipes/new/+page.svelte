@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import RecipeForm from '$lib/components/RecipeForm.svelte';
+	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
+	import { unsavedChangesGuard } from '$lib/utils/unsavedChangesGuard.svelte';
 	import { createRecipe } from '$lib/api/recipes';
 	import { ApiError } from '$lib/api/client';
 	import { toast } from '$lib/state/toast.svelte';
@@ -10,11 +12,14 @@
 
 	let { data }: PageProps = $props();
 	let submitting = $state(false);
+	let dirty = $state(false);
+	const leaveGuard = unsavedChangesGuard(() => dirty);
 
 	async function handleSubmit(recipe: NewRecipe) {
 		submitting = true;
 		try {
 			const created = await createRecipe(recipe);
+			leaveGuard.allowNext();
 			await goto(`/recipes/${created._id}`);
 		} catch (err) {
 			toast.push(err instanceof ApiError ? err.message : 'Could not create recipe');
@@ -33,8 +38,19 @@
 		submitLabel="Save recipe"
 		{submitting}
 		onSubmit={handleSubmit}
+		bind:dirty
 	/>
 </div>
+
+<ConfirmModal
+	open={leaveGuard.confirming}
+	title="Discard changes?"
+	message="You have unsaved changes that will be lost if you leave this page."
+	confirmLabel="Discard"
+	confirmingLabel="Discard"
+	onConfirm={leaveGuard.confirmLeave}
+	onCancel={leaveGuard.cancelLeave}
+/>
 
 <style>
 	.page {

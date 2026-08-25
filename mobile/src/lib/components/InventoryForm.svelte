@@ -6,21 +6,40 @@
 		initial,
 		submitLabel,
 		submitting,
-		onSubmit
+		onSubmit,
+		dirty = $bindable(false)
 	}: {
 		initial?: Partial<NewInventory>;
 		submitLabel: string;
 		submitting: boolean;
 		onSubmit: (data: NewInventory) => void;
+		dirty?: boolean;
 	} = $props();
 
-	let name = $state(initial?.name ?? '');
-	let quantity = $state(initial?.quantity ?? 0);
-	let unit = $state<Unit>(initial?.unit ?? 'g');
-	let expirationDte = $state(initial?.expirationDte?.slice(0, 10) ?? '');
-	let lowStockThreshold = $state(initial?.lowStockThreshold ?? undefined);
-	let notes = $state(initial?.notes ?? '');
+	const initialName = initial?.name ?? '';
+	const initialQuantity = initial?.quantity ?? 0;
+	const initialUnit = initial?.unit ?? 'g';
+	const initialExpiration = initial?.expirationDte?.slice(0, 10) ?? '';
+	const initialLowStock = initial?.lowStockThreshold ?? undefined;
+	const initialNotes = initial?.notes ?? '';
+
+	let name = $state(initialName);
+	let quantity = $state(initialQuantity);
+	let unit = $state<Unit>(initialUnit);
+	let expirationDte = $state(initialExpiration);
+	let lowStockThreshold = $state(initialLowStock);
+	let notes = $state(initialNotes);
 	let error = $state('');
+
+	$effect(() => {
+		dirty =
+			name !== initialName ||
+			quantity !== initialQuantity ||
+			unit !== initialUnit ||
+			expirationDte !== initialExpiration ||
+			lowStockThreshold !== initialLowStock ||
+			notes !== initialNotes;
+	});
 
 	function handleSubmit(event: SubmitEvent) {
 		event.preventDefault();

@@ -5,6 +5,7 @@
 	import { ApiError } from '$lib/api/client';
 	import { toast } from '$lib/state/toast.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
+	import { unsavedChangesGuard } from '$lib/utils/unsavedChangesGuard.svelte';
 	import type { NewInventory } from '$lib/types/inventory';
 	import type { PageProps } from './$types';
 
@@ -12,12 +13,15 @@
 	let submitting = $state(false);
 	let deleting = $state(false);
 	let confirmingDelete = $state(false);
+	let dirty = $state(false);
+	const leaveGuard = unsavedChangesGuard(() => dirty);
 
 	async function handleSubmit(item: NewInventory) {
 		submitting = true;
 		try {
 			await updateInventoryItem(data.item._id, item);
 			await invalidate('app:inventory');
+			leaveGuard.allowNext();
 			await goto('/inventory');
 		} catch (err) {
 			toast.push(err instanceof ApiError ? err.message : 'Could not update item');
@@ -31,6 +35,7 @@
 		try {
 			await deleteInventoryItem(data.item._id);
 			await invalidate('app:inventory');
+			leaveGuard.allowNext();
 			await goto('/inventory');
 		} catch (err) {
 			toast.push(err instanceof ApiError ? err.message : 'Could not delete item');
@@ -43,7 +48,13 @@
 <div class="page">
 	<a class="back" href="/inventory">‹ Inventory</a>
 	<h1>Edit Item</h1>
-	<InventoryForm initial={data.item} submitLabel="Save changes" {submitting} onSubmit={handleSubmit} />
+	<InventoryForm
+		initial={data.item}
+		submitLabel="Save changes"
+		{submitting}
+		onSubmit={handleSubmit}
+		bind:dirty
+	/>
 	<div class="danger-zone">
 		<button type="button" class="danger-link" onclick={() => (confirmingDelete = true)}>
 			Delete item
@@ -59,6 +70,16 @@
 	confirming={deleting}
 	onConfirm={confirmDelete}
 	onCancel={() => (confirmingDelete = false)}
+/>
+
+<ConfirmModal
+	open={leaveGuard.confirming}
+	title="Discard changes?"
+	message="You have unsaved changes that will be lost if you leave this page."
+	confirmLabel="Discard"
+	confirmingLabel="Discard"
+	onConfirm={leaveGuard.confirmLeave}
+	onCancel={leaveGuard.cancelLeave}
 />
 
 <style>
