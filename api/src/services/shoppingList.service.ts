@@ -35,6 +35,17 @@ export const shoppingListService = {
 
     async addItem(listId: string, item: ShoppingListItem) {
         const list = await this.getShoppingListById(listId);
+        // Case-insensitive dedupe, matching inventoryService.checkStock's pattern — without
+        // this, adding "Milk" twice creates two separate rows instead of merging quantities.
+        const existing = list.items.find(
+            (i) => i.name.trim().toLowerCase() === item.name.trim().toLowerCase()
+        );
+        if (existing) {
+            const items = list.items.map((i) =>
+                i === existing ? { ...i, quantity: i.quantity + item.quantity } : i
+            );
+            return shoppingListModel.update(listId, { items });
+        }
         // Category is always derived from the name, never client-supplied — see STO-18.
         const category = await categorizeItemName(item.name);
         list.items.push({ ...item, category, _id: new ObjectId() });
