@@ -18,6 +18,7 @@
 	let quantity = $state(initial?.quantity ?? 0);
 	let unit = $state<Unit>(initial?.unit ?? 'g');
 	let expirationDte = $state(initial?.expirationDte?.slice(0, 10) ?? '');
+	let lowStockThreshold = $state(initial?.lowStockThreshold ?? undefined);
 	let notes = $state(initial?.notes ?? '');
 	let error = $state('');
 
@@ -35,6 +36,7 @@
 			quantity,
 			unit,
 			expirationDte: expirationDte || undefined,
+			lowStockThreshold: lowStockThreshold ?? undefined,
 			notes: notes || undefined
 		});
 	}
@@ -66,6 +68,11 @@
 	<label>
 		Expiration
 		<input type="date" bind:value={expirationDte} />
+	</label>
+
+	<label>
+		Low stock alert below
+		<input type="number" min="0" step="any" placeholder="Off" bind:value={lowStockThreshold} />
 	</label>
 
 	<label>
