@@ -12,7 +12,9 @@ class ToastState {
 	push(message: string, type: Toast['type'] = 'error') {
 		const id = nextId++;
 		this.items.push({ id, message, type });
-		setTimeout(() => this.dismiss(id), 4000);
+		// Errors get longer on screen than success/info confirmations — they usually need
+		// reading and a decision, where a confirmation just needs a glance.
+		setTimeout(() => this.dismiss(id), type === 'error' ? 5000 : 3000);
 	}
 
 	dismiss(id: number) {

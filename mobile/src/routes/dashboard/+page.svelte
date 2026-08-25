@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n/index.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -13,15 +14,15 @@
 </script>
 
 <div class="page">
-	<h1>Dashboard</h1>
+	<h1>{t('dashboard.title')}</h1>
 
 	<a class="card" href="/recipes">
 		<div class="card-header">
-			<span class="card-title">Recipes</span>
+			<span class="card-title">{t('dashboard.recipes')}</span>
 			<span class="stat">{data.recipes.length}</span>
 		</div>
 		{#if data.recipes.length === 0}
-			<p class="empty">No recipes yet.</p>
+			<p class="empty">{t('dashboard.noRecipes')}</p>
 		{:else}
 			<p class="preview">
 				{data.recipes
@@ -34,11 +35,11 @@
 
 	<a class="card" href="/recipes/suggestions">
 		<div class="card-header">
-			<span class="card-title">Suggestions</span>
+			<span class="card-title">{t('dashboard.suggestions')}</span>
 			<span class="stat">{data.suggestions.length}</span>
 		</div>
 		{#if data.suggestions.length === 0}
-			<p class="empty">Nothing fully stocked yet.</p>
+			<p class="empty">{t('dashboard.noSuggestions')}</p>
 		{:else}
 			<p class="preview">
 				{data.suggestions
@@ -51,29 +52,37 @@
 
 	<a class="card" href="/inventory">
 		<div class="card-header">
-			<span class="card-title">Inventory</span>
+			<span class="card-title">{t('dashboard.inventory')}</span>
 			<span class="stat">{data.inventory.length}</span>
 		</div>
 		{#if data.inventory.length === 0}
-			<p class="empty">No items yet.</p>
+			<p class="empty">{t('dashboard.noInventory')}</p>
 		{:else if outOfStockCount > 0}
-			<p class="preview warn">{outOfStockCount} item{outOfStockCount > 1 ? 's' : ''} out of stock</p>
+			<p class="preview warn">
+				{t(outOfStockCount === 1 ? 'dashboard.outOfStock_one' : 'dashboard.outOfStock_other', {
+					count: outOfStockCount
+				})}
+			</p>
 		{:else}
-			<p class="preview good">Everything's stocked.</p>
+			<p class="preview good">{t('dashboard.allStocked')}</p>
 		{/if}
 	</a>
 
 	<a class="card" href="/shopping-lists">
 		<div class="card-header">
-			<span class="card-title">Shopping Lists</span>
+			<span class="card-title">{t('dashboard.shoppingLists')}</span>
 			<span class="stat">{data.shoppingLists.length}</span>
 		</div>
 		{#if data.shoppingLists.length === 0}
-			<p class="empty">No lists yet.</p>
+			<p class="empty">{t('dashboard.noLists')}</p>
 		{:else if uncheckedCount > 0}
-			<p class="preview warn">{uncheckedCount} item{uncheckedCount > 1 ? 's' : ''} left to get</p>
+			<p class="preview warn">
+				{t(uncheckedCount === 1 ? 'dashboard.leftToGet_one' : 'dashboard.leftToGet_other', {
+					count: uncheckedCount
+				})}
+			</p>
 		{:else}
-			<p class="preview good">All caught up.</p>
+			<p class="preview good">{t('dashboard.allCaughtUp')}</p>
 		{/if}
 	</a>
 </div>

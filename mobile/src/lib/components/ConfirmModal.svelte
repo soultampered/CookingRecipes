@@ -20,6 +20,16 @@
 		onConfirm: () => void;
 		onCancel: () => void;
 	} = $props();
+
+	// This can open with a form input still focused (e.g. STO-95's discard-changes prompt on
+	// hardware back). On iOS the keyboard doesn't auto-dismiss with the input still mounted,
+	// and — because the WKWebView's own scroll is disabled to keep the keyboard from
+	// desyncing the layout (see +layout.svelte) — it overlays without resizing the viewport,
+	// which can leave this modal's buttons rendered underneath it. Blurring on open sidesteps
+	// that entirely instead of trying to reposition around the keyboard.
+	$effect(() => {
+		if (open) (document.activeElement as HTMLElement | null)?.blur?.();
+	});
 </script>
 
 {#if open}

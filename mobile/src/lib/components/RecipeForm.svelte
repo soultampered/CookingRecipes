@@ -2,36 +2,73 @@
 	import type { DifficultyLevel, NewRecipe, RecipeIngredient } from '$lib/types/recipe';
 	import type { Inventory } from '$lib/types/inventory';
 	import { UNITS } from '$lib/types/unit';
+	import { t, tRaw } from '$lib/i18n/index.svelte';
 
 	let {
 		initial,
 		inventoryItems,
 		submitLabel,
 		submitting,
-		onSubmit
+		onSubmit,
+		dirty = $bindable(false)
 	}: {
 		initial?: Partial<NewRecipe>;
 		inventoryItems: Inventory[];
 		submitLabel: string;
 		submitting: boolean;
 		onSubmit: (data: NewRecipe) => void;
+		dirty?: boolean;
 	} = $props();
 
-	let title = $state(initial?.title ?? '');
-	let description = $state(initial?.description ?? '');
-	let author = $state(initial?.author ?? '');
-	let difficulty = $state<DifficultyLevel>(initial?.difficulty ?? 'easy');
-	let servings = $state(initial?.servings ?? 4);
-	let prepTimeMinutes = $state(initial?.prepTimeMinutes);
-	let cookTimeMinutes = $state(initial?.cookTimeMinutes);
-	let instructions = $state<string[]>(initial?.instructions?.length ? [...initial.instructions] : ['']);
-	let ingredients = $state<RecipeIngredient[]>(
-		initial?.ingredients?.length
-			? initial.ingredients.map((i) => ({ ...i }))
-			: inventoryItems.length
-				? [{ inventoryItemId: inventoryItems[0]._id, quantity: 1, unit: inventoryItems[0].unit }]
-				: []
-	);
+	const initialTitle = initial?.title ?? '';
+	const initialDescription = initial?.description ?? '';
+	const initialAuthor = initial?.author ?? '';
+	const initialDifficulty = initial?.difficulty ?? 'easy';
+	const initialServings = initial?.servings ?? 4;
+	const initialPrepTime = initial?.prepTimeMinutes;
+	const initialCookTime = initial?.cookTimeMinutes;
+	const initialInstructions = initial?.instructions?.length ? [...initial.instructions] : [''];
+	const initialIngredients = initial?.ingredients?.length
+		? initial.ingredients.map((i) => ({ ...i }))
+		: inventoryItems.length
+			? [{ inventoryItemId: inventoryItems[0]._id, quantity: 1, unit: inventoryItems[0].unit }]
+			: [];
+	const initialSnapshot = JSON.stringify({
+		title: initialTitle,
+		description: initialDescription,
+		author: initialAuthor,
+		difficulty: initialDifficulty,
+		servings: initialServings,
+		prepTimeMinutes: initialPrepTime,
+		cookTimeMinutes: initialCookTime,
+		instructions: initialInstructions,
+		ingredients: initialIngredients
+	});
+
+	let title = $state(initialTitle);
+	let description = $state(initialDescription);
+	let author = $state(initialAuthor);
+	let difficulty = $state<DifficultyLevel>(initialDifficulty);
+	let servings = $state(initialServings);
+	let prepTimeMinutes = $state(initialPrepTime);
+	let cookTimeMinutes = $state(initialCookTime);
+	let instructions = $state<string[]>(initialInstructions);
+	let ingredients = $state<RecipeIngredient[]>(initialIngredients);
+
+	$effect(() => {
+		dirty =
+			JSON.stringify({
+				title,
+				description,
+				author,
+				difficulty,
+				servings,
+				prepTimeMinutes,
+				cookTimeMinutes,
+				instructions,
+				ingredients
+			}) !== initialSnapshot;
+	});
 
 	function addIngredient() {
 		if (!inventoryItems.length) return;
@@ -50,12 +87,37 @@
 		instructions = instructions.filter((_, i) => i !== index);
 	}
 
+	function moveInstruction(index: number, direction: -1 | 1) {
+		const target = index + direction;
+		if (target < 0 || target >= instructions.length) return;
+		const copy = [...instructions];
+		[copy[index], copy[target]] = [copy[target], copy[index]];
+		instructions = copy;
+	}
+
 	function inventoryName(id: string) {
 		return inventoryItems.find((i) => i._id === id)?.name ?? id;
 	}
 
+	let errors = $state<{ title?: string; author?: string; servings?: string; instructions?: string }>(
+		{}
+	);
+
+	function validate(): boolean {
+		const next: typeof errors = {};
+		if (!title.trim()) next.title = t('recipeForm.titleRequired');
+		if (!author.trim()) next.author = t('recipeForm.authorRequired');
+		if (!servings || servings < 1) next.servings = t('recipeForm.servingsRequired');
+		if (!instructions.some((line) => line.trim().length > 0)) {
+			next.instructions = t('recipeForm.instructionsRequired');
+		}
+		errors = next;
+		return Object.keys(next).length === 0;
+	}
+
 	function handleSubmit(event: SubmitEvent) {
 		event.preventDefault();
+		if (!validate()) return;
 		onSubmit({
 			title,
 			description: description || undefined,
@@ -73,23 +135,35 @@
 	}
 </script>
 
-<form onsubmit={handleSubmit}>
+<form onsubmit={handleSubmit} novalidate>
 	<label>
-		Title
-		<input type="text" bind:value={title} required />
+		{t('recipeForm.title')}
+		<input
+			type="text"
+			bind:value={title}
+			class:invalid={!!errors.title}
+			aria-invalid={!!errors.title}
+		/>
+		{#if errors.title}<p class="field-error">{errors.title}</p>{/if}
 	</label>
 
 	<label>
-		Description
+		{t('recipeForm.description')}
 		<textarea bind:value={description} rows="2"></textarea>
 	</label>
 
 	<label>
-		Author
-		<input type="text" bind:value={author} required />
+		{t('recipeForm.author')}
+		<input
+			type="text"
+			bind:value={author}
+			class:invalid={!!errors.author}
+			aria-invalid={!!errors.author}
+		/>
+		{#if errors.author}<p class="field-error">{errors.author}</p>{/if}
 	</label>
 
-	<div class="field-label">Difficulty</div>
+	<div class="field-label">{t('recipeForm.difficulty')}</div>
 	<div class="chiprow">
 		{#each ['easy', 'medium', 'hard'] as const as level}
 			<button
@@ -98,29 +172,36 @@
 				class:active={difficulty === level}
 				onclick={() => (difficulty = level)}
 			>
-				{level}
+				{tRaw('difficulty', level)}
 			</button>
 		{/each}
 	</div>
 
 	<div class="row">
 		<label>
-			Servings
-			<input type="number" min="1" bind:value={servings} />
+			{t('recipeForm.servings')}
+			<input
+				type="number"
+				min="1"
+				bind:value={servings}
+				class:invalid={!!errors.servings}
+				aria-invalid={!!errors.servings}
+			/>
+			{#if errors.servings}<p class="field-error">{errors.servings}</p>{/if}
 		</label>
 		<label>
-			Prep (min)
+			{t('recipeForm.prepMinutes')}
 			<input type="number" min="0" bind:value={prepTimeMinutes} />
 		</label>
 		<label>
-			Cook (min)
+			{t('recipeForm.cookMinutes')}
 			<input type="number" min="0" bind:value={cookTimeMinutes} />
 		</label>
 	</div>
 
-	<div class="field-label">Ingredients</div>
+	<div class="field-label">{t('recipeForm.ingredients')}</div>
 	{#if inventoryItems.length === 0}
-		<p class="hint">Add inventory items first so you have something to reference here.</p>
+		<p class="hint">{t('recipeForm.noInventoryHint')}</p>
 	{/if}
 	{#each ingredients as ingredient, index}
 		<div class="ingredient-row">
@@ -132,28 +213,49 @@
 			<input type="number" min="0" step="any" bind:value={ingredient.quantity} />
 			<select bind:value={ingredient.unit}>
 				{#each UNITS as unit}
-					<option value={unit}>{unit}</option>
+					<option value={unit}>{tRaw('unit', unit)}</option>
 				{/each}
 			</select>
 			<button type="button" class="remove" onclick={() => removeIngredient(index)}>×</button>
 		</div>
 	{/each}
 	<button type="button" class="link" onclick={addIngredient} disabled={!inventoryItems.length}>
-		+ Add ingredient
+		{t('recipeForm.addIngredient')}
 	</button>
 
-	<div class="field-label">Instructions</div>
+	<div class="field-label">{t('recipeForm.instructions')}</div>
+	{#if errors.instructions}<p class="field-error">{errors.instructions}</p>{/if}
 	{#each instructions as _, index}
 		<div class="instruction-row">
 			<span class="step">{index + 1}.</span>
+			<div class="reorder-btns">
+				<button
+					type="button"
+					class="reorder"
+					onclick={() => moveInstruction(index, -1)}
+					disabled={index === 0}
+					aria-label={t('recipeForm.moveStepUp')}
+				>
+					↑
+				</button>
+				<button
+					type="button"
+					class="reorder"
+					onclick={() => moveInstruction(index, 1)}
+					disabled={index === instructions.length - 1}
+					aria-label={t('recipeForm.moveStepDown')}
+				>
+					↓
+				</button>
+			</div>
 			<textarea bind:value={instructions[index]} rows="2"></textarea>
 			<button type="button" class="remove" onclick={() => removeInstruction(index)}>×</button>
 		</div>
 	{/each}
-	<button type="button" class="link" onclick={addInstruction}>+ Add step</button>
+	<button type="button" class="link" onclick={addInstruction}>{t('recipeForm.addStep')}</button>
 
 	<button type="submit" class="primary" disabled={submitting}>
-		{submitting ? 'Saving…' : submitLabel}
+		{submitting ? t('common.saving') : submitLabel}
 	</button>
 </form>
 
@@ -187,6 +289,14 @@
 	.row label {
 		flex: 1;
 		min-width: 0;
+	}
+	input.invalid {
+		border-color: var(--bad);
+	}
+	.field-error {
+		color: var(--bad);
+		font-size: 0.78rem;
+		margin: 0.15rem 0 0;
 	}
 	.field-label {
 		font-size: 0.75rem;
@@ -235,6 +345,26 @@
 	.instruction-row textarea {
 		flex: 1;
 		min-width: 0;
+	}
+	.reorder-btns {
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+		flex: 0 0 auto;
+	}
+	.reorder {
+		border: 1px solid var(--line);
+		border-radius: 4px;
+		background: var(--paper-raised);
+		color: var(--ink);
+		font-size: 0.7rem;
+		line-height: 1;
+		padding: 0.15rem 0.35rem;
+		cursor: pointer;
+	}
+	.reorder:disabled {
+		opacity: 0.35;
+		cursor: default;
 	}
 	.step {
 		font-size: 0.8rem;

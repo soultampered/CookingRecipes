@@ -1,5 +1,6 @@
 <script lang="ts">
 	import RecipeCard from '$lib/components/RecipeCard.svelte';
+	import { t } from '$lib/i18n/index.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -7,15 +8,15 @@
 
 <div class="page">
 	<div class="header">
-		<h1>Recipes</h1>
+		<h1>{t('recipes.title')}</h1>
 		<div class="actions">
-			<a class="btn-outline" href="/recipes/suggestions">Suggestions</a>
-			<a class="btn-outline" href="/recipes/new">+ New recipe</a>
+			<a class="btn-outline" href="/recipes/suggestions">{t('recipes.suggestions')}</a>
+			<a class="btn-outline" href="/recipes/new">{t('recipes.newRecipe')}</a>
 		</div>
 	</div>
 
 	{#if data.recipes.length === 0}
-		<p class="empty">No recipes yet. Create your first one.</p>
+		<p class="empty">{t('recipes.empty')}</p>
 	{:else}
 		<div class="list">
 			{#each data.recipes as recipe (recipe._id)}

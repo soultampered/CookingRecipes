@@ -3,6 +3,7 @@
 	import { createShoppingList } from '$lib/api/shoppingLists';
 	import { ApiError } from '$lib/api/client';
 	import { toast } from '$lib/state/toast.svelte';
+	import { t } from '$lib/i18n/index.svelte';
 
 	let name = $state('');
 	let submitting = $state(false);
@@ -14,7 +15,7 @@
 			const list = await createShoppingList({ name, items: [] });
 			await goto(`/shopping-lists/${list._id}`);
 		} catch (err) {
-			toast.push(err instanceof ApiError ? err.message : 'Could not create list');
+			toast.push(err instanceof ApiError ? err.message : t('shoppingListNew.error'));
 		} finally {
 			submitting = false;
 		}
@@ -22,15 +23,15 @@
 </script>
 
 <div class="page">
-	<a class="back" href="/shopping-lists">‹ Shopping Lists</a>
-	<h1>New List</h1>
+	<a class="back" href="/shopping-lists">{t('shoppingListNew.back')}</a>
+	<h1>{t('shoppingListNew.title')}</h1>
 	<form onsubmit={handleSubmit}>
 		<label>
-			Name
+			{t('shoppingListNew.name')}
 			<input type="text" bind:value={name} required />
 		</label>
 		<button type="submit" class="primary" disabled={submitting}>
-			{submitting ? 'Creating…' : 'Create list'}
+			{submitting ? t('common.creating') : t('shoppingListNew.create')}
 		</button>
 	</form>
 </div>

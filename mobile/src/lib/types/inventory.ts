@@ -32,6 +32,7 @@ export interface Inventory {
 	category?: InventoryCategory;
 	userId: string;
 	notes?: string;
+	lowStockThreshold?: number;
 }
 
 export type NewInventory = Omit<Inventory, '_id' | 'createdAt' | 'updatedAt' | 'userId'>;

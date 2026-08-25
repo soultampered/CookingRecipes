@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Recipe } from '$lib/types/recipe';
+	import { t, tRaw } from '$lib/i18n/index.svelte';
 
 	let { recipe }: { recipe: Recipe } = $props();
 
@@ -19,9 +20,9 @@
 	<div class="body">
 		<div class="title">{recipe.title}</div>
 		<div class="meta">
-			<span class="pill pill-{recipe.difficulty}">{recipe.difficulty}</span>
-			{#if recipe.totalTimeMinutes}<span>{recipe.totalTimeMinutes} min</span>{/if}
-			{#if recipe.servings}<span>serves {recipe.servings}</span>{/if}
+			<span class="pill pill-{recipe.difficulty}">{tRaw('difficulty', recipe.difficulty)}</span>
+			{#if recipe.totalTimeMinutes}<span>{t('recipes.minutes', { count: recipe.totalTimeMinutes })}</span>{/if}
+			{#if recipe.servings}<span>{t('recipes.servesCount', { count: recipe.servings })}</span>{/if}
 		</div>
 	</div>
 </a>

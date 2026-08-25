@@ -4,6 +4,7 @@
 	import { requestPasswordReset, resetPassword } from '$lib/api/auth';
 	import { toast } from '$lib/state/toast.svelte';
 	import { ApiError } from '$lib/api/client';
+	import { t } from '$lib/i18n/index.svelte';
 
 	let required = $derived(page.url.searchParams.get('required') === '1');
 
@@ -21,10 +22,10 @@
 		requesting = true;
 		try {
 			await requestPasswordReset(identifier);
-			toast.push('If that account exists, a reset code has been sent', 'info');
+			toast.push(t('forgotPassword.codeSent'), 'info');
 			stage = 'reset';
 		} catch (err) {
-			toast.push(err instanceof ApiError ? err.message : 'Could not request reset code');
+			toast.push(err instanceof ApiError ? err.message : t('forgotPassword.errorRequest'));
 		} finally {
 			requesting = false;
 		}
@@ -35,10 +36,10 @@
 		resetting = true;
 		try {
 			await resetPassword({ identifier, code, newPassword });
-			toast.push('Password reset — log in with your new password', 'info');
+			toast.push(t('forgotPassword.resetDone'), 'info');
 			await goto('/welcome');
 		} catch (err) {
-			toast.push(err instanceof ApiError ? err.message : 'Could not reset password');
+			toast.push(err instanceof ApiError ? err.message : t('forgotPassword.errorReset'));
 		} finally {
 			resetting = false;
 		}
@@ -46,32 +47,31 @@
 </script>
 
 <div class="forgot">
-	<h1>Reset your password</h1>
+	<h1>{t('forgotPassword.title')}</h1>
 
 	{#if required}
 		<div class="banner">
-			We detected unusual activity on your account and require a password reset before you
-			can continue.
+			{t('forgotPassword.forcedBanner')}
 		</div>
 	{/if}
 
 	{#if stage === 'request'}
-		<p class="hint">Enter your username or email and we'll send you a reset code.</p>
+		<p class="hint">{t('forgotPassword.requestHint')}</p>
 		<form onsubmit={handleRequest}>
 			<label>
-				Username or email
+				{t('forgotPassword.identifier')}
 				<input type="text" bind:value={identifier} required />
 			</label>
 			<button type="submit" disabled={requesting}>
-				{requesting ? 'Sending…' : 'Send reset code'}
+				{requesting ? t('forgotPassword.sending') : t('forgotPassword.sendCode')}
 			</button>
 		</form>
-		<a class="link" href="/welcome">Back to Login</a>
+		<a class="link" href="/welcome">{t('forgotPassword.backToLogin')}</a>
 	{:else}
-		<p class="hint">Enter the code we sent you, plus a new password.</p>
+		<p class="hint">{t('forgotPassword.resetHint')}</p>
 		<form onsubmit={handleReset}>
 			<label>
-				Reset code
+				{t('forgotPassword.resetCode')}
 				<input
 					type="text"
 					inputmode="numeric"
@@ -82,17 +82,17 @@
 				/>
 			</label>
 			<label>
-				New password
+				{t('forgotPassword.newPassword')}
 				<input type="password" bind:value={newPassword} required />
 			</label>
 			<button type="submit" disabled={resetting}>
-				{resetting ? 'Resetting…' : 'Reset password'}
+				{resetting ? t('forgotPassword.resetting') : t('forgotPassword.resetPassword')}
 			</button>
 		</form>
 		<button type="button" class="link" onclick={() => (stage = 'request')}>
-			Didn't get a code? Try again
+			{t('forgotPassword.tryAgain')}
 		</button>
-		<a class="link" href="/welcome">Back to Login</a>
+		<a class="link" href="/welcome">{t('forgotPassword.backToLogin')}</a>
 	{/if}
 </div>
 

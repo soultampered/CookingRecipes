@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { toast } from '$lib/state/toast.svelte';
+	import { keyboardInset } from '$lib/state/keyboardInset.svelte';
 </script>
 
-<div class="toasts">
+<div class="toasts" style:bottom="calc(5.5rem + {keyboardInset.current}px)">
 	{#each toast.items as item (item.id)}
 		<div class="toast toast-{item.type}">
 			{item.message}
@@ -13,7 +14,6 @@
 <style>
 	.toasts {
 		position: fixed;
-		bottom: 5.5rem;
 		left: 0;
 		right: 0;
 		display: flex;

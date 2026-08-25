@@ -3,20 +3,15 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import NavBar from '$lib/components/NavBar.svelte';
 	import Toast from '$lib/components/Toast.svelte';
-	import { page } from '$app/state';
+	import { page, navigating } from '$app/state';
 	import { onMount } from 'svelte';
 	import { theme } from '$lib/state/theme.svelte';
-	import { Capacitor } from '@capacitor/core';
-	import { Keyboard } from '@capacitor/keyboard';
+	import { categoryOrder } from '$lib/state/categoryOrder.svelte';
+	import { expirySettings } from '$lib/state/expirySettings.svelte';
+	import { keyboardInset } from '$lib/state/keyboardInset.svelte';
+	import { locale } from '$lib/i18n/index.svelte';
 
 	let { children } = $props();
-
-	// With Keyboard.resize: 'none', iOS never shrinks the webview for the keyboard, so it
-	// just overlays the bottom of the screen. On a short page `main` has no scroll headroom
-	// to begin with, so there's nothing to swipe to bring covered content (e.g. a submit
-	// button) up above it. Tracking the live keyboard height and padding `main` by that
-	// amount manufactures exactly enough scroll room while the keyboard is up.
-	let keyboardInset = $state(0);
 
 	onMount(() => {
 		// The boot splash in app.html is static HTML shown while the root load() blocks on
@@ -24,39 +19,48 @@
 		document.getElementById('boot-splash')?.remove();
 
 		theme.restore();
-
-		if (Capacitor.getPlatform() !== 'ios') return;
+		categoryOrder.restore();
+		expirySettings.restore();
+		locale.restore();
 
 		// The CSS-level html/body scroll-lock (app.css) stops the *page* from ever
 		// scrolling, but iOS's automatic keyboard avoidance repositions the WKWebView's
 		// native UIScrollView content offset directly at the OS layer — that bypasses CSS
 		// entirely, which is why the nav bar could still drift after the keyboard dismissed.
-		// Disabling the webview's own scroll natively closes that gap.
-		Keyboard.setScroll({ isDisabled: true });
-
-		const showHandle = Keyboard.addListener('keyboardWillShow', (info) => {
-			keyboardInset = info.keyboardHeight;
-		});
-		const hideHandle = Keyboard.addListener('keyboardWillHide', () => {
-			keyboardInset = 0;
-		});
-
-		return () => {
-			showHandle.then((h) => h.remove());
-			hideHandle.then((h) => h.remove());
-		};
+		// Disabling the webview's own scroll natively closes that gap; keyboardInset.watch()
+		// does that and tracks the live keyboard height so fixed/padded UI can stay clear of it.
+		return keyboardInset.watch();
 	});
 
 	const noNavRoutes = ['/', '/welcome', '/verify-email', '/forgot-password'];
 	let showNav = $derived(!noNavRoutes.includes(page.url.pathname));
+
+	// STO-15's boot splash only covers first launch — this is the equivalent signal for
+	// in-app navigation (e.g. into a recipe detail with a slow load). Debounced so a fast
+	// navigation never flashes it.
+	let showNavProgress = $state(false);
+	$effect(() => {
+		if (navigating.to) {
+			const timer = setTimeout(() => (showNavProgress = true), 150);
+			return () => {
+				clearTimeout(timer);
+				showNavProgress = false;
+			};
+		}
+		showNavProgress = false;
+	});
 </script>
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
+{#if showNavProgress}
+	<div class="nav-progress" aria-hidden="true"></div>
+{/if}
+
 <div class="app-shell">
-	<main style:padding-bottom="{keyboardInset}px">
+	<main style:padding-bottom="{keyboardInset.current}px">
 		{@render children()}
 	</main>
 
@@ -90,5 +94,34 @@
 		overflow-y: auto;
 		-webkit-overflow-scrolling: touch;
 		transition: padding-bottom 0.25s ease;
+	}
+	.nav-progress {
+		position: fixed;
+		top: env(safe-area-inset-top);
+		left: 0;
+		right: 0;
+		height: 3px;
+		overflow: hidden;
+		z-index: 200;
+		background: transparent;
+		pointer-events: none;
+	}
+	.nav-progress::after {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: -30%;
+		width: 30%;
+		height: 100%;
+		background: var(--accent);
+		animation: nav-progress-slide 1s ease-in-out infinite;
+	}
+	@keyframes nav-progress-slide {
+		0% {
+			left: -30%;
+		}
+		100% {
+			left: 100%;
+		}
 	}
 </style>
