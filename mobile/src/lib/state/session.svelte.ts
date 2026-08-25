@@ -5,6 +5,7 @@ import { getCurrentUser } from '$lib/api/auth';
 import { setAuthToken, setRefreshToken } from '$lib/api/client';
 import { markAuthReady } from './authReady';
 import { onForceLogout, onTokensRefreshed } from './authEvents';
+import { toast } from './toast.svelte';
 
 const TOKEN_KEY = 'stokpot.token';
 const REFRESH_TOKEN_KEY = 'stokpot.refreshToken';
@@ -93,8 +94,11 @@ export const sessionRestored = session.restore();
 onForceLogout(() => {
 	// Clear local state and always navigate to /welcome — without this, a session dying
 	// while the user is already deep in the app (not on the root route) would just leave
-	// them stranded on a page whose data requests now silently fail.
+	// them stranded on a page whose data requests now silently fail. This only fires from
+	// apiFetch's 401 handling on a live session (expired refresh token, detected token
+	// reuse), never during a cold-start restore() failure, so the toast is always relevant.
 	session.signOut();
+	toast.push('Your session expired — please sign in again.');
 	goto('/welcome');
 });
 
