@@ -1,13 +1,32 @@
 <script lang="ts">
+	import { onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resendCode, verifyEmail } from '$lib/api/auth';
 	import { session } from '$lib/state/session.svelte';
 	import { toast } from '$lib/state/toast.svelte';
 	import { ApiError } from '$lib/api/client';
 
+	// Matches the backend's RESEND_COOLDOWN_MS (api/src/services/auth.service.ts). A generic
+	// "wait a bit" toast on a 429 doesn't tell the user how long, and doesn't stop them
+	// immediately re-tapping into the same error — a visible countdown does both.
+	const RESEND_COOLDOWN_SECONDS = 60;
+
 	let code = $state('');
 	let verifying = $state(false);
 	let resending = $state(false);
+	let cooldownRemaining = $state(0);
+	let cooldownInterval: ReturnType<typeof setInterval> | undefined;
+
+	function startCooldown(seconds: number) {
+		cooldownRemaining = seconds;
+		clearInterval(cooldownInterval);
+		cooldownInterval = setInterval(() => {
+			cooldownRemaining -= 1;
+			if (cooldownRemaining <= 0) clearInterval(cooldownInterval);
+		}, 1000);
+	}
+
+	onDestroy(() => clearInterval(cooldownInterval));
 
 	async function handleVerify(event: SubmitEvent) {
 		event.preventDefault();
@@ -29,11 +48,16 @@
 	}
 
 	async function handleResend() {
+		if (cooldownRemaining > 0) return;
 		resending = true;
 		try {
 			await resendCode();
 			toast.push('New code sent', 'info');
+			startCooldown(RESEND_COOLDOWN_SECONDS);
 		} catch (err) {
+			// Already on cooldown server-side (429) — sync the UI to match instead of leaving
+			// the button tappable into the same error again.
+			if (err instanceof ApiError && err.status === 429) startCooldown(RESEND_COOLDOWN_SECONDS);
 			toast.push(err instanceof ApiError ? err.message : 'Could not resend code');
 		} finally {
 			resending = false;
@@ -63,8 +87,12 @@
 		<button type="submit" disabled={verifying}>{verifying ? 'Verifying…' : 'Verify'}</button>
 	</form>
 
-	<button type="button" class="link" onclick={handleResend} disabled={resending}>
-		{resending ? 'Sending…' : 'Resend code'}
+	<button type="button" class="link" onclick={handleResend} disabled={resending || cooldownRemaining > 0}>
+		{resending
+			? 'Sending…'
+			: cooldownRemaining > 0
+				? `Resend code (${cooldownRemaining}s)`
+				: 'Resend code'}
 	</button>
 
 	<button type="button" class="link" onclick={handleBack}>Back to Login</button>
