@@ -10,7 +10,7 @@
 	import { ApiError } from '$lib/api/client';
 	import { toast } from '$lib/state/toast.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
-	import { INVENTORY_CATEGORIES } from '$lib/types/inventory';
+	import { categoryOrder } from '$lib/state/categoryOrder.svelte';
 	import type { ShoppingListItem } from '$lib/types/shoppingList';
 	import type { PageProps } from './$types';
 
@@ -74,7 +74,7 @@
 		}
 	}
 
-	// Fixed category order first (matches inventory's grouping), uncategorized items last.
+	// User's own aisle-order preference first (see STO-26), uncategorized items last.
 	let groupedItems = $derived.by(() => {
 		const groups = new Map<string, ShoppingListItem[]>();
 		for (const item of data.list.items) {
@@ -83,7 +83,7 @@
 			groups.get(key)!.push(item);
 		}
 		const ordered: [string, ShoppingListItem[]][] = [];
-		for (const category of INVENTORY_CATEGORIES) {
+		for (const category of categoryOrder.current) {
 			if (groups.has(category)) ordered.push([category, groups.get(category)!]);
 		}
 		if (groups.has('')) ordered.push(['', groups.get('')!]);

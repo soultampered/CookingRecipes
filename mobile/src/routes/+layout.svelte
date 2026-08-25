@@ -6,6 +6,7 @@
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { theme } from '$lib/state/theme.svelte';
+	import { categoryOrder } from '$lib/state/categoryOrder.svelte';
 	import { Capacitor } from '@capacitor/core';
 	import { Keyboard } from '@capacitor/keyboard';
 
@@ -24,6 +25,7 @@
 		document.getElementById('boot-splash')?.remove();
 
 		theme.restore();
+		categoryOrder.restore();
 
 		if (Capacitor.getPlatform() !== 'ios') return;
 

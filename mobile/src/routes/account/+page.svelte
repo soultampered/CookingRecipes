@@ -8,6 +8,7 @@
 	import { PALETTES } from '$lib/theme/palettes';
 	import { toast } from '$lib/state/toast.svelte';
 	import { ApiError } from '$lib/api/client';
+	import { categoryOrder } from '$lib/state/categoryOrder.svelte';
 
 	let confirmingDelete = $state(false);
 	let deleting = $state(false);
@@ -91,6 +92,38 @@
 			{/each}
 		</div>
 		<p class="palette-name">{palette.current}</p>
+	</div>
+
+	<div class="section category-order-section">
+		<span class="section-label">Shopping list order</span>
+		<p class="section-hint">Match your store's aisle layout — reorder categories below.</p>
+		<div class="category-order-list">
+			{#each categoryOrder.current as category, index (category)}
+				<div class="category-order-row">
+					<span class="category-order-name">{category}</span>
+					<div class="reorder-btns">
+						<button
+							type="button"
+							class="reorder"
+							onclick={() => categoryOrder.move(index, -1)}
+							disabled={index === 0}
+							aria-label={`Move ${category} up`}
+						>
+							↑
+						</button>
+						<button
+							type="button"
+							class="reorder"
+							onclick={() => categoryOrder.move(index, 1)}
+							disabled={index === categoryOrder.current.length - 1}
+							aria-label={`Move ${category} down`}
+						>
+							↓
+						</button>
+					</div>
+				</div>
+			{/each}
+		</div>
 	</div>
 
 	<button type="button" class="outline" onclick={handleLogout}>Log out</button>
@@ -251,6 +284,56 @@
 		margin: 0;
 		font-size: 0.8rem;
 		color: var(--ink-soft);
+	}
+	.category-order-section {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 0.5rem;
+	}
+	.section-hint {
+		margin: 0;
+		font-size: 0.78rem;
+		color: var(--ink-soft);
+	}
+	.category-order-list {
+		display: flex;
+		flex-direction: column;
+		max-height: 260px;
+		overflow-y: auto;
+		border: 1px solid var(--line);
+		border-radius: 8px;
+	}
+	.category-order-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
+		padding: 0.5rem 0.7rem;
+		border-bottom: 1px solid var(--line);
+	}
+	.category-order-row:last-child {
+		border-bottom: none;
+	}
+	.category-order-name {
+		font-size: 0.85rem;
+	}
+	.reorder-btns {
+		display: flex;
+		gap: 0.3rem;
+	}
+	.reorder {
+		border: 1px solid var(--line);
+		border-radius: 4px;
+		background: var(--paper-raised);
+		color: var(--ink);
+		font-size: 0.75rem;
+		line-height: 1;
+		padding: 0.25rem 0.5rem;
+		cursor: pointer;
+	}
+	.reorder:disabled {
+		opacity: 0.35;
+		cursor: default;
 	}
 	.legal-links {
 		display: flex;
