@@ -4,6 +4,7 @@
 	import { session } from '$lib/state/session.svelte';
 	import { toast } from '$lib/state/toast.svelte';
 	import { ApiError } from '$lib/api/client';
+	import { t } from '$lib/i18n/index.svelte';
 	import type { User } from '$lib/types/user';
 
 	function postAuthRedirect(user: User) {
@@ -31,7 +32,7 @@
 			await session.signIn(result);
 			await postAuthRedirect(result.user);
 		} catch (err) {
-			toast.push(err instanceof ApiError ? err.message : 'Could not log in');
+			toast.push(err instanceof ApiError ? err.message : t('welcome.errorLogin'));
 		} finally {
 			loggingIn = false;
 		}
@@ -45,7 +46,7 @@
 			await session.signIn(result);
 			await postAuthRedirect(result.user);
 		} catch (err) {
-			toast.push(err instanceof ApiError ? err.message : 'Could not create account');
+			toast.push(err instanceof ApiError ? err.message : t('welcome.errorRegister'));
 		} finally {
 			registering = false;
 		}
@@ -53,53 +54,55 @@
 </script>
 
 <div class="welcome">
-	<h1>Stokpot</h1>
+	<h1>{t('welcome.brand')}</h1>
 
 	<div class="tabs">
 		<button type="button" class:active={mode === 'login'} onclick={() => (mode = 'login')}>
-			Log in
+			{t('welcome.login')}
 		</button>
 		<button type="button" class:active={mode === 'register'} onclick={() => (mode = 'register')}>
-			Create account
+			{t('welcome.createAccount')}
 		</button>
 	</div>
 
 	{#if mode === 'login'}
 		<form onsubmit={handleLogin}>
 			<label>
-				Username or email
+				{t('welcome.identifier')}
 				<input type="text" bind:value={identifier} required />
 			</label>
 			<label>
-				Password
+				{t('welcome.password')}
 				<input type="password" bind:value={loginPassword} required />
 			</label>
-			<button type="submit" disabled={loggingIn}>{loggingIn ? 'Logging in…' : 'Log in'}</button>
+			<button type="submit" disabled={loggingIn}>
+				{loggingIn ? t('welcome.loggingIn') : t('welcome.login')}
+			</button>
 		</form>
-		<a class="link" href="/forgot-password">Forgot password?</a>
+		<a class="link" href="/forgot-password">{t('welcome.forgotPassword')}</a>
 	{:else}
 		<form onsubmit={handleRegister}>
 			<label>
-				Username
+				{t('welcome.username')}
 				<input type="text" bind:value={username} required />
 			</label>
 			<label>
-				Email
+				{t('welcome.email')}
 				<input type="email" bind:value={email} required />
 			</label>
 			<label>
-				Password
+				{t('welcome.password')}
 				<input type="password" bind:value={registerPassword} required />
 			</label>
 			<button type="submit" disabled={registering}>
-				{registering ? 'Creating…' : 'Create account'}
+				{registering ? t('welcome.creating') : t('welcome.createAccount')}
 			</button>
 		</form>
 		<p class="legal">
-			By creating an account you agree to our
-			<a href="https://stokpot.ca/terms" target="_blank">Terms</a>
-			and
-			<a href="https://stokpot.ca/privacy" target="_blank">Privacy Policy</a>.
+			{t('welcome.legalPrefix')}
+			<a href="https://stokpot.ca/terms" target="_blank">{t('welcome.legalTerms')}</a>
+			{t('welcome.legalAnd')}
+			<a href="https://stokpot.ca/privacy" target="_blank">{t('welcome.legalPrivacy')}</a>
 		</p>
 	{/if}
 </div>

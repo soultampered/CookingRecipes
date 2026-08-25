@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onDestroy } from 'svelte';
+	import { t } from '$lib/i18n/index.svelte';
 
 	let { seconds }: { seconds: number } = $props();
 
@@ -46,14 +47,14 @@
 <div class="step-timer" class:done>
 	<span class="time">{format(remaining)}</span>
 	{#if running}
-		<button type="button" onclick={stopInterval}>Pause</button>
+		<button type="button" onclick={stopInterval}>{t('stepTimer.pause')}</button>
 	{:else}
 		<button type="button" onclick={start}>
-			{done ? 'Restart' : remaining < seconds ? 'Resume' : 'Start timer'}
+			{done ? t('stepTimer.restart') : remaining < seconds ? t('stepTimer.resume') : t('stepTimer.start')}
 		</button>
 	{/if}
 	{#if remaining < seconds && !running}
-		<button type="button" class="reset" onclick={reset}>Reset</button>
+		<button type="button" class="reset" onclick={reset}>{t('stepTimer.reset')}</button>
 	{/if}
 </div>
 

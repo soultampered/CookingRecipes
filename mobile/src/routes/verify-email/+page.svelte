@@ -5,6 +5,7 @@
 	import { session } from '$lib/state/session.svelte';
 	import { toast } from '$lib/state/toast.svelte';
 	import { ApiError } from '$lib/api/client';
+	import { t } from '$lib/i18n/index.svelte';
 
 	// Matches the backend's RESEND_COOLDOWN_MS (api/src/services/auth.service.ts). A generic
 	// "wait a bit" toast on a 429 doesn't tell the user how long, and doesn't stop them
@@ -36,7 +37,7 @@
 			session.setUser(user);
 			await goto('/dashboard');
 		} catch (err) {
-			toast.push(err instanceof ApiError ? err.message : 'Could not verify code');
+			toast.push(err instanceof ApiError ? err.message : t('verifyEmail.errorVerify'));
 		} finally {
 			verifying = false;
 		}
@@ -52,13 +53,13 @@
 		resending = true;
 		try {
 			await resendCode();
-			toast.push('New code sent', 'info');
+			toast.push(t('verifyEmail.codeSent'), 'info');
 			startCooldown(RESEND_COOLDOWN_SECONDS);
 		} catch (err) {
 			// Already on cooldown server-side (429) — sync the UI to match instead of leaving
 			// the button tappable into the same error again.
 			if (err instanceof ApiError && err.status === 429) startCooldown(RESEND_COOLDOWN_SECONDS);
-			toast.push(err instanceof ApiError ? err.message : 'Could not resend code');
+			toast.push(err instanceof ApiError ? err.message : t('verifyEmail.errorResend'));
 		} finally {
 			resending = false;
 		}
@@ -66,15 +67,14 @@
 </script>
 
 <div class="verify">
-	<h1>Check your email</h1>
+	<h1>{t('verifyEmail.title')}</h1>
 	<p class="hint">
-		We sent a 6-digit code to {session.user?.email ?? 'your email'}. Enter it below to finish
-		setting up your account.
+		{t('verifyEmail.hint', { email: session.user?.email ?? t('verifyEmail.yourEmail') })}
 	</p>
 
 	<form onsubmit={handleVerify}>
 		<label>
-			Verification code
+			{t('verifyEmail.codeLabel')}
 			<input
 				type="text"
 				inputmode="numeric"
@@ -84,18 +84,20 @@
 				required
 			/>
 		</label>
-		<button type="submit" disabled={verifying}>{verifying ? 'Verifying…' : 'Verify'}</button>
+		<button type="submit" disabled={verifying}>
+			{verifying ? t('verifyEmail.verifying') : t('verifyEmail.verify')}
+		</button>
 	</form>
 
 	<button type="button" class="link" onclick={handleResend} disabled={resending || cooldownRemaining > 0}>
 		{resending
-			? 'Sending…'
+			? t('verifyEmail.sending')
 			: cooldownRemaining > 0
-				? `Resend code (${cooldownRemaining}s)`
-				: 'Resend code'}
+				? t('verifyEmail.resendCooldown', { seconds: cooldownRemaining })
+				: t('verifyEmail.resend')}
 	</button>
 
-	<button type="button" class="link" onclick={handleBack}>Back to Login</button>
+	<button type="button" class="link" onclick={handleBack}>{t('verifyEmail.backToLogin')}</button>
 </div>
 
 <style>

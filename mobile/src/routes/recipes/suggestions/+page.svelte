@@ -1,17 +1,18 @@
 <script lang="ts">
 	import RecipeCard from '$lib/components/RecipeCard.svelte';
+	import { t } from '$lib/i18n/index.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 </script>
 
 <div class="page">
-	<a class="back" href="/recipes">‹ Recipes</a>
-	<h1>Suggestions</h1>
-	<p class="sub">Fully in stock — ready to cook right now.</p>
+	<a class="back" href="/recipes">{t('suggestions.back')}</a>
+	<h1>{t('suggestions.title')}</h1>
+	<p class="sub">{t('suggestions.subtitle')}</p>
 
 	{#if data.recipes.length === 0}
-		<p class="empty">Nothing is fully stocked yet. Check Inventory to see what's missing.</p>
+		<p class="empty">{t('suggestions.empty')}</p>
 	{:else}
 		<div class="list">
 			{#each data.recipes as recipe (recipe._id)}

@@ -1,21 +1,22 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import NavIcon from './NavIcon.svelte';
+	import { t } from '$lib/i18n/index.svelte';
 
 	const tabs = [
-		{ href: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
-		{ href: '/recipes', label: 'Recipes', icon: 'recipes' },
-		{ href: '/inventory', label: 'Inventory', icon: 'inventory' },
-		{ href: '/shopping-lists', label: 'Shopping', icon: 'shopping' },
-		{ href: '/account', label: 'Account', icon: 'account' }
-	];
+		{ href: '/dashboard', labelKey: 'nav.dashboard', icon: 'dashboard' },
+		{ href: '/recipes', labelKey: 'nav.recipes', icon: 'recipes' },
+		{ href: '/inventory', labelKey: 'nav.inventory', icon: 'inventory' },
+		{ href: '/shopping-lists', labelKey: 'nav.shopping', icon: 'shopping' },
+		{ href: '/account', labelKey: 'nav.account', icon: 'account' }
+	] as const;
 </script>
 
 <nav>
 	{#each tabs as tab}
 		<a href={tab.href} class:active={page.url.pathname === tab.href}>
 			<NavIcon name={tab.icon} />
-			<span>{tab.label}</span>
+			<span>{t(tab.labelKey)}</span>
 		</a>
 	{/each}
 </nav>

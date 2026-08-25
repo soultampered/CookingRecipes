@@ -6,6 +6,7 @@
 	import { ApiError } from '$lib/api/client';
 	import { toast } from '$lib/state/toast.svelte';
 	import { expirySettings } from '$lib/state/expirySettings.svelte';
+	import { t, tRaw } from '$lib/i18n/index.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -37,7 +38,7 @@
 			try {
 				shoppingLists = await listShoppingLists();
 			} catch (err) {
-				toast.push(err instanceof ApiError ? err.message : 'Could not load shopping lists');
+				toast.push(err instanceof ApiError ? err.message : t('inventory.errorLoadLists'));
 				quickAddItem = null;
 			} finally {
 				loadingLists = false;
@@ -50,10 +51,10 @@
 		addingToListId = listId;
 		try {
 			await addItem(listId, { name: quickAddItem.name, quantity: 1 });
-			toast.push(`Added "${quickAddItem.name}" to shopping list`, 'info');
+			toast.push(t('inventory.addedToList', { name: quickAddItem.name }), 'info');
 			quickAddItem = null;
 		} catch (err) {
-			toast.push(err instanceof ApiError ? err.message : 'Could not add item');
+			toast.push(err instanceof ApiError ? err.message : t('inventory.errorAddItem'));
 		} finally {
 			addingToListId = null;
 		}
@@ -62,25 +63,27 @@
 
 <div class="page">
 	<div class="header">
-		<h1>Inventory</h1>
-		<a class="btn-outline" href="/inventory/new">+ New item</a>
+		<h1>{t('inventory.title')}</h1>
+		<a class="btn-outline" href="/inventory/new">{t('inventory.newItem')}</a>
 	</div>
 
 	<div class="chiprow">
-		<button class="chip" class:active={!data.category} onclick={() => selectCategory(null)}>All</button>
+		<button class="chip" class:active={!data.category} onclick={() => selectCategory(null)}>
+			{t('inventory.all')}
+		</button>
 		{#each INVENTORY_CATEGORIES as category}
 			<button
 				class="chip"
 				class:active={data.category === category}
 				onclick={() => selectCategory(category)}
 			>
-				{category}
+				{tRaw('category', category)}
 			</button>
 		{/each}
 	</div>
 
 	{#if data.items.length === 0}
-		<p class="empty">No items in this category yet.</p>
+		<p class="empty">{t('inventory.empty')}</p>
 	{:else}
 		<div class="list">
 			{#each data.items as item (item._id)}
@@ -88,15 +91,15 @@
 					<a class="row-link" href={`/inventory/${item._id}/edit`}>
 						<span class="dot" class:out={item.quantity === 0}></span>
 						<span class="name">{item.name}</span>
-						<span class="qty">{item.quantity} {item.unit}</span>
+						<span class="qty">{item.quantity} {tRaw('unit', item.unit)}</span>
 					</a>
 					{#if isLowStock(item)}
 						<button type="button" class="low-stock-badge" onclick={() => openQuickAdd(item)}>
-							Low
+							{t('inventory.lowBadge')}
 						</button>
 					{/if}
 					{#if isExpiringSoon(item)}
-						<span class="expiring-badge">Expiring</span>
+						<span class="expiring-badge">{t('inventory.expiringBadge')}</span>
 					{/if}
 				</div>
 			{/each}
@@ -118,11 +121,11 @@
 			tabindex="-1"
 			onclick={(e) => e.stopPropagation()}
 		>
-			<h2>Add "{quickAddItem.name}" to a list</h2>
+			<h2>{t('inventory.addToListTitle', { name: quickAddItem.name })}</h2>
 			{#if loadingLists}
-				<p class="hint">Loading lists…</p>
+				<p class="hint">{t('inventory.loadingLists')}</p>
 			{:else if !shoppingLists || shoppingLists.length === 0}
-				<p class="hint">No shopping lists yet — create one first.</p>
+				<p class="hint">{t('inventory.noLists')}</p>
 			{:else}
 				<div class="list-options">
 					{#each shoppingLists as list (list._id)}
@@ -132,12 +135,14 @@
 							onclick={() => quickAddToList(list._id!)}
 							disabled={addingToListId === list._id}
 						>
-							{addingToListId === list._id ? 'Adding…' : list.name}
+							{addingToListId === list._id ? t('common.adding') : list.name}
 						</button>
 					{/each}
 				</div>
 			{/if}
-			<button type="button" class="outline" onclick={() => (quickAddItem = null)}>Cancel</button>
+			<button type="button" class="outline" onclick={() => (quickAddItem = null)}>
+				{t('common.cancel')}
+			</button>
 		</div>
 	</div>
 {/if}

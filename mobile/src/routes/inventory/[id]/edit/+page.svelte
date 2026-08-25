@@ -6,6 +6,7 @@
 	import { toast } from '$lib/state/toast.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import { unsavedChangesGuard } from '$lib/utils/unsavedChangesGuard.svelte';
+	import { t } from '$lib/i18n/index.svelte';
 	import type { NewInventory } from '$lib/types/inventory';
 	import type { PageProps } from './$types';
 
@@ -24,7 +25,7 @@
 			leaveGuard.allowNext();
 			await goto('/inventory');
 		} catch (err) {
-			toast.push(err instanceof ApiError ? err.message : 'Could not update item');
+			toast.push(err instanceof ApiError ? err.message : t('inventoryEdit.errorUpdate'));
 		} finally {
 			submitting = false;
 		}
@@ -38,7 +39,7 @@
 			leaveGuard.allowNext();
 			await goto('/inventory');
 		} catch (err) {
-			toast.push(err instanceof ApiError ? err.message : 'Could not delete item');
+			toast.push(err instanceof ApiError ? err.message : t('inventoryEdit.errorDelete'));
 			deleting = false;
 			confirmingDelete = false;
 		}
@@ -46,27 +47,29 @@
 </script>
 
 <div class="page">
-	<a class="back" href="/inventory">‹ Inventory</a>
-	<h1>Edit Item</h1>
+	<a class="back" href="/inventory">{t('inventoryEdit.back')}</a>
+	<h1>{t('inventoryEdit.title')}</h1>
 	<InventoryForm
 		initial={data.item}
-		submitLabel="Save changes"
+		submitLabel={t('inventoryEdit.saveLabel')}
 		{submitting}
 		onSubmit={handleSubmit}
 		bind:dirty
 	/>
 	<div class="danger-zone">
 		<button type="button" class="danger-link" onclick={() => (confirmingDelete = true)}>
-			Delete item
+			{t('inventoryEdit.deleteItem')}
 		</button>
 	</div>
 </div>
 
 <ConfirmModal
 	open={confirmingDelete}
-	title="Delete item?"
-	message={`This will permanently delete "${data.item.name}" from your inventory.`}
-	confirmLabel="Delete item"
+	title={t('inventoryEdit.deleteTitle')}
+	message={t('inventoryEdit.deleteMessage', { name: data.item.name })}
+	confirmLabel={t('inventoryEdit.deleteItem')}
+	confirmingLabel={t('common.deleting')}
+	cancelLabel={t('common.cancel')}
 	confirming={deleting}
 	onConfirm={confirmDelete}
 	onCancel={() => (confirmingDelete = false)}
@@ -74,10 +77,11 @@
 
 <ConfirmModal
 	open={leaveGuard.confirming}
-	title="Discard changes?"
-	message="You have unsaved changes that will be lost if you leave this page."
-	confirmLabel="Discard"
-	confirmingLabel="Discard"
+	title={t('unsaved.title')}
+	message={t('unsaved.message')}
+	confirmLabel={t('unsaved.discard')}
+	confirmingLabel={t('unsaved.discard')}
+	cancelLabel={t('common.cancel')}
 	onConfirm={leaveGuard.confirmLeave}
 	onCancel={leaveGuard.cancelLeave}
 />

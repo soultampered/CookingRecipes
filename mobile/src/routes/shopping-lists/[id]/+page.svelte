@@ -11,6 +11,7 @@
 	import { toast } from '$lib/state/toast.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import { categoryOrder } from '$lib/state/categoryOrder.svelte';
+	import { t, tRaw } from '$lib/i18n/index.svelte';
 	import type { ShoppingListItem } from '$lib/types/shoppingList';
 	import type { PageProps } from './$types';
 
@@ -68,7 +69,7 @@
 			itemQuantity = 1;
 			await invalidate(`app:shopping-list:${data.list._id}`);
 		} catch (err) {
-			toast.push(err instanceof ApiError ? err.message : 'Could not add item');
+			toast.push(err instanceof ApiError ? err.message : t('shoppingList.errorAddItem'));
 		} finally {
 			adding = false;
 		}
@@ -95,7 +96,7 @@
 			await toggleItemChecked(data.list._id!, itemId);
 			await invalidate(`app:shopping-list:${data.list._id}`);
 		} catch (err) {
-			toast.push(err instanceof ApiError ? err.message : 'Could not update item');
+			toast.push(err instanceof ApiError ? err.message : t('shoppingList.errorUpdateItem'));
 		}
 	}
 
@@ -106,7 +107,7 @@
 			await removeItem(data.list._id!, itemId);
 			await invalidate(`app:shopping-list:${data.list._id}`);
 		} catch (err) {
-			toast.push(err instanceof ApiError ? err.message : 'Could not remove item');
+			toast.push(err instanceof ApiError ? err.message : t('shoppingList.errorRemoveItem'));
 		} finally {
 			removingItemId = null;
 		}
@@ -133,7 +134,7 @@
 			await invalidate(`app:shopping-list:${data.list._id}`);
 			editingName = false;
 		} catch (err) {
-			toast.push(err instanceof ApiError ? err.message : 'Could not rename list');
+			toast.push(err instanceof ApiError ? err.message : t('shoppingList.errorRename'));
 		} finally {
 			savingName = false;
 		}
@@ -145,7 +146,7 @@
 			await deleteShoppingList(data.list._id!);
 			await goto('/shopping-lists');
 		} catch (err) {
-			toast.push(err instanceof ApiError ? err.message : 'Could not delete list');
+			toast.push(err instanceof ApiError ? err.message : t('shoppingList.errorDelete'));
 			deleting = false;
 			confirmingDeleteList = false;
 		}
@@ -153,7 +154,7 @@
 </script>
 
 <div class="page">
-	<a class="back" href="/shopping-lists">‹ Shopping Lists</a>
+	<a class="back" href="/shopping-lists">{t('shoppingList.back')}</a>
 
 	{#if editingName}
 		<form
@@ -164,31 +165,38 @@
 			}}
 		>
 			<input type="text" bind:value={nameDraft} maxlength="100" required use:focusOnMount />
-			<button type="submit" disabled={savingName}>{savingName ? 'Saving…' : 'Save'}</button>
+			<button type="submit" disabled={savingName}>
+				{savingName ? t('common.saving') : t('common.save')}
+			</button>
 			<button
 				type="button"
 				class="outline"
 				onclick={() => (editingName = false)}
 				disabled={savingName}
 			>
-				Cancel
+				{t('common.cancel')}
 			</button>
 		</form>
 	{:else}
 		<div class="title-row">
 			<h1>{data.list.name}</h1>
-			<button type="button" class="edit-btn" onclick={startEditName} aria-label="Rename list">
+			<button
+				type="button"
+				class="edit-btn"
+				onclick={startEditName}
+				aria-label={t('shoppingList.renameAriaLabel')}
+			>
 				✎
 			</button>
 		</div>
 	{/if}
 
 	{#if data.list.items.length === 0}
-		<p class="empty">No items yet.</p>
+		<p class="empty">{t('shoppingList.empty')}</p>
 	{:else}
 		{#each groupedItems as [category, items] (category || '__uncategorized')}
 			{#if groupedItems.length > 1}
-				<div class="category-header">{category || 'Other'}</div>
+				<div class="category-header">{category ? tRaw('category', category) : t('common.other')}</div>
 			{/if}
 			<div class="items">
 				{#each items as item (item._id)}
@@ -200,9 +208,9 @@
 								removingItemId = item._id!;
 								closeSwipe(item._id!);
 							}}
-							aria-label={`Delete ${item.name}`}
+							aria-label={t('shoppingList.deleteItemAriaLabel', { name: item.name })}
 						>
-							Delete
+							{t('shoppingList.deleteAction')}
 						</button>
 						<div
 							class="item-row"
@@ -231,33 +239,38 @@
 	{/if}
 
 	<form class="add-item-form" onsubmit={handleAddItem}>
-		<input type="text" placeholder="Item name" bind:value={itemName} required />
+		<input type="text" placeholder={t('shoppingList.itemNamePlaceholder')} bind:value={itemName} required />
 		<input type="number" min="1" bind:value={itemQuantity} />
-		<button type="submit" disabled={adding}>{adding ? 'Adding…' : '+ Add'}</button>
+		<button type="submit" disabled={adding}>{adding ? t('common.adding') : t('shoppingList.add')}</button>
 	</form>
 
 	<div class="danger-zone">
 		<button type="button" class="danger-link" onclick={() => (confirmingDeleteList = true)}>
-			Delete list
+			{t('shoppingList.deleteList')}
 		</button>
 	</div>
 </div>
 
 <ConfirmModal
 	open={removingItemId !== null}
-	title="Remove item?"
-	message={`Remove "${data.list.items.find((i) => i._id === removingItemId)?.name ?? ''}" from this list?`}
-	confirmLabel="Remove"
-	confirmingLabel="Removing…"
+	title={t('shoppingList.removeItemTitle')}
+	message={t('shoppingList.removeItemMessage', {
+		name: data.list.items.find((i) => i._id === removingItemId)?.name ?? ''
+	})}
+	confirmLabel={t('shoppingList.remove')}
+	confirmingLabel={t('shoppingList.removing')}
+	cancelLabel={t('common.cancel')}
 	onConfirm={confirmRemove}
 	onCancel={() => (removingItemId = null)}
 />
 
 <ConfirmModal
 	open={confirmingDeleteList}
-	title="Delete list?"
-	message={`This will permanently delete "${data.list.name}" and all its items.`}
-	confirmLabel="Delete list"
+	title={t('shoppingList.deleteListTitle')}
+	message={t('shoppingList.deleteListMessage', { name: data.list.name })}
+	confirmLabel={t('shoppingList.deleteList')}
+	confirmingLabel={t('common.deleting')}
+	cancelLabel={t('common.cancel')}
 	confirming={deleting}
 	onConfirm={confirmDeleteList}
 	onCancel={() => (confirmingDeleteList = false)}

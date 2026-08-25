@@ -6,6 +6,7 @@
 	import { createInventoryItem } from '$lib/api/inventory';
 	import { ApiError } from '$lib/api/client';
 	import { toast } from '$lib/state/toast.svelte';
+	import { t } from '$lib/i18n/index.svelte';
 	import type { NewInventory } from '$lib/types/inventory';
 
 	let submitting = $state(false);
@@ -19,7 +20,7 @@
 			leaveGuard.allowNext();
 			await goto('/inventory');
 		} catch (err) {
-			toast.push(err instanceof ApiError ? err.message : 'Could not create item');
+			toast.push(err instanceof ApiError ? err.message : t('inventoryNew.error'));
 		} finally {
 			submitting = false;
 		}
@@ -27,17 +28,18 @@
 </script>
 
 <div class="page">
-	<a class="back" href="/inventory">‹ Inventory</a>
-	<h1>New Item</h1>
-	<InventoryForm submitLabel="Save item" {submitting} onSubmit={handleSubmit} bind:dirty />
+	<a class="back" href="/inventory">{t('inventoryNew.back')}</a>
+	<h1>{t('inventoryNew.title')}</h1>
+	<InventoryForm submitLabel={t('inventoryNew.saveLabel')} {submitting} onSubmit={handleSubmit} bind:dirty />
 </div>
 
 <ConfirmModal
 	open={leaveGuard.confirming}
-	title="Discard changes?"
-	message="You have unsaved changes that will be lost if you leave this page."
-	confirmLabel="Discard"
-	confirmingLabel="Discard"
+	title={t('unsaved.title')}
+	message={t('unsaved.message')}
+	confirmLabel={t('unsaved.discard')}
+	confirmingLabel={t('unsaved.discard')}
+	cancelLabel={t('common.cancel')}
 	onConfirm={leaveGuard.confirmLeave}
 	onCancel={leaveGuard.cancelLeave}
 />

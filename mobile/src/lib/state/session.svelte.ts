@@ -6,6 +6,7 @@ import { setAuthToken, setRefreshToken } from '$lib/api/client';
 import { markAuthReady } from './authReady';
 import { onForceLogout, onTokensRefreshed } from './authEvents';
 import { toast } from './toast.svelte';
+import { t } from '../i18n/index.svelte';
 
 const TOKEN_KEY = 'stokpot.token';
 const REFRESH_TOKEN_KEY = 'stokpot.refreshToken';
@@ -98,7 +99,7 @@ onForceLogout(() => {
 	// apiFetch's 401 handling on a live session (expired refresh token, detected token
 	// reuse), never during a cold-start restore() failure, so the toast is always relevant.
 	session.signOut();
-	toast.push('Your session expired — please sign in again.');
+	toast.push(t('session.expired'));
 	goto('/welcome');
 });
 

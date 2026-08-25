@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { NewInventory } from '$lib/types/inventory';
 	import { UNITS, type Unit } from '$lib/types/unit';
+	import { t, tRaw } from '$lib/i18n/index.svelte';
 
 	let {
 		initial,
@@ -45,8 +46,8 @@
 	// this is enforced here instead of relying on the API response.
 	function validate(): boolean {
 		const next: typeof errors = {};
-		if (!name.trim()) next.name = 'Name is required.';
-		if (quantity == null || quantity < 0) next.quantity = 'Quantity is required.';
+		if (!name.trim()) next.name = t('inventoryForm.nameRequired');
+		if (quantity == null || quantity < 0) next.quantity = t('inventoryForm.quantityRequired');
 		errors = next;
 		return Object.keys(next).length === 0;
 	}
@@ -67,14 +68,14 @@
 
 <form onsubmit={handleSubmit} novalidate>
 	<label>
-		Name
+		{t('inventoryForm.name')}
 		<input type="text" bind:value={name} class:invalid={!!errors.name} aria-invalid={!!errors.name} />
 		{#if errors.name}<p class="field-error">{errors.name}</p>{/if}
 	</label>
 
 	<div class="row">
 		<label>
-			Quantity
+			{t('inventoryForm.quantity')}
 			<input
 				type="number"
 				min="0"
@@ -86,32 +87,38 @@
 			{#if errors.quantity}<p class="field-error">{errors.quantity}</p>{/if}
 		</label>
 		<label>
-			Unit
+			{t('inventoryForm.unit')}
 			<select bind:value={unit}>
 				{#each UNITS as u}
-					<option value={u}>{u}</option>
+					<option value={u}>{tRaw('unit', u)}</option>
 				{/each}
 			</select>
 		</label>
 	</div>
 
 	<label>
-		Expiration
+		{t('inventoryForm.expiration')}
 		<input type="date" bind:value={expirationDte} />
 	</label>
 
 	<label>
-		Low stock alert below
-		<input type="number" min="0" step="any" placeholder="Off" bind:value={lowStockThreshold} />
+		{t('inventoryForm.lowStockAlert')}
+		<input
+			type="number"
+			min="0"
+			step="any"
+			placeholder={t('inventoryForm.lowStockPlaceholder')}
+			bind:value={lowStockThreshold}
+		/>
 	</label>
 
 	<label>
-		Notes
+		{t('inventoryForm.notes')}
 		<textarea bind:value={notes} rows="2"></textarea>
 	</label>
 
 	<button type="submit" class="primary" disabled={submitting}>
-		{submitting ? 'Saving…' : submitLabel}
+		{submitting ? t('common.saving') : submitLabel}
 	</button>
 </form>
 

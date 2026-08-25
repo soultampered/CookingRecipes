@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { t } from '$lib/i18n/index.svelte';
 </script>
 
 <div class="error-page">
-	<h1>Something went wrong</h1>
-	<p>{page.error?.message ?? 'That page could not be loaded.'}</p>
-	<a href="/recipes">Back to Recipes</a>
+	<h1>{t('error.title')}</h1>
+	<p>{page.error?.message ?? t('error.fallback')}</p>
+	<a href="/recipes">{t('error.backToRecipes')}</a>
 </div>
 
 <style>

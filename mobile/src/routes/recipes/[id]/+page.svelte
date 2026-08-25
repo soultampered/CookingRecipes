@@ -6,6 +6,7 @@
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import StepTimer from '$lib/components/StepTimer.svelte';
 	import { parseDurationSeconds } from '$lib/utils/parseDuration';
+	import { t, tRaw } from '$lib/i18n/index.svelte';
 	import type { MissingIngredient } from '$lib/types/recipe';
 	import type { PageProps } from './$types';
 
@@ -21,7 +22,7 @@
 	);
 
 	function inventoryName(id: string) {
-		return data.inventoryNames[id] ?? 'Unknown ingredient';
+		return data.inventoryNames[id] ?? t('recipeDetail.unknownIngredient');
 	}
 
 	async function handlePrepare() {
@@ -29,13 +30,13 @@
 		missing = null;
 		try {
 			await prepareRecipe(data.recipe._id);
-			toast.push('Recipe prepared — inventory updated', 'info');
+			toast.push(t('recipeDetail.prepared'), 'info');
 			await invalidate(`app:recipe:${data.recipe._id}`);
 		} catch (err) {
 			try {
 				missing = await getMissingIngredients(data.recipe._id);
 			} catch {
-				toast.push(err instanceof ApiError ? err.message : 'Could not prepare recipe');
+				toast.push(err instanceof ApiError ? err.message : t('recipeDetail.errorPrepare'));
 			}
 		} finally {
 			preparing = false;
@@ -48,7 +49,7 @@
 			await deleteRecipe(data.recipe._id);
 			await goto('/recipes');
 		} catch (err) {
-			toast.push(err instanceof ApiError ? err.message : 'Could not delete recipe');
+			toast.push(err instanceof ApiError ? err.message : t('recipeDetail.errorDelete'));
 			deleting = false;
 			confirmingDelete = false;
 		}
@@ -56,34 +57,34 @@
 </script>
 
 <div class="page">
-	<a class="back" href="/recipes">‹ Recipes</a>
+	<a class="back" href="/recipes">{t('recipeDetail.back')}</a>
 	<div class="header">
 		<div>
 			<h1>{data.recipe.title}</h1>
 			<div class="meta">
-				<span class="pill pill-{data.recipe.difficulty}">{data.recipe.difficulty}</span>
-				{#if data.recipe.totalTimeMinutes}<span>{data.recipe.totalTimeMinutes} min</span>{/if}
-				{#if data.recipe.servings}<span>serves {data.recipe.servings}</span>{/if}
+				<span class="pill pill-{data.recipe.difficulty}">{tRaw('difficulty', data.recipe.difficulty)}</span>
+				{#if data.recipe.totalTimeMinutes}<span>{t('recipes.minutes', { count: data.recipe.totalTimeMinutes })}</span>{/if}
+				{#if data.recipe.servings}<span>{t('recipes.servesCount', { count: data.recipe.servings })}</span>{/if}
 			</div>
 		</div>
-		<a href={`/recipes/${data.recipe._id}/edit`} class="btn-outline">Edit</a>
+		<a href={`/recipes/${data.recipe._id}/edit`} class="btn-outline">{t('recipeDetail.edit')}</a>
 	</div>
 
 	{#if data.recipe.description}
 		<p class="description">{data.recipe.description}</p>
 	{/if}
 
-	<div class="field-label">Ingredients</div>
+	<div class="field-label">{t('recipeDetail.ingredients')}</div>
 	<div class="ingredients">
 		{#each data.recipe.ingredients as ingredient}
 			<div class="ingredient-row">
 				<span>{inventoryName(ingredient.inventoryItemId)}</span>
-				<span class="qty">{ingredient.quantity}{ingredient.unit ? ` ${ingredient.unit}` : ''}</span>
+				<span class="qty">{ingredient.quantity}{ingredient.unit ? ` ${tRaw('unit', ingredient.unit)}` : ''}</span>
 			</div>
 		{/each}
 	</div>
 
-	<div class="field-label">Instructions</div>
+	<div class="field-label">{t('recipeDetail.instructions')}</div>
 	<ol class="instructions">
 		{#each instructionSteps as step}
 			<li>
@@ -96,30 +97,36 @@
 	</ol>
 
 	<button type="button" class="primary" onclick={handlePrepare} disabled={preparing}>
-		{preparing ? 'Preparing…' : 'Prepare'}
+		{preparing ? t('recipeDetail.preparing') : t('recipeDetail.prepare')}
 	</button>
 
 	{#if missing && missing.length > 0}
 		<div class="banner">
-			<strong>Can't prepare — missing {missing.length} ingredient{missing.length > 1 ? 's' : ''}</strong>
+			<strong>
+				{t(missing.length === 1 ? 'recipeDetail.cantPrepare_one' : 'recipeDetail.cantPrepare_other', {
+					count: missing.length
+				})}
+			</strong>
 			{#each missing as item}
-				<div>{item.name} ({item.needed}{item.unit ? ` ${item.unit}` : ''})</div>
+				<div>{item.name} ({item.needed}{item.unit ? ` ${tRaw('unit', item.unit)}` : ''})</div>
 			{/each}
 		</div>
 	{/if}
 
 	<div class="danger-zone">
 		<button type="button" class="danger-link" onclick={() => (confirmingDelete = true)}>
-			Delete recipe
+			{t('recipeDetail.deleteRecipe')}
 		</button>
 	</div>
 </div>
 
 <ConfirmModal
 	open={confirmingDelete}
-	title="Delete recipe?"
-	message={`This will permanently delete "${data.recipe.title}".`}
-	confirmLabel="Delete recipe"
+	title={t('recipeDetail.deleteTitle')}
+	message={t('recipeDetail.deleteMessage', { title: data.recipe.title })}
+	confirmLabel={t('recipeDetail.deleteRecipe')}
+	confirmingLabel={t('common.deleting')}
+	cancelLabel={t('common.cancel')}
 	confirming={deleting}
 	onConfirm={confirmDelete}
 	onCancel={() => (confirmingDelete = false)}

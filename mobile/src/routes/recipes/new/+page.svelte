@@ -7,6 +7,7 @@
 	import { ApiError } from '$lib/api/client';
 	import { toast } from '$lib/state/toast.svelte';
 	import { session } from '$lib/state/session.svelte';
+	import { t } from '$lib/i18n/index.svelte';
 	import type { NewRecipe } from '$lib/types/recipe';
 	import type { PageProps } from './$types';
 
@@ -22,7 +23,7 @@
 			leaveGuard.allowNext();
 			await goto(`/recipes/${created._id}`);
 		} catch (err) {
-			toast.push(err instanceof ApiError ? err.message : 'Could not create recipe');
+			toast.push(err instanceof ApiError ? err.message : t('recipeNew.error'));
 		} finally {
 			submitting = false;
 		}
@@ -30,12 +31,12 @@
 </script>
 
 <div class="page">
-	<a class="back" href="/recipes">‹ Recipes</a>
-	<h1>New Recipe</h1>
+	<a class="back" href="/recipes">{t('recipeNew.back')}</a>
+	<h1>{t('recipeNew.title')}</h1>
 	<RecipeForm
 		inventoryItems={data.inventoryItems}
 		initial={{ author: session.user?.username ?? '' }}
-		submitLabel="Save recipe"
+		submitLabel={t('recipeNew.saveLabel')}
 		{submitting}
 		onSubmit={handleSubmit}
 		bind:dirty
@@ -44,10 +45,11 @@
 
 <ConfirmModal
 	open={leaveGuard.confirming}
-	title="Discard changes?"
-	message="You have unsaved changes that will be lost if you leave this page."
-	confirmLabel="Discard"
-	confirmingLabel="Discard"
+	title={t('unsaved.title')}
+	message={t('unsaved.message')}
+	confirmLabel={t('unsaved.discard')}
+	confirmingLabel={t('unsaved.discard')}
+	cancelLabel={t('common.cancel')}
 	onConfirm={leaveGuard.confirmLeave}
 	onCancel={leaveGuard.cancelLeave}
 />

@@ -2,6 +2,7 @@
 	import type { DifficultyLevel, NewRecipe, RecipeIngredient } from '$lib/types/recipe';
 	import type { Inventory } from '$lib/types/inventory';
 	import { UNITS } from '$lib/types/unit';
+	import { t, tRaw } from '$lib/i18n/index.svelte';
 
 	let {
 		initial,
@@ -104,11 +105,11 @@
 
 	function validate(): boolean {
 		const next: typeof errors = {};
-		if (!title.trim()) next.title = 'Title is required.';
-		if (!author.trim()) next.author = 'Author is required.';
-		if (!servings || servings < 1) next.servings = 'Servings must be at least 1.';
+		if (!title.trim()) next.title = t('recipeForm.titleRequired');
+		if (!author.trim()) next.author = t('recipeForm.authorRequired');
+		if (!servings || servings < 1) next.servings = t('recipeForm.servingsRequired');
 		if (!instructions.some((line) => line.trim().length > 0)) {
-			next.instructions = 'Add at least one instruction step.';
+			next.instructions = t('recipeForm.instructionsRequired');
 		}
 		errors = next;
 		return Object.keys(next).length === 0;
@@ -136,7 +137,7 @@
 
 <form onsubmit={handleSubmit} novalidate>
 	<label>
-		Title
+		{t('recipeForm.title')}
 		<input
 			type="text"
 			bind:value={title}
@@ -147,12 +148,12 @@
 	</label>
 
 	<label>
-		Description
+		{t('recipeForm.description')}
 		<textarea bind:value={description} rows="2"></textarea>
 	</label>
 
 	<label>
-		Author
+		{t('recipeForm.author')}
 		<input
 			type="text"
 			bind:value={author}
@@ -162,7 +163,7 @@
 		{#if errors.author}<p class="field-error">{errors.author}</p>{/if}
 	</label>
 
-	<div class="field-label">Difficulty</div>
+	<div class="field-label">{t('recipeForm.difficulty')}</div>
 	<div class="chiprow">
 		{#each ['easy', 'medium', 'hard'] as const as level}
 			<button
@@ -171,14 +172,14 @@
 				class:active={difficulty === level}
 				onclick={() => (difficulty = level)}
 			>
-				{level}
+				{tRaw('difficulty', level)}
 			</button>
 		{/each}
 	</div>
 
 	<div class="row">
 		<label>
-			Servings
+			{t('recipeForm.servings')}
 			<input
 				type="number"
 				min="1"
@@ -189,18 +190,18 @@
 			{#if errors.servings}<p class="field-error">{errors.servings}</p>{/if}
 		</label>
 		<label>
-			Prep (min)
+			{t('recipeForm.prepMinutes')}
 			<input type="number" min="0" bind:value={prepTimeMinutes} />
 		</label>
 		<label>
-			Cook (min)
+			{t('recipeForm.cookMinutes')}
 			<input type="number" min="0" bind:value={cookTimeMinutes} />
 		</label>
 	</div>
 
-	<div class="field-label">Ingredients</div>
+	<div class="field-label">{t('recipeForm.ingredients')}</div>
 	{#if inventoryItems.length === 0}
-		<p class="hint">Add inventory items first so you have something to reference here.</p>
+		<p class="hint">{t('recipeForm.noInventoryHint')}</p>
 	{/if}
 	{#each ingredients as ingredient, index}
 		<div class="ingredient-row">
@@ -212,17 +213,17 @@
 			<input type="number" min="0" step="any" bind:value={ingredient.quantity} />
 			<select bind:value={ingredient.unit}>
 				{#each UNITS as unit}
-					<option value={unit}>{unit}</option>
+					<option value={unit}>{tRaw('unit', unit)}</option>
 				{/each}
 			</select>
 			<button type="button" class="remove" onclick={() => removeIngredient(index)}>×</button>
 		</div>
 	{/each}
 	<button type="button" class="link" onclick={addIngredient} disabled={!inventoryItems.length}>
-		+ Add ingredient
+		{t('recipeForm.addIngredient')}
 	</button>
 
-	<div class="field-label">Instructions</div>
+	<div class="field-label">{t('recipeForm.instructions')}</div>
 	{#if errors.instructions}<p class="field-error">{errors.instructions}</p>{/if}
 	{#each instructions as _, index}
 		<div class="instruction-row">
@@ -233,7 +234,7 @@
 					class="reorder"
 					onclick={() => moveInstruction(index, -1)}
 					disabled={index === 0}
-					aria-label="Move step up"
+					aria-label={t('recipeForm.moveStepUp')}
 				>
 					↑
 				</button>
@@ -242,7 +243,7 @@
 					class="reorder"
 					onclick={() => moveInstruction(index, 1)}
 					disabled={index === instructions.length - 1}
-					aria-label="Move step down"
+					aria-label={t('recipeForm.moveStepDown')}
 				>
 					↓
 				</button>
@@ -251,10 +252,10 @@
 			<button type="button" class="remove" onclick={() => removeInstruction(index)}>×</button>
 		</div>
 	{/each}
-	<button type="button" class="link" onclick={addInstruction}>+ Add step</button>
+	<button type="button" class="link" onclick={addInstruction}>{t('recipeForm.addStep')}</button>
 
 	<button type="submit" class="primary" disabled={submitting}>
-		{submitting ? 'Saving…' : submitLabel}
+		{submitting ? t('common.saving') : submitLabel}
 	</button>
 </form>
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n/index.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -10,21 +11,23 @@
 
 <div class="page">
 	<div class="header">
-		<h1>Shopping Lists</h1>
-		<a class="btn-outline" href="/shopping-lists/new">+ New list</a>
+		<h1>{t('shoppingLists.title')}</h1>
+		<a class="btn-outline" href="/shopping-lists/new">{t('shoppingLists.newList')}</a>
 	</div>
 
 	{#if data.lists.length === 0}
-		<p class="empty">No shopping lists yet.</p>
+		<p class="empty">{t('shoppingLists.empty')}</p>
 	{:else}
 		<div class="list">
 			{#each data.lists as list (list._id)}
 				<a class="card" href={`/shopping-lists/${list._id}`}>
 					<div class="card-title">{list.name}</div>
 					<div class="card-meta">
-						{list.items.length} item{list.items.length === 1 ? '' : 's'}
+						{t(list.items.length === 1 ? 'shoppingLists.itemCount_one' : 'shoppingLists.itemCount_other', {
+							count: list.items.length
+						})}
 						{#if uncheckedCount(list.items) > 0}
-							· {uncheckedCount(list.items)} left
+							· {t('shoppingLists.leftCount', { count: uncheckedCount(list.items) })}
 						{/if}
 					</div>
 				</a>

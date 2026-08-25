@@ -10,6 +10,8 @@
 	import { ApiError } from '$lib/api/client';
 	import { categoryOrder } from '$lib/state/categoryOrder.svelte';
 	import { expirySettings } from '$lib/state/expirySettings.svelte';
+	import { t, tRaw, locale } from '$lib/i18n/index.svelte';
+	import type { Locale } from '$lib/i18n/translations';
 
 	let confirmingDelete = $state(false);
 	let deleting = $state(false);
@@ -32,17 +34,22 @@
 		try {
 			await deleteUser(session.user._id);
 			await session.signOut();
-			toast.push('Your account has been deleted', 'info');
+			toast.push(t('account.deleted'), 'info');
 			await goto('/welcome');
 		} catch (err) {
-			toast.push(err instanceof ApiError ? err.message : 'Could not delete account');
+			toast.push(err instanceof ApiError ? err.message : t('account.errorDelete'));
 			deleting = false;
 		}
 	}
+
+	const LANGUAGES: { value: Locale; label: string }[] = [
+		{ value: 'en', label: 'English' },
+		{ value: 'fr', label: 'Français' }
+	];
 </script>
 
 <div class="account">
-	<h1>Account</h1>
+	<h1>{t('account.title')}</h1>
 
 	{#if session.user}
 		<div class="profile">
@@ -55,22 +62,38 @@
 	{/if}
 
 	<div class="section">
-		<span class="section-label">Dark mode</span>
+		<span class="section-label">{t('account.darkMode')}</span>
 		<button
 			type="button"
 			class="switch"
 			class:on={theme.current === 'dark'}
 			role="switch"
 			aria-checked={theme.current === 'dark'}
-			aria-label="Dark mode"
+			aria-label={t('account.darkMode')}
 			onclick={() => theme.toggle()}
 		>
 			<span class="knob"></span>
 		</button>
 	</div>
 
+	<div class="section language-section">
+		<span class="section-label">{t('account.language')}</span>
+		<div class="language-options">
+			{#each LANGUAGES as lang (lang.value)}
+				<button
+					type="button"
+					class="language-btn"
+					class:active={locale.current === lang.value}
+					onclick={() => locale.set(lang.value)}
+				>
+					{lang.label}
+				</button>
+			{/each}
+		</div>
+	</div>
+
 	<div class="section palette-section">
-		<span class="section-label">Color palette</span>
+		<span class="section-label">{t('account.colorPalette')}</span>
 		<div class="swatch-grid">
 			{#each PALETTES as p (p.name)}
 				{@const colors = p[theme.current]}
@@ -96,8 +119,8 @@
 	</div>
 
 	<div class="section expiry-section">
-		<span class="section-label">Expiration alerts</span>
-		<p class="section-hint">Flag inventory items expiring within this many days.</p>
+		<span class="section-label">{t('account.expirationAlerts')}</span>
+		<p class="section-hint">{t('account.expirationHint')}</p>
 		<label class="expiry-input-row">
 			<input
 				type="number"
@@ -105,24 +128,24 @@
 				value={expirySettings.daysAhead}
 				onchange={(e) => expirySettings.set(Number(e.currentTarget.value) || 0)}
 			/>
-			<span>days</span>
+			<span>{t('account.days')}</span>
 		</label>
 	</div>
 
 	<div class="section category-order-section">
-		<span class="section-label">Shopping list order</span>
-		<p class="section-hint">Match your store's aisle layout — reorder categories below.</p>
+		<span class="section-label">{t('account.shoppingListOrder')}</span>
+		<p class="section-hint">{t('account.shoppingListOrderHint')}</p>
 		<div class="category-order-list">
 			{#each categoryOrder.current as category, index (category)}
 				<div class="category-order-row">
-					<span class="category-order-name">{category}</span>
+					<span class="category-order-name">{tRaw('category', category)}</span>
 					<div class="reorder-btns">
 						<button
 							type="button"
 							class="reorder"
 							onclick={() => categoryOrder.move(index, -1)}
 							disabled={index === 0}
-							aria-label={`Move ${category} up`}
+							aria-label={t('account.moveUp', { name: tRaw('category', category) })}
 						>
 							↑
 						</button>
@@ -131,7 +154,7 @@
 							class="reorder"
 							onclick={() => categoryOrder.move(index, 1)}
 							disabled={index === categoryOrder.current.length - 1}
-							aria-label={`Move ${category} down`}
+							aria-label={t('account.moveDown', { name: tRaw('category', category) })}
 						>
 							↓
 						</button>
@@ -141,26 +164,26 @@
 		</div>
 	</div>
 
-	<button type="button" class="outline" onclick={handleLogout}>Log out</button>
+	<button type="button" class="outline" onclick={handleLogout}>{t('account.logOut')}</button>
 
 	<div class="legal-links">
-		<a href="https://stokpot.ca/privacy" target="_blank" rel="noopener">Privacy Policy</a>
-		<a href="https://stokpot.ca/terms" target="_blank" rel="noopener">Terms of Service</a>
+		<a href="https://stokpot.ca/privacy" target="_blank" rel="noopener">{t('account.privacyPolicy')}</a>
+		<a href="https://stokpot.ca/terms" target="_blank" rel="noopener">{t('account.termsOfService')}</a>
 	</div>
 
 	<div class="danger-zone">
 		{#if !confirmingDelete}
 			<button type="button" class="danger-link" onclick={() => (confirmingDelete = true)}>
-				Delete account
+				{t('account.deleteAccount')}
 			</button>
 		{:else}
-			<p class="danger-copy">This can't be undone — your account will be permanently deleted.</p>
+			<p class="danger-copy">{t('account.deleteWarning')}</p>
 			<div class="danger-actions">
 				<button type="button" class="outline" onclick={() => (confirmingDelete = false)}>
-					Cancel
+					{t('common.cancel')}
 				</button>
 				<button type="button" class="danger" onclick={handleDeleteAccount} disabled={deleting}>
-					{deleting ? 'Deleting…' : 'Yes, delete my account'}
+					{deleting ? t('common.deleting') : t('account.confirmDelete')}
 				</button>
 			</div>
 		{/if}
@@ -301,10 +324,31 @@
 		color: var(--ink-soft);
 	}
 	.category-order-section,
-	.expiry-section {
+	.expiry-section,
+	.language-section {
 		flex-direction: column;
 		align-items: stretch;
 		gap: 0.5rem;
+	}
+	.language-options {
+		display: flex;
+		gap: 0.5rem;
+	}
+	.language-btn {
+		flex: 1;
+		padding: 0.55rem;
+		border-radius: 8px;
+		border: 1px solid var(--line);
+		background: var(--paper-raised);
+		color: var(--ink);
+		font-size: 0.85rem;
+		font-weight: 600;
+		cursor: pointer;
+	}
+	.language-btn.active {
+		background: var(--accent);
+		color: var(--paper-raised);
+		border-color: var(--accent);
 	}
 	.expiry-input-row {
 		display: flex;

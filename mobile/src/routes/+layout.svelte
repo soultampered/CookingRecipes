@@ -9,6 +9,7 @@
 	import { categoryOrder } from '$lib/state/categoryOrder.svelte';
 	import { expirySettings } from '$lib/state/expirySettings.svelte';
 	import { keyboardInset } from '$lib/state/keyboardInset.svelte';
+	import { locale } from '$lib/i18n/index.svelte';
 
 	let { children } = $props();
 
@@ -20,6 +21,7 @@
 		theme.restore();
 		categoryOrder.restore();
 		expirySettings.restore();
+		locale.restore();
 
 		// The CSS-level html/body scroll-lock (app.css) stops the *page* from ever
 		// scrolling, but iOS's automatic keyboard avoidance repositions the WKWebView's
