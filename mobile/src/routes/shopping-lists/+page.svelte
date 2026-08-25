@@ -2,6 +2,7 @@
 	import { invalidate } from '$app/navigation';
 	import { t } from '$lib/i18n/index.svelte';
 	import { swipeToDelete } from '$lib/utils/swipeToDelete.svelte';
+	import { shoppingListOrder } from '$lib/state/shoppingListOrder.svelte';
 	import { deleteShoppingList } from '$lib/api/shoppingLists';
 	import { ApiError } from '$lib/api/client';
 	import { toast } from '$lib/state/toast.svelte';
@@ -13,6 +14,8 @@
 	function uncheckedCount(items: { checked?: boolean }[]) {
 		return items.filter((i) => !i.checked).length;
 	}
+
+	let orderedLists = $derived(shoppingListOrder.apply(data.lists));
 
 	const swipe = swipeToDelete();
 	let removingListId = $state<string | null>(null);
@@ -44,40 +47,73 @@
 		<p class="empty">{t('shoppingLists.empty')}</p>
 	{:else}
 		<div class="list">
-			{#each data.lists as list (list._id)}
-				<div class="swipe-wrapper">
-					<button
-						type="button"
-						class="swipe-delete-action"
-						onclick={() => {
-							removingListId = list._id!;
-							swipe.close(list._id!);
-						}}
-						aria-label={t('shoppingList.deleteItemAriaLabel', { name: list.name })}
-					>
-						{t('shoppingList.deleteAction')}
-					</button>
-					<a
-						class="card"
-						class:dragging={swipe.isDragging(list._id!)}
-						href={`/shopping-lists/${list._id}`}
-						style:transform={`translateX(${swipe.offsetFor(list._id!)}px)`}
-						onpointerdown={(e) => swipe.onPointerDown(e, list._id!)}
-						onpointermove={(e) => swipe.onPointerMove(e, list._id!)}
-						onpointerup={() => swipe.onPointerUp(list._id!)}
-						onpointercancel={() => swipe.onPointerUp(list._id!)}
-						onclick={(e) => swipe.handleClick(e, list._id!)}
-					>
-						<div class="card-title">{list.name}</div>
-						<div class="card-meta">
-							{t(list.items.length === 1 ? 'shoppingLists.itemCount_one' : 'shoppingLists.itemCount_other', {
-								count: list.items.length
-							})}
-							{#if uncheckedCount(list.items) > 0}
-								· {t('shoppingLists.leftCount', { count: uncheckedCount(list.items) })}
-							{/if}
-						</div>
-					</a>
+			{#each orderedLists as list, index (list._id)}
+				<div class="list-row">
+					<div class="reorder-btns">
+						<button
+							type="button"
+							class="reorder"
+							onclick={() =>
+								shoppingListOrder.move(
+									orderedLists.map((l) => l._id!),
+									index,
+									-1
+								)}
+							disabled={index === 0}
+							aria-label={t('account.moveUp', { name: list.name })}
+						>
+							↑
+						</button>
+						<button
+							type="button"
+							class="reorder"
+							onclick={() =>
+								shoppingListOrder.move(
+									orderedLists.map((l) => l._id!),
+									index,
+									1
+								)}
+							disabled={index === orderedLists.length - 1}
+							aria-label={t('account.moveDown', { name: list.name })}
+						>
+							↓
+						</button>
+					</div>
+					<div class="swipe-wrapper">
+						<button
+							type="button"
+							class="swipe-delete-action"
+							onclick={() => {
+								removingListId = list._id!;
+								swipe.close(list._id!);
+							}}
+							aria-label={t('shoppingList.deleteItemAriaLabel', { name: list.name })}
+						>
+							{t('shoppingList.deleteAction')}
+						</button>
+						<a
+							class="card"
+							class:dragging={swipe.isDragging(list._id!)}
+							href={`/shopping-lists/${list._id}`}
+							style:transform={`translateX(${swipe.offsetFor(list._id!)}px)`}
+							onpointerdown={(e) => swipe.onPointerDown(e, list._id!)}
+							onpointermove={(e) => swipe.onPointerMove(e, list._id!)}
+							onpointerup={() => swipe.onPointerUp(list._id!)}
+							onpointercancel={() => swipe.onPointerUp(list._id!)}
+							onclick={(e) => swipe.handleClick(e, list._id!)}
+						>
+							<div class="card-title">{list.name}</div>
+							<div class="card-meta">
+								{t(
+									list.items.length === 1 ? 'shoppingLists.itemCount_one' : 'shoppingLists.itemCount_other',
+									{ count: list.items.length }
+								)}
+								{#if uncheckedCount(list.items) > 0}
+									· {t('shoppingLists.leftCount', { count: uncheckedCount(list.items) })}
+								{/if}
+							</div>
+						</a>
+					</div>
 				</div>
 			{/each}
 		</div>
@@ -126,10 +162,37 @@
 		flex-direction: column;
 		gap: 0.6rem;
 	}
+	.list-row {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+	}
+	.reorder-btns {
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+		flex: 0 0 auto;
+	}
+	.reorder {
+		border: 1px solid var(--line);
+		border-radius: 4px;
+		background: var(--paper-raised);
+		color: var(--ink);
+		font-size: 0.7rem;
+		line-height: 1;
+		padding: 0.15rem 0.35rem;
+		cursor: pointer;
+	}
+	.reorder:disabled {
+		opacity: 0.35;
+		cursor: default;
+	}
 	.swipe-wrapper {
 		position: relative;
 		overflow: hidden;
 		border-radius: 10px;
+		flex: 1;
+		min-width: 0;
 	}
 	.swipe-delete-action {
 		position: absolute;

@@ -7,6 +7,7 @@
 	import { onMount } from 'svelte';
 	import { theme } from '$lib/state/theme.svelte';
 	import { categoryOrder } from '$lib/state/categoryOrder.svelte';
+	import { shoppingListOrder } from '$lib/state/shoppingListOrder.svelte';
 	import { expirySettings } from '$lib/state/expirySettings.svelte';
 	import { keyboardInset } from '$lib/state/keyboardInset.svelte';
 	import { locale } from '$lib/i18n/index.svelte';
@@ -20,6 +21,7 @@
 
 		theme.restore();
 		categoryOrder.restore();
+		shoppingListOrder.restore();
 		expirySettings.restore();
 		locale.restore();
 
