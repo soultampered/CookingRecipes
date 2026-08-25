@@ -9,6 +9,7 @@
 	import { toast } from '$lib/state/toast.svelte';
 	import { ApiError } from '$lib/api/client';
 	import { categoryOrder } from '$lib/state/categoryOrder.svelte';
+	import { expirySettings } from '$lib/state/expirySettings.svelte';
 
 	let confirmingDelete = $state(false);
 	let deleting = $state(false);
@@ -92,6 +93,20 @@
 			{/each}
 		</div>
 		<p class="palette-name">{palette.current}</p>
+	</div>
+
+	<div class="section expiry-section">
+		<span class="section-label">Expiration alerts</span>
+		<p class="section-hint">Flag inventory items expiring within this many days.</p>
+		<label class="expiry-input-row">
+			<input
+				type="number"
+				min="0"
+				value={expirySettings.daysAhead}
+				onchange={(e) => expirySettings.set(Number(e.currentTarget.value) || 0)}
+			/>
+			<span>days</span>
+		</label>
 	</div>
 
 	<div class="section category-order-section">
@@ -285,10 +300,26 @@
 		font-size: 0.8rem;
 		color: var(--ink-soft);
 	}
-	.category-order-section {
+	.category-order-section,
+	.expiry-section {
 		flex-direction: column;
 		align-items: stretch;
 		gap: 0.5rem;
+	}
+	.expiry-input-row {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.85rem;
+	}
+	.expiry-input-row input {
+		width: 70px;
+		padding: 0.5rem 0.6rem;
+		border: 1px solid var(--line);
+		border-radius: 8px;
+		font-size: 0.95rem;
+		background: var(--paper-raised);
+		color: var(--ink);
 	}
 	.section-hint {
 		margin: 0;

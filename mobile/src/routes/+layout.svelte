@@ -7,6 +7,7 @@
 	import { onMount } from 'svelte';
 	import { theme } from '$lib/state/theme.svelte';
 	import { categoryOrder } from '$lib/state/categoryOrder.svelte';
+	import { expirySettings } from '$lib/state/expirySettings.svelte';
 	import { Capacitor } from '@capacitor/core';
 	import { Keyboard } from '@capacitor/keyboard';
 
@@ -26,6 +27,7 @@
 
 		theme.restore();
 		categoryOrder.restore();
+		expirySettings.restore();
 
 		if (Capacitor.getPlatform() !== 'ios') return;
 

@@ -5,6 +5,7 @@
 	import type { ShoppingList } from '$lib/types/shoppingList';
 	import { ApiError } from '$lib/api/client';
 	import { toast } from '$lib/state/toast.svelte';
+	import { expirySettings } from '$lib/state/expirySettings.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -20,6 +21,13 @@
 
 	function isLowStock(item: Inventory) {
 		return item.lowStockThreshold != null && item.quantity <= item.lowStockThreshold;
+	}
+
+	function isExpiringSoon(item: Inventory) {
+		if (!item.expirationDte) return false;
+		const msAhead = expirySettings.daysAhead * 24 * 60 * 60 * 1000;
+		const expiresAt = new Date(item.expirationDte).getTime();
+		return expiresAt <= Date.now() + msAhead;
 	}
 
 	async function openQuickAdd(item: Inventory) {
@@ -86,6 +94,9 @@
 						<button type="button" class="low-stock-badge" onclick={() => openQuickAdd(item)}>
 							Low
 						</button>
+					{/if}
+					{#if isExpiringSoon(item)}
+						<span class="expiring-badge">Expiring</span>
 					{/if}
 				</div>
 			{/each}
@@ -206,6 +217,16 @@
 		padding: 0.25rem 0.55rem;
 		border-radius: 999px;
 		cursor: pointer;
+	}
+	.expiring-badge {
+		flex: 0 0 auto;
+		border: 1px solid var(--bad);
+		background: var(--bad-soft);
+		color: var(--bad);
+		font-size: 0.75rem;
+		font-weight: 600;
+		padding: 0.25rem 0.55rem;
+		border-radius: 999px;
 	}
 	.backdrop {
 		position: fixed;
