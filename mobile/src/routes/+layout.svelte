@@ -8,17 +8,9 @@
 	import { theme } from '$lib/state/theme.svelte';
 	import { categoryOrder } from '$lib/state/categoryOrder.svelte';
 	import { expirySettings } from '$lib/state/expirySettings.svelte';
-	import { Capacitor } from '@capacitor/core';
-	import { Keyboard } from '@capacitor/keyboard';
+	import { keyboardInset } from '$lib/state/keyboardInset.svelte';
 
 	let { children } = $props();
-
-	// With Keyboard.resize: 'none', iOS never shrinks the webview for the keyboard, so it
-	// just overlays the bottom of the screen. On a short page `main` has no scroll headroom
-	// to begin with, so there's nothing to swipe to bring covered content (e.g. a submit
-	// button) up above it. Tracking the live keyboard height and padding `main` by that
-	// amount manufactures exactly enough scroll room while the keyboard is up.
-	let keyboardInset = $state(0);
 
 	onMount(() => {
 		// The boot splash in app.html is static HTML shown while the root load() blocks on
@@ -29,26 +21,13 @@
 		categoryOrder.restore();
 		expirySettings.restore();
 
-		if (Capacitor.getPlatform() !== 'ios') return;
-
 		// The CSS-level html/body scroll-lock (app.css) stops the *page* from ever
 		// scrolling, but iOS's automatic keyboard avoidance repositions the WKWebView's
 		// native UIScrollView content offset directly at the OS layer — that bypasses CSS
 		// entirely, which is why the nav bar could still drift after the keyboard dismissed.
-		// Disabling the webview's own scroll natively closes that gap.
-		Keyboard.setScroll({ isDisabled: true });
-
-		const showHandle = Keyboard.addListener('keyboardWillShow', (info) => {
-			keyboardInset = info.keyboardHeight;
-		});
-		const hideHandle = Keyboard.addListener('keyboardWillHide', () => {
-			keyboardInset = 0;
-		});
-
-		return () => {
-			showHandle.then((h) => h.remove());
-			hideHandle.then((h) => h.remove());
-		};
+		// Disabling the webview's own scroll natively closes that gap; keyboardInset.watch()
+		// does that and tracks the live keyboard height so fixed/padded UI can stay clear of it.
+		return keyboardInset.watch();
 	});
 
 	const noNavRoutes = ['/', '/welcome', '/verify-email', '/forgot-password'];
@@ -60,7 +39,7 @@
 </svelte:head>
 
 <div class="app-shell">
-	<main style:padding-bottom="{keyboardInset}px">
+	<main style:padding-bottom="{keyboardInset.current}px">
 		{@render children()}
 	</main>
 
