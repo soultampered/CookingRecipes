@@ -29,7 +29,7 @@
 		missing = null;
 		try {
 			await prepareRecipe(data.recipe._id);
-			toast.push('Recipe prepared — inventory updated.', 'info');
+			toast.push('Recipe prepared — inventory updated', 'info');
 			await invalidate(`app:recipe:${data.recipe._id}`);
 		} catch (err) {
 			try {
