@@ -3,6 +3,8 @@
 	import type { Inventory } from '$lib/types/inventory';
 	import { UNITS } from '$lib/types/unit';
 	import { t, tRaw } from '$lib/i18n/index.svelte';
+	import { flip } from 'svelte/animate';
+	import { dragToReorder } from '$lib/utils/dragToReorder.svelte';
 
 	let {
 		initial,
@@ -28,6 +30,14 @@
 	const initialPrepTime = initial?.prepTimeMinutes;
 	const initialCookTime = initial?.cookTimeMinutes;
 	const initialInstructions = initial?.instructions?.length ? [...initial.instructions] : [''];
+	// Stable per-row ids for keyed reordering (drag AND the existing up/down buttons both need
+	// this — a plain string[] keyed by index would make Svelte reuse/mismatch DOM nodes across
+	// a reorder instead of animating them, and the drag composable needs a stable id to attach
+	// its DOM refs/gesture state to per row) — never sent to the API, only `instructionTexts`
+	// (below) is.
+	function makeInstructionId() {
+		return crypto.randomUUID();
+	}
 	const initialIngredients = initial?.ingredients?.length
 		? initial.ingredients.map((i) => ({ ...i }))
 		: inventoryItems.length
@@ -52,8 +62,13 @@
 	let servings = $state(initialServings);
 	let prepTimeMinutes = $state(initialPrepTime);
 	let cookTimeMinutes = $state(initialCookTime);
-	let instructions = $state<string[]>(initialInstructions);
+	let instructionRows = $state(initialInstructions.map((text) => ({ id: makeInstructionId(), text })));
 	let ingredients = $state<RecipeIngredient[]>(initialIngredients);
+
+	// Every other field/function below keeps referring to `instructions` as a plain string[],
+	// same as before — only the mutation functions (add/remove/move/reorder) and the template's
+	// {#each} need to know about the row ids underneath.
+	let instructions = $derived(instructionRows.map((row) => row.text));
 
 	$effect(() => {
 		dirty =
@@ -70,6 +85,15 @@
 			}) !== initialSnapshot;
 	});
 
+	const instructionDrag = dragToReorder();
+
+	function reorderInstructions(fromIndex: number, toIndex: number) {
+		const copy = [...instructionRows];
+		const [moved] = copy.splice(fromIndex, 1);
+		copy.splice(toIndex, 0, moved);
+		instructionRows = copy;
+	}
+
 	function addIngredient() {
 		if (!inventoryItems.length) return;
 		ingredients.push({ inventoryItemId: inventoryItems[0]._id, quantity: 1, unit: inventoryItems[0].unit });
@@ -80,23 +104,32 @@
 	}
 
 	function addInstruction() {
-		instructions.push('');
+		instructionRows.push({ id: makeInstructionId(), text: '' });
 	}
 
 	function removeInstruction(index: number) {
-		instructions = instructions.filter((_, i) => i !== index);
+		instructionRows = instructionRows.filter((_, i) => i !== index);
 	}
 
 	function moveInstruction(index: number, direction: -1 | 1) {
 		const target = index + direction;
-		if (target < 0 || target >= instructions.length) return;
-		const copy = [...instructions];
+		if (target < 0 || target >= instructionRows.length) return;
+		const copy = [...instructionRows];
 		[copy[index], copy[target]] = [copy[target], copy[index]];
-		instructions = copy;
+		instructionRows = copy;
 	}
 
 	function inventoryName(id: string) {
 		return inventoryItems.find((i) => i._id === id)?.name ?? id;
+	}
+
+	function registerInstructionRef(node: HTMLElement, id: string) {
+		instructionDrag.registerRef(id, node);
+		return {
+			destroy() {
+				instructionDrag.registerRef(id, null);
+			}
+		};
 	}
 
 	let errors = $state<{ title?: string; author?: string; servings?: string; instructions?: string }>(
@@ -225,9 +258,31 @@
 
 	<div class="field-label">{t('recipeForm.instructions')}</div>
 	{#if errors.instructions}<p class="field-error">{errors.instructions}</p>{/if}
-	{#each instructions as _, index}
-		<div class="instruction-row">
+	{#each instructionRows as row, index (row.id)}
+		<div
+			class="instruction-row"
+			class:dragging={instructionDrag.isDragging(row.id)}
+			use:registerInstructionRef={row.id}
+			style:transform={`translateY(${instructionDrag.offsetFor(row.id)}px)`}
+			animate:flip={{ duration: 200 }}
+		>
 			<span class="step">{index + 1}.</span>
+			<button
+				type="button"
+				class="drag-handle"
+				aria-label={t('recipeForm.dragToReorder')}
+				onpointerdown={(e) => instructionDrag.onPointerDown(e, row.id)}
+				onpointermove={(e) => instructionDrag.onPointerMove(e, row.id)}
+				onpointerup={() =>
+					instructionDrag.onPointerUp(
+						row.id,
+						instructionRows.map((r) => r.id),
+						reorderInstructions
+					)}
+				onpointercancel={() => instructionDrag.cancel()}
+			>
+				⠿
+			</button>
 			<div class="reorder-btns">
 				<button
 					type="button"
@@ -242,13 +297,13 @@
 					type="button"
 					class="reorder"
 					onclick={() => moveInstruction(index, 1)}
-					disabled={index === instructions.length - 1}
+					disabled={index === instructionRows.length - 1}
 					aria-label={t('recipeForm.moveStepDown')}
 				>
 					↓
 				</button>
 			</div>
-			<textarea bind:value={instructions[index]} rows="2"></textarea>
+			<textarea bind:value={row.text} rows="2"></textarea>
 			<button type="button" class="remove" onclick={() => removeInstruction(index)}>×</button>
 		</div>
 	{/each}
@@ -329,6 +384,27 @@
 		display: flex;
 		gap: 0.4rem;
 		align-items: center;
+	}
+	.instruction-row {
+		position: relative;
+		background: var(--paper);
+	}
+	.instruction-row.dragging {
+		z-index: 10;
+	}
+	.drag-handle {
+		flex: 0 0 auto;
+		border: none;
+		background: none;
+		color: var(--ink-soft);
+		font-size: 1.1rem;
+		line-height: 1;
+		padding: 0.2rem 0.15rem;
+		cursor: grab;
+		touch-action: none;
+	}
+	.instruction-row.dragging .drag-handle {
+		cursor: grabbing;
 	}
 	.ingredient-row select:first-child {
 		flex: 2;
