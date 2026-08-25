@@ -22,6 +22,38 @@
 	let deleting = $state(false);
 	let removingItemId = $state<string | null>(null);
 	let confirmingDeleteList = $state(false);
+	let swipeOffsets = $state<Record<string, number>>({});
+	let dragItemId = $state<string | null>(null);
+	let dragStartX = 0;
+	let dragStartOffset = 0;
+
+	const SWIPE_OPEN = -76;
+	const SWIPE_THRESHOLD = -40;
+
+	function handlePointerDown(e: PointerEvent, itemId: string) {
+		dragItemId = itemId;
+		dragStartX = e.clientX;
+		dragStartOffset = swipeOffsets[itemId] ?? 0;
+		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+	}
+
+	function handlePointerMove(e: PointerEvent, itemId: string) {
+		if (dragItemId !== itemId) return;
+		const delta = e.clientX - dragStartX;
+		const next = Math.min(0, Math.max(dragStartOffset + delta, SWIPE_OPEN));
+		swipeOffsets = { ...swipeOffsets, [itemId]: next };
+	}
+
+	function handlePointerUp(itemId: string) {
+		if (dragItemId !== itemId) return;
+		dragItemId = null;
+		const current = swipeOffsets[itemId] ?? 0;
+		swipeOffsets = { ...swipeOffsets, [itemId]: current <= SWIPE_THRESHOLD ? SWIPE_OPEN : 0 };
+	}
+
+	function closeSwipe(itemId: string) {
+		swipeOffsets = { ...swipeOffsets, [itemId]: 0 };
+	}
 	let editingName = $state(false);
 	let nameDraft = $state(data.list.name);
 	let savingName = $state(false);
@@ -160,15 +192,38 @@
 			{/if}
 			<div class="items">
 				{#each items as item (item._id)}
-					<div class="item-row">
-						<input
-							type="checkbox"
-							checked={item.checked}
-							onchange={() => handleToggle(item._id!)}
-						/>
-						<span class="item-name" class:checked={item.checked}>{item.name}</span>
-						<span class="item-qty">{item.quantity}</span>
-						<button type="button" class="remove" onclick={() => (removingItemId = item._id!)}>×</button>
+					<div class="swipe-wrapper">
+						<button
+							type="button"
+							class="swipe-delete-action"
+							onclick={() => {
+								removingItemId = item._id!;
+								closeSwipe(item._id!);
+							}}
+							aria-label={`Delete ${item.name}`}
+						>
+							Delete
+						</button>
+						<div
+							class="item-row"
+							class:dragging={dragItemId === item._id}
+							style:transform={`translateX(${swipeOffsets[item._id!] ?? 0}px)`}
+							role="group"
+							aria-label={item.name}
+							onpointerdown={(e) => handlePointerDown(e, item._id!)}
+							onpointermove={(e) => handlePointerMove(e, item._id!)}
+							onpointerup={() => handlePointerUp(item._id!)}
+							onpointercancel={() => handlePointerUp(item._id!)}
+						>
+							<input
+								type="checkbox"
+								checked={item.checked}
+								onchange={() => handleToggle(item._id!)}
+							/>
+							<span class="item-name" class:checked={item.checked}>{item.name}</span>
+							<span class="item-qty">{item.quantity}</span>
+							<button type="button" class="remove" onclick={() => (removingItemId = item._id!)}>×</button>
+						</div>
 					</div>
 				{/each}
 			</div>
@@ -284,12 +339,36 @@
 		display: flex;
 		flex-direction: column;
 	}
+	.swipe-wrapper {
+		position: relative;
+		overflow: hidden;
+	}
+	.swipe-delete-action {
+		position: absolute;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		width: 76px;
+		border: none;
+		background: var(--bad);
+		color: var(--paper-raised);
+		font-weight: 600;
+		font-size: 0.85rem;
+		cursor: pointer;
+	}
 	.item-row {
+		position: relative;
 		display: flex;
 		align-items: center;
 		gap: 0.6rem;
 		padding: 0.5rem 0;
 		border-bottom: 1px solid var(--line);
+		background: var(--paper);
+		touch-action: pan-y;
+		transition: transform 0.15s ease;
+	}
+	.item-row.dragging {
+		transition: none;
 	}
 	.item-name {
 		flex: 1;
