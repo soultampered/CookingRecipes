@@ -1,9 +1,32 @@
 <script lang="ts">
+	import { invalidate } from '$app/navigation';
 	import RecipeCard from '$lib/components/RecipeCard.svelte';
+	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
+	import { deleteRecipe } from '$lib/api/recipes';
+	import { ApiError } from '$lib/api/client';
+	import { toast } from '$lib/state/toast.svelte';
 	import { t } from '$lib/i18n/index.svelte';
+	import type { Recipe } from '$lib/types/recipe';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
+
+	let removingRecipe = $state<Recipe | null>(null);
+	let removing = $state(false);
+
+	async function confirmRemove() {
+		if (!removingRecipe) return;
+		removing = true;
+		try {
+			await deleteRecipe(removingRecipe._id);
+			await invalidate('app:recipes');
+			removingRecipe = null;
+		} catch (err) {
+			toast.push(err instanceof ApiError ? err.message : t('recipeDetail.errorDelete'));
+		} finally {
+			removing = false;
+		}
+	}
 </script>
 
 <div class="page">
@@ -20,11 +43,23 @@
 	{:else}
 		<div class="list">
 			{#each data.recipes as recipe (recipe._id)}
-				<RecipeCard {recipe} />
+				<RecipeCard {recipe} onDelete={(r) => (removingRecipe = r)} />
 			{/each}
 		</div>
 	{/if}
 </div>
+
+<ConfirmModal
+	open={removingRecipe !== null}
+	title={t('recipeDetail.deleteTitle')}
+	message={t('recipeDetail.deleteMessage', { title: removingRecipe?.title ?? '' })}
+	confirmLabel={t('recipeDetail.deleteRecipe')}
+	confirmingLabel={t('common.deleting')}
+	cancelLabel={t('common.cancel')}
+	confirming={removing}
+	onConfirm={confirmRemove}
+	onCancel={() => (removingRecipe = null)}
+/>
 
 <style>
 	.page {

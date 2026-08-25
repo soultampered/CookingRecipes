@@ -1,11 +1,36 @@
 <script lang="ts">
+	import { invalidate } from '$app/navigation';
 	import { t } from '$lib/i18n/index.svelte';
+	import { swipeToDelete } from '$lib/utils/swipeToDelete.svelte';
+	import { deleteShoppingList } from '$lib/api/shoppingLists';
+	import { ApiError } from '$lib/api/client';
+	import { toast } from '$lib/state/toast.svelte';
+	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
 	function uncheckedCount(items: { checked?: boolean }[]) {
 		return items.filter((i) => !i.checked).length;
+	}
+
+	const swipe = swipeToDelete();
+	let removingListId = $state<string | null>(null);
+	let removing = $state(false);
+
+	async function confirmRemove() {
+		const listId = removingListId;
+		if (!listId) return;
+		removing = true;
+		try {
+			await deleteShoppingList(listId);
+			await invalidate('app:shopping-lists');
+			removingListId = null;
+		} catch (err) {
+			toast.push(err instanceof ApiError ? err.message : t('shoppingList.errorDelete'));
+		} finally {
+			removing = false;
+		}
 	}
 </script>
 
@@ -20,21 +45,58 @@
 	{:else}
 		<div class="list">
 			{#each data.lists as list (list._id)}
-				<a class="card" href={`/shopping-lists/${list._id}`}>
-					<div class="card-title">{list.name}</div>
-					<div class="card-meta">
-						{t(list.items.length === 1 ? 'shoppingLists.itemCount_one' : 'shoppingLists.itemCount_other', {
-							count: list.items.length
-						})}
-						{#if uncheckedCount(list.items) > 0}
-							· {t('shoppingLists.leftCount', { count: uncheckedCount(list.items) })}
-						{/if}
-					</div>
-				</a>
+				<div class="swipe-wrapper">
+					<button
+						type="button"
+						class="swipe-delete-action"
+						onclick={() => {
+							removingListId = list._id!;
+							swipe.close(list._id!);
+						}}
+						aria-label={t('shoppingList.deleteItemAriaLabel', { name: list.name })}
+					>
+						{t('shoppingList.deleteAction')}
+					</button>
+					<a
+						class="card"
+						class:dragging={swipe.isDragging(list._id!)}
+						href={`/shopping-lists/${list._id}`}
+						style:transform={`translateX(${swipe.offsetFor(list._id!)}px)`}
+						onpointerdown={(e) => swipe.onPointerDown(e, list._id!)}
+						onpointermove={(e) => swipe.onPointerMove(e, list._id!)}
+						onpointerup={() => swipe.onPointerUp(list._id!)}
+						onpointercancel={() => swipe.onPointerUp(list._id!)}
+						onclick={(e) => swipe.handleClick(e, list._id!)}
+					>
+						<div class="card-title">{list.name}</div>
+						<div class="card-meta">
+							{t(list.items.length === 1 ? 'shoppingLists.itemCount_one' : 'shoppingLists.itemCount_other', {
+								count: list.items.length
+							})}
+							{#if uncheckedCount(list.items) > 0}
+								· {t('shoppingLists.leftCount', { count: uncheckedCount(list.items) })}
+							{/if}
+						</div>
+					</a>
+				</div>
 			{/each}
 		</div>
 	{/if}
 </div>
+
+<ConfirmModal
+	open={removingListId !== null}
+	title={t('shoppingList.deleteListTitle')}
+	message={t('shoppingList.deleteListMessage', {
+		name: data.lists.find((l) => l._id === removingListId)?.name ?? ''
+	})}
+	confirmLabel={t('shoppingList.deleteList')}
+	confirmingLabel={t('common.deleting')}
+	cancelLabel={t('common.cancel')}
+	confirming={removing}
+	onConfirm={confirmRemove}
+	onCancel={() => (removingListId = null)}
+/>
 
 <style>
 	.page {
@@ -64,7 +126,26 @@
 		flex-direction: column;
 		gap: 0.6rem;
 	}
+	.swipe-wrapper {
+		position: relative;
+		overflow: hidden;
+		border-radius: 10px;
+	}
+	.swipe-delete-action {
+		position: absolute;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		width: 76px;
+		border: none;
+		background: var(--bad);
+		color: var(--paper-raised);
+		font-weight: 600;
+		font-size: 0.85rem;
+		cursor: pointer;
+	}
 	.card {
+		position: relative;
 		display: block;
 		border: 1px solid var(--line);
 		border-radius: 10px;
@@ -72,6 +153,11 @@
 		text-decoration: none;
 		color: inherit;
 		background: var(--paper-raised);
+		touch-action: pan-y;
+		transition: transform 0.15s ease;
+	}
+	.card.dragging {
+		transition: none;
 	}
 	.card-title {
 		font-weight: 600;

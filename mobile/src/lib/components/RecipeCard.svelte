@@ -1,8 +1,12 @@
 <script lang="ts">
 	import type { Recipe } from '$lib/types/recipe';
 	import { t, tRaw } from '$lib/i18n/index.svelte';
+	import { swipeToDelete } from '$lib/utils/swipeToDelete.svelte';
 
-	let { recipe }: { recipe: Recipe } = $props();
+	// onDelete is optional — recipes/suggestions/+page.svelte reuses this card without swipe-
+	// to-delete (deleting a recipe from "what's fully in stock" isn't a natural action there),
+	// while recipes/+page.svelte (see STO-105) passes it to enable the swipe gesture.
+	let { recipe, onDelete }: { recipe: Recipe; onDelete?: (recipe: Recipe) => void } = $props();
 
 	// Warm, food-evocative placeholder palette (stands in for a real recipe photo).
 	// Picked deterministically per recipe so the same card always gets the same color.
@@ -13,9 +17,13 @@
 		for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
 		return THUMB_COLORS[hash % THUMB_COLORS.length];
 	}
+
+	// Each card is its own component instance, so a local swipe id ('this') is enough — no
+	// need for the shared id-keyed instance the list-of-rows screens use.
+	const swipe = onDelete ? swipeToDelete() : null;
 </script>
 
-<a class="card" href={`/recipes/${recipe._id}`}>
+{#snippet cardBody()}
 	<div class="thumb" style="background: {thumbColor(recipe._id)};"></div>
 	<div class="body">
 		<div class="title">{recipe.title}</div>
@@ -25,10 +33,62 @@
 			{#if recipe.servings}<span>{t('recipes.servesCount', { count: recipe.servings })}</span>{/if}
 		</div>
 	</div>
-</a>
+{/snippet}
+
+{#if onDelete && swipe}
+	<div class="swipe-wrapper">
+		<button
+			type="button"
+			class="swipe-delete-action"
+			onclick={() => {
+				onDelete(recipe);
+				swipe.close('this');
+			}}
+			aria-label={t('shoppingList.deleteItemAriaLabel', { name: recipe.title })}
+		>
+			{t('shoppingList.deleteAction')}
+		</button>
+		<a
+			class="card"
+			class:dragging={swipe.isDragging('this')}
+			href={`/recipes/${recipe._id}`}
+			style:transform={`translateX(${swipe.offsetFor('this')}px)`}
+			onpointerdown={(e) => swipe.onPointerDown(e, 'this')}
+			onpointermove={(e) => swipe.onPointerMove(e, 'this')}
+			onpointerup={() => swipe.onPointerUp('this')}
+			onpointercancel={() => swipe.onPointerUp('this')}
+			onclick={(e) => swipe.handleClick(e, 'this')}
+		>
+			{@render cardBody()}
+		</a>
+	</div>
+{:else}
+	<a class="card" href={`/recipes/${recipe._id}`}>
+		{@render cardBody()}
+	</a>
+{/if}
 
 <style>
+	.swipe-wrapper {
+		position: relative;
+		overflow: hidden;
+		border-radius: 10px;
+	}
+	.swipe-delete-action {
+		position: absolute;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		width: 76px;
+		border: none;
+		background: var(--bad);
+		color: var(--paper-raised);
+		font-weight: 600;
+		font-size: 0.85rem;
+		cursor: pointer;
+	}
 	.card {
+		position: relative;
 		display: flex;
 		align-items: center;
 		gap: 0.7rem;
@@ -38,6 +98,11 @@
 		text-decoration: none;
 		color: inherit;
 		background: var(--paper-raised);
+		touch-action: pan-y;
+		transition: transform 0.15s ease;
+	}
+	.card.dragging {
+		transition: none;
 	}
 	.thumb {
 		width: 40px;

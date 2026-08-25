@@ -12,6 +12,7 @@
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import { categoryOrder } from '$lib/state/categoryOrder.svelte';
 	import { t, tRaw } from '$lib/i18n/index.svelte';
+	import { swipeToDelete } from '$lib/utils/swipeToDelete.svelte';
 	import type { ShoppingListItem } from '$lib/types/shoppingList';
 	import type { PageProps } from './$types';
 
@@ -23,38 +24,8 @@
 	let deleting = $state(false);
 	let removingItemId = $state<string | null>(null);
 	let confirmingDeleteList = $state(false);
-	let swipeOffsets = $state<Record<string, number>>({});
-	let dragItemId = $state<string | null>(null);
-	let dragStartX = 0;
-	let dragStartOffset = 0;
+	const itemSwipe = swipeToDelete();
 
-	const SWIPE_OPEN = -76;
-	const SWIPE_THRESHOLD = -40;
-
-	function handlePointerDown(e: PointerEvent, itemId: string) {
-		dragItemId = itemId;
-		dragStartX = e.clientX;
-		dragStartOffset = swipeOffsets[itemId] ?? 0;
-		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-	}
-
-	function handlePointerMove(e: PointerEvent, itemId: string) {
-		if (dragItemId !== itemId) return;
-		const delta = e.clientX - dragStartX;
-		const next = Math.min(0, Math.max(dragStartOffset + delta, SWIPE_OPEN));
-		swipeOffsets = { ...swipeOffsets, [itemId]: next };
-	}
-
-	function handlePointerUp(itemId: string) {
-		if (dragItemId !== itemId) return;
-		dragItemId = null;
-		const current = swipeOffsets[itemId] ?? 0;
-		swipeOffsets = { ...swipeOffsets, [itemId]: current <= SWIPE_THRESHOLD ? SWIPE_OPEN : 0 };
-	}
-
-	function closeSwipe(itemId: string) {
-		swipeOffsets = { ...swipeOffsets, [itemId]: 0 };
-	}
 	let editingName = $state(false);
 	let nameDraft = $state(data.list.name);
 	let savingName = $state(false);
@@ -206,7 +177,7 @@
 							class="swipe-delete-action"
 							onclick={() => {
 								removingItemId = item._id!;
-								closeSwipe(item._id!);
+								itemSwipe.close(item._id!);
 							}}
 							aria-label={t('shoppingList.deleteItemAriaLabel', { name: item.name })}
 						>
@@ -214,14 +185,14 @@
 						</button>
 						<div
 							class="item-row"
-							class:dragging={dragItemId === item._id}
-							style:transform={`translateX(${swipeOffsets[item._id!] ?? 0}px)`}
+							class:dragging={itemSwipe.isDragging(item._id!)}
+							style:transform={`translateX(${itemSwipe.offsetFor(item._id!)}px)`}
 							role="group"
 							aria-label={item.name}
-							onpointerdown={(e) => handlePointerDown(e, item._id!)}
-							onpointermove={(e) => handlePointerMove(e, item._id!)}
-							onpointerup={() => handlePointerUp(item._id!)}
-							onpointercancel={() => handlePointerUp(item._id!)}
+							onpointerdown={(e) => itemSwipe.onPointerDown(e, item._id!)}
+							onpointermove={(e) => itemSwipe.onPointerMove(e, item._id!)}
+							onpointerup={() => itemSwipe.onPointerUp(item._id!)}
+							onpointercancel={() => itemSwipe.onPointerUp(item._id!)}
 						>
 							<input
 								type="checkbox"

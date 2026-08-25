@@ -1,12 +1,15 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { goto, invalidate } from '$app/navigation';
 	import { INVENTORY_CATEGORIES, type Inventory } from '$lib/types/inventory';
 	import { listShoppingLists, addItem } from '$lib/api/shoppingLists';
+	import { deleteInventoryItem } from '$lib/api/inventory';
 	import type { ShoppingList } from '$lib/types/shoppingList';
 	import { ApiError } from '$lib/api/client';
 	import { toast } from '$lib/state/toast.svelte';
 	import { expirySettings } from '$lib/state/expirySettings.svelte';
 	import { t, tRaw } from '$lib/i18n/index.svelte';
+	import { swipeToDelete } from '$lib/utils/swipeToDelete.svelte';
+	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -15,6 +18,24 @@
 	let shoppingLists = $state<ShoppingList[] | null>(null);
 	let loadingLists = $state(false);
 	let addingToListId = $state<string | null>(null);
+	const swipe = swipeToDelete();
+	let removingItemId = $state<string | null>(null);
+	let removing = $state(false);
+
+	async function confirmRemove() {
+		const itemId = removingItemId;
+		if (!itemId) return;
+		removing = true;
+		try {
+			await deleteInventoryItem(itemId);
+			await invalidate('app:inventory');
+			removingItemId = null;
+		} catch (err) {
+			toast.push(err instanceof ApiError ? err.message : t('inventoryEdit.errorDelete'));
+		} finally {
+			removing = false;
+		}
+	}
 
 	function selectCategory(category: string | null) {
 		goto(category ? `/inventory?category=${encodeURIComponent(category)}` : '/inventory');
@@ -87,20 +108,47 @@
 	{:else}
 		<div class="list">
 			{#each data.items as item (item._id)}
-				<div class="row">
-					<a class="row-link" href={`/inventory/${item._id}/edit`}>
-						<span class="dot" class:out={item.quantity === 0}></span>
-						<span class="name">{item.name}</span>
-						<span class="qty">{item.quantity} {tRaw('unit', item.unit)}</span>
-					</a>
-					{#if isLowStock(item)}
-						<button type="button" class="low-stock-badge" onclick={() => openQuickAdd(item)}>
-							{t('inventory.lowBadge')}
-						</button>
-					{/if}
-					{#if isExpiringSoon(item)}
-						<span class="expiring-badge">{t('inventory.expiringBadge')}</span>
-					{/if}
+				<div class="swipe-wrapper">
+					<button
+						type="button"
+						class="swipe-delete-action"
+						onclick={() => {
+							removingItemId = item._id;
+							swipe.close(item._id);
+						}}
+						aria-label={t('shoppingList.deleteItemAriaLabel', { name: item.name })}
+					>
+						{t('shoppingList.deleteAction')}
+					</button>
+					<div
+						class="row"
+						class:dragging={swipe.isDragging(item._id)}
+						style:transform={`translateX(${swipe.offsetFor(item._id)}px)`}
+						role="group"
+						aria-label={item.name}
+						onpointerdown={(e) => swipe.onPointerDown(e, item._id)}
+						onpointermove={(e) => swipe.onPointerMove(e, item._id)}
+						onpointerup={() => swipe.onPointerUp(item._id)}
+						onpointercancel={() => swipe.onPointerUp(item._id)}
+					>
+						<a
+						class="row-link"
+						href={`/inventory/${item._id}/edit`}
+						onclick={(e) => swipe.handleClick(e, item._id)}
+					>
+							<span class="dot" class:out={item.quantity === 0}></span>
+							<span class="name">{item.name}</span>
+							<span class="qty">{item.quantity} {tRaw('unit', item.unit)}</span>
+						</a>
+						{#if isLowStock(item)}
+							<button type="button" class="low-stock-badge" onclick={() => openQuickAdd(item)}>
+								{t('inventory.lowBadge')}
+							</button>
+						{/if}
+						{#if isExpiringSoon(item)}
+							<span class="expiring-badge">{t('inventory.expiringBadge')}</span>
+						{/if}
+					</div>
 				</div>
 			{/each}
 		</div>
@@ -146,6 +194,20 @@
 		</div>
 	</div>
 {/if}
+
+<ConfirmModal
+	open={removingItemId !== null}
+	title={t('inventoryEdit.deleteTitle')}
+	message={t('inventoryEdit.deleteMessage', {
+		name: data.items.find((i) => i._id === removingItemId)?.name ?? ''
+	})}
+	confirmLabel={t('inventoryEdit.deleteItem')}
+	confirmingLabel={t('common.deleting')}
+	cancelLabel={t('common.cancel')}
+	confirming={removing}
+	onConfirm={confirmRemove}
+	onCancel={() => (removingItemId = null)}
+/>
 
 <style>
 	.page {
@@ -196,12 +258,36 @@
 		display: flex;
 		flex-direction: column;
 	}
+	.swipe-wrapper {
+		position: relative;
+		overflow: hidden;
+	}
+	.swipe-delete-action {
+		position: absolute;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		width: 76px;
+		border: none;
+		background: var(--bad);
+		color: var(--paper-raised);
+		font-weight: 600;
+		font-size: 0.85rem;
+		cursor: pointer;
+	}
 	.row {
+		position: relative;
 		display: flex;
 		align-items: center;
 		gap: 0.6rem;
 		padding: 0.6rem 0;
 		border-bottom: 1px solid var(--line);
+		background: var(--paper);
+		touch-action: pan-y;
+		transition: transform 0.15s ease;
+	}
+	.row.dragging {
+		transition: none;
 	}
 	.row-link {
 		display: flex;
