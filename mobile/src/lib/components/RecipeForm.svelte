@@ -50,6 +50,14 @@
 		instructions = instructions.filter((_, i) => i !== index);
 	}
 
+	function moveInstruction(index: number, direction: -1 | 1) {
+		const target = index + direction;
+		if (target < 0 || target >= instructions.length) return;
+		const copy = [...instructions];
+		[copy[index], copy[target]] = [copy[target], copy[index]];
+		instructions = copy;
+	}
+
 	function inventoryName(id: string) {
 		return inventoryItems.find((i) => i._id === id)?.name ?? id;
 	}
@@ -146,6 +154,26 @@
 	{#each instructions as _, index}
 		<div class="instruction-row">
 			<span class="step">{index + 1}.</span>
+			<div class="reorder-btns">
+				<button
+					type="button"
+					class="reorder"
+					onclick={() => moveInstruction(index, -1)}
+					disabled={index === 0}
+					aria-label="Move step up"
+				>
+					↑
+				</button>
+				<button
+					type="button"
+					class="reorder"
+					onclick={() => moveInstruction(index, 1)}
+					disabled={index === instructions.length - 1}
+					aria-label="Move step down"
+				>
+					↓
+				</button>
+			</div>
 			<textarea bind:value={instructions[index]} rows="2"></textarea>
 			<button type="button" class="remove" onclick={() => removeInstruction(index)}>×</button>
 		</div>
@@ -235,6 +263,26 @@
 	.instruction-row textarea {
 		flex: 1;
 		min-width: 0;
+	}
+	.reorder-btns {
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+		flex: 0 0 auto;
+	}
+	.reorder {
+		border: 1px solid var(--line);
+		border-radius: 4px;
+		background: var(--paper-raised);
+		color: var(--ink);
+		font-size: 0.7rem;
+		line-height: 1;
+		padding: 0.15rem 0.35rem;
+		cursor: pointer;
+	}
+	.reorder:disabled {
+		opacity: 0.35;
+		cursor: default;
 	}
 	.step {
 		font-size: 0.8rem;
