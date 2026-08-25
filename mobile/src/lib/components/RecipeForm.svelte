@@ -98,8 +98,25 @@
 		return inventoryItems.find((i) => i._id === id)?.name ?? id;
 	}
 
+	let errors = $state<{ title?: string; author?: string; servings?: string; instructions?: string }>(
+		{}
+	);
+
+	function validate(): boolean {
+		const next: typeof errors = {};
+		if (!title.trim()) next.title = 'Title is required.';
+		if (!author.trim()) next.author = 'Author is required.';
+		if (!servings || servings < 1) next.servings = 'Servings must be at least 1.';
+		if (!instructions.some((line) => line.trim().length > 0)) {
+			next.instructions = 'Add at least one instruction step.';
+		}
+		errors = next;
+		return Object.keys(next).length === 0;
+	}
+
 	function handleSubmit(event: SubmitEvent) {
 		event.preventDefault();
+		if (!validate()) return;
 		onSubmit({
 			title,
 			description: description || undefined,
@@ -117,10 +134,16 @@
 	}
 </script>
 
-<form onsubmit={handleSubmit}>
+<form onsubmit={handleSubmit} novalidate>
 	<label>
 		Title
-		<input type="text" bind:value={title} required />
+		<input
+			type="text"
+			bind:value={title}
+			class:invalid={!!errors.title}
+			aria-invalid={!!errors.title}
+		/>
+		{#if errors.title}<p class="field-error">{errors.title}</p>{/if}
 	</label>
 
 	<label>
@@ -130,7 +153,13 @@
 
 	<label>
 		Author
-		<input type="text" bind:value={author} required />
+		<input
+			type="text"
+			bind:value={author}
+			class:invalid={!!errors.author}
+			aria-invalid={!!errors.author}
+		/>
+		{#if errors.author}<p class="field-error">{errors.author}</p>{/if}
 	</label>
 
 	<div class="field-label">Difficulty</div>
@@ -150,7 +179,14 @@
 	<div class="row">
 		<label>
 			Servings
-			<input type="number" min="1" bind:value={servings} />
+			<input
+				type="number"
+				min="1"
+				bind:value={servings}
+				class:invalid={!!errors.servings}
+				aria-invalid={!!errors.servings}
+			/>
+			{#if errors.servings}<p class="field-error">{errors.servings}</p>{/if}
 		</label>
 		<label>
 			Prep (min)
@@ -187,6 +223,7 @@
 	</button>
 
 	<div class="field-label">Instructions</div>
+	{#if errors.instructions}<p class="field-error">{errors.instructions}</p>{/if}
 	{#each instructions as _, index}
 		<div class="instruction-row">
 			<span class="step">{index + 1}.</span>
@@ -251,6 +288,14 @@
 	.row label {
 		flex: 1;
 		min-width: 0;
+	}
+	input.invalid {
+		border-color: var(--bad);
+	}
+	.field-error {
+		color: var(--bad);
+		font-size: 0.78rem;
+		margin: 0.15rem 0 0;
 	}
 	.field-label {
 		font-size: 0.75rem;

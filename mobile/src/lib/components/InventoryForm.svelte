@@ -29,7 +29,7 @@
 	let expirationDte = $state(initialExpiration);
 	let lowStockThreshold = $state(initialLowStock);
 	let notes = $state(initialNotes);
-	let error = $state('');
+	let errors = $state<{ name?: string; quantity?: string }>({});
 
 	$effect(() => {
 		dirty =
@@ -41,15 +41,19 @@
 			notes !== initialNotes;
 	});
 
+	// The backend's INVALID_INPUT error on missing name/quantity never surfaces as a 400, so
+	// this is enforced here instead of relying on the API response.
+	function validate(): boolean {
+		const next: typeof errors = {};
+		if (!name.trim()) next.name = 'Name is required.';
+		if (quantity == null || quantity < 0) next.quantity = 'Quantity is required.';
+		errors = next;
+		return Object.keys(next).length === 0;
+	}
+
 	function handleSubmit(event: SubmitEvent) {
 		event.preventDefault();
-		// The backend's INVALID_INPUT error on missing name/quantity never surfaces as a 400,
-		// so this is enforced here instead of relying on the API response.
-		if (!name.trim() || quantity == null) {
-			error = 'Name and quantity are required.';
-			return;
-		}
-		error = '';
+		if (!validate()) return;
 		onSubmit({
 			name: name.trim(),
 			quantity,
@@ -61,18 +65,25 @@
 	}
 </script>
 
-<form onsubmit={handleSubmit}>
-	{#if error}<p class="error">{error}</p>{/if}
-
+<form onsubmit={handleSubmit} novalidate>
 	<label>
 		Name
-		<input type="text" bind:value={name} required />
+		<input type="text" bind:value={name} class:invalid={!!errors.name} aria-invalid={!!errors.name} />
+		{#if errors.name}<p class="field-error">{errors.name}</p>{/if}
 	</label>
 
 	<div class="row">
 		<label>
 			Quantity
-			<input type="number" min="0" step="any" bind:value={quantity} />
+			<input
+				type="number"
+				min="0"
+				step="any"
+				bind:value={quantity}
+				class:invalid={!!errors.quantity}
+				aria-invalid={!!errors.quantity}
+			/>
+			{#if errors.quantity}<p class="field-error">{errors.quantity}</p>{/if}
 		</label>
 		<label>
 			Unit
@@ -135,10 +146,13 @@
 		background: var(--paper-raised);
 		color: var(--ink);
 	}
-	.error {
+	input.invalid {
+		border-color: var(--bad);
+	}
+	.field-error {
 		color: var(--bad);
-		font-size: 0.85rem;
-		margin: 0;
+		font-size: 0.78rem;
+		margin: 0.15rem 0 0;
 	}
 	.primary {
 		margin-top: 0.4rem;
