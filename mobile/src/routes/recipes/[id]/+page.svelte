@@ -4,6 +4,8 @@
 	import { ApiError } from '$lib/api/client';
 	import { toast } from '$lib/state/toast.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
+	import StepTimer from '$lib/components/StepTimer.svelte';
+	import { parseDurationSeconds } from '$lib/utils/parseDuration';
 	import type { MissingIngredient } from '$lib/types/recipe';
 	import type { PageProps } from './$types';
 
@@ -13,6 +15,10 @@
 	let deleting = $state(false);
 	let confirmingDelete = $state(false);
 	let missing = $state<MissingIngredient[] | null>(null);
+
+	let instructionSteps = $derived(
+		data.recipe.instructions.map((text) => ({ text, duration: parseDurationSeconds(text) }))
+	);
 
 	function inventoryName(id: string) {
 		return data.inventoryNames[id] ?? 'Unknown ingredient';
@@ -79,8 +85,13 @@
 
 	<div class="field-label">Instructions</div>
 	<ol class="instructions">
-		{#each data.recipe.instructions as step}
-			<li>{step}</li>
+		{#each instructionSteps as step}
+			<li>
+				{step.text}
+				{#if step.duration !== null}
+					<StepTimer seconds={step.duration} />
+				{/if}
+			</li>
 		{/each}
 	</ol>
 
@@ -192,6 +203,9 @@
 		padding-left: 1.1rem;
 		font-size: 0.9rem;
 		line-height: 1.6;
+	}
+	.instructions li {
+		margin-bottom: 0.4rem;
 	}
 	.btn-outline {
 		border: 1px solid var(--line);
