@@ -5,6 +5,7 @@
 	import Toast from '$lib/components/Toast.svelte';
 	import { page, navigating } from '$app/state';
 	import { onMount } from 'svelte';
+	import { fade } from 'svelte/transition';
 	import { theme } from '$lib/state/theme.svelte';
 	import { categoryOrder } from '$lib/state/categoryOrder.svelte';
 	import { shoppingListOrder } from '$lib/state/shoppingListOrder.svelte';
@@ -63,7 +64,11 @@
 
 <div class="app-shell">
 	<main style:padding-bottom="{keyboardInset.current}px">
-		{@render children()}
+		{#key page.url.pathname}
+			<div class="page-transition" in:fade={{ duration: 130 }}>
+				{@render children()}
+			</div>
+		{/key}
 	</main>
 
 	{#if showNav}
