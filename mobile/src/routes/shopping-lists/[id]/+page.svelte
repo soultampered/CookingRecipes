@@ -29,6 +29,31 @@
 	const itemSwipe = swipeToDelete();
 	const itemDrag = dragToReorder();
 
+	let editingQuantityId = $state<string | null>(null);
+	let quantityDraft = $state(1);
+	let savingQuantity = $state(false);
+
+	function startEditQuantity(item: ShoppingListItem) {
+		editingQuantityId = item._id!;
+		quantityDraft = item.quantity;
+	}
+
+	async function commitQuantity(itemId: string) {
+		savingQuantity = true;
+		try {
+			const reordered = data.list.items.map((i) =>
+				i._id === itemId ? { ...i, quantity: quantityDraft } : i
+			);
+			await updateShoppingList(data.list._id!, { items: reordered });
+			await invalidate(`app:shopping-list:${data.list._id}`);
+			editingQuantityId = null;
+		} catch (err) {
+			toast.push(err instanceof ApiError ? err.message : t('shoppingList.errorUpdateItem'));
+		} finally {
+			savingQuantity = false;
+		}
+	}
+
 	let selectMode = $state(false);
 	let selectedIds = $state<Set<string>>(new Set());
 	let bulkActing = $state(false);
@@ -392,7 +417,36 @@
 									onchange={() => handleToggle(item._id!)}
 								/>
 								<span class="item-name" class:checked={item.checked}>{item.name}</span>
-								<span class="item-qty">{item.quantity}</span>
+								{#if editingQuantityId === item._id && !selectMode}
+									<div class="qty-edit">
+										<QuantityStepper
+											bind:value={quantityDraft}
+											min={1}
+											decreaseLabel={t('shoppingList.decreaseQuantity')}
+											increaseLabel={t('shoppingList.increaseQuantity')}
+											quantityLabel={t('shoppingList.quantityAriaLabel')}
+										/>
+										<button
+											type="button"
+											class="qty-done"
+											disabled={savingQuantity}
+											onclick={() => commitQuantity(item._id!)}
+											aria-label={t('shoppingList.confirmQuantity')}
+										>
+											✓
+										</button>
+									</div>
+								{:else}
+									<button
+										type="button"
+										class="item-qty"
+										disabled={selectMode}
+										onclick={() => startEditQuantity(item)}
+										aria-label={t('shoppingList.editQuantityAriaLabel', { name: item.name })}
+									>
+										{item.quantity}
+									</button>
+								{/if}
 								<button type="button" class="remove" onclick={() => (removingItemId = item._id!)}>×</button>
 							</div>
 						</div>
@@ -664,9 +718,40 @@
 		text-decoration: line-through;
 	}
 	.item-qty {
+		border: none;
+		background: none;
+		padding: 0.2rem 0.4rem;
+		border-radius: 6px;
 		font-size: 0.85rem;
 		color: var(--ink-soft);
 		font-variant-numeric: tabular-nums;
+		cursor: pointer;
+	}
+	.item-qty:disabled {
+		cursor: default;
+	}
+	.qty-edit {
+		display: flex;
+		align-items: center;
+		gap: 0.3rem;
+	}
+	.qty-edit :global(.stepper) {
+		width: 6.5rem;
+	}
+	.qty-done {
+		flex: 0 0 auto;
+		width: 1.8rem;
+		height: 1.8rem;
+		border: none;
+		border-radius: 6px;
+		background: var(--accent);
+		color: var(--paper-raised);
+		font-weight: 700;
+		cursor: pointer;
+	}
+	.qty-done:disabled {
+		opacity: 0.6;
+		cursor: default;
 	}
 	.remove {
 		border: none;

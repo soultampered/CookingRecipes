@@ -92,6 +92,8 @@ export const translations = {
 		'shoppingList.deleteSelected': 'Delete',
 		'shoppingList.removeSelectedTitle': 'Remove selected items?',
 		'shoppingList.removeSelectedMessage': 'Remove {count} selected items from this list?',
+		'shoppingList.editQuantityAriaLabel': 'Edit quantity for {name}',
+		'shoppingList.confirmQuantity': 'Confirm quantity',
 		'shoppingList.deleteList': 'Delete list',
 		'shoppingList.removeItemTitle': 'Remove item?',
 		'shoppingList.removeItemMessage': 'Remove "{name}" from this list?',
@@ -393,6 +395,8 @@ export const translations = {
 		'shoppingList.removeSelectedTitle': 'Retirer les articles sélectionnés ?',
 		'shoppingList.removeSelectedMessage':
 			'Retirer {count} articles sélectionnés de cette liste ?',
+		'shoppingList.editQuantityAriaLabel': 'Modifier la quantité de {name}',
+		'shoppingList.confirmQuantity': 'Confirmer la quantité',
 		'shoppingList.deleteList': 'Supprimer la liste',
 		'shoppingList.removeItemTitle': "Retirer l'article ?",
 		'shoppingList.removeItemMessage': 'Retirer « {name} » de cette liste ?',
