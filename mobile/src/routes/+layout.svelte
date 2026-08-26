@@ -51,6 +51,17 @@
 			}
 		});
 
+		// STO-76: Android's hardware back button. window.history.back() triggers the same
+		// popstate SvelteKit's client router already listens for, so link clicks, goto(), and
+		// this all funnel through the same beforeNavigate — including unsavedChangesGuard's
+		// discard-changes prompt (STO-95), which cancels the navigation like it would for any
+		// other back trigger. canGoBack reflects the WebView's real history, which already
+		// includes every client-side route change (pushState), not just full page loads.
+		const backButtonHandle = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+			if (canGoBack) window.history.back();
+			else CapacitorApp.exitApp();
+		});
+
 		// The CSS-level html/body scroll-lock (app.css) stops the *page* from ever
 		// scrolling, but iOS's automatic keyboard avoidance repositions the WKWebView's
 		// native UIScrollView content offset directly at the OS layer — that bypasses CSS
@@ -61,6 +72,7 @@
 
 		return () => {
 			urlOpenHandle.then((h) => h.remove());
+			backButtonHandle.then((h) => h.remove());
 			stopKeyboardWatch();
 		};
 	});
