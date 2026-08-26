@@ -118,6 +118,24 @@
 		}
 	}
 
+	let checkedCount = $derived(data.list.items.filter((i) => i.checked).length);
+	let confirmingClearChecked = $state(false);
+	let clearingChecked = $state(false);
+
+	async function confirmClearChecked() {
+		clearingChecked = true;
+		try {
+			const checkedIds = data.list.items.filter((i) => i.checked).map((i) => i._id!);
+			await Promise.all(checkedIds.map((id) => removeItem(data.list._id!, id)));
+			await invalidate(`app:shopping-list:${data.list._id}`);
+			confirmingClearChecked = false;
+		} catch (err) {
+			toast.push(err instanceof ApiError ? err.message : t('shoppingList.errorRemoveItem'));
+		} finally {
+			clearingChecked = false;
+		}
+	}
+
 	// Item order is real server data (not a client-only preference like categoryOrder/
 	// shoppingListOrder), so a drag needs to end in a single PATCH. dragToReorder never
 	// touches the backing array during the drag itself (only visual per-row offsets, resolved
@@ -327,9 +345,20 @@
 					</button>
 				</div>
 			{:else}
-				<button type="button" class="select-action outline" onclick={toggleSelectMode}>
-					{t('shoppingList.selectItems')}
-				</button>
+				<div class="select-actions">
+					<button type="button" class="select-action outline" onclick={toggleSelectMode}>
+						{t('shoppingList.selectItems')}
+					</button>
+					{#if checkedCount > 0}
+						<button
+							type="button"
+							class="select-action outline"
+							onclick={() => (confirmingClearChecked = true)}
+						>
+							{t('shoppingList.clearChecked', { count: checkedCount })}
+						</button>
+					{/if}
+				</div>
 			{/if}
 		</div>
 		{#each groupedItems as [category, items] (category || '__uncategorized')}
@@ -489,6 +518,18 @@
 		</button>
 	</div>
 </div>
+
+<ConfirmModal
+	open={confirmingClearChecked}
+	title={t('shoppingList.clearCheckedTitle')}
+	message={t('shoppingList.clearCheckedMessage', { count: checkedCount })}
+	confirmLabel={t('shoppingList.clearCheckedConfirm')}
+	confirmingLabel={t('shoppingList.removing')}
+	cancelLabel={t('common.cancel')}
+	confirming={clearingChecked}
+	onConfirm={confirmClearChecked}
+	onCancel={() => (confirmingClearChecked = false)}
+/>
 
 <ConfirmModal
 	open={confirmingBulkDelete}
