@@ -11,12 +11,39 @@
 	import { swipeToDelete } from '$lib/utils/swipeToDelete.svelte';
 	import { dragToReorder } from '$lib/utils/dragToReorder.svelte';
 	import { inventoryOrder } from '$lib/state/inventoryOrder.svelte';
+	import { inventorySortMode, type InventorySortMode } from '$lib/state/inventorySortMode.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
+	import PullToRefresh from '$lib/components/PullToRefresh.svelte';
+	import EmptyState from '$lib/components/EmptyState.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
-	let orderedItems = $derived(inventoryOrder.apply(data.items));
+	let searchQuery = $state('');
+	let orderedItems = $derived.by(() => {
+		let ordered: Inventory[];
+		if (inventorySortMode.current === 'name') {
+			ordered = [...data.items].sort((a, b) => a.name.localeCompare(b.name));
+		} else if (inventorySortMode.current === 'expiration') {
+			ordered = [...data.items].sort((a, b) => {
+				if (!a.expirationDte && !b.expirationDte) return 0;
+				if (!a.expirationDte) return 1;
+				if (!b.expirationDte) return -1;
+				return new Date(a.expirationDte).getTime() - new Date(b.expirationDte).getTime();
+			});
+		} else if (inventorySortMode.current === 'quantity') {
+			ordered = [...data.items].sort((a, b) => a.quantity - b.quantity);
+		} else {
+			ordered = inventoryOrder.apply(data.items);
+		}
+		const query = searchQuery.trim().toLowerCase();
+		if (!query) return ordered;
+		return ordered.filter((item) => item.name.toLowerCase().includes(query));
+	});
+
+	function handleSortChange(e: Event) {
+		inventorySortMode.set((e.target as HTMLSelectElement).value as InventorySortMode);
+	}
 
 	let quickAddItem = $state<Inventory | null>(null);
 	let shoppingLists = $state<ShoppingList[] | null>(null);
@@ -95,10 +122,32 @@
 	}
 </script>
 
+<PullToRefresh dependency="app:inventory">
 <div class="page">
 	<div class="header">
 		<h1>{t('inventory.title')}</h1>
 		<a class="btn-outline" href="/inventory/new">{t('inventory.newItem')}</a>
+	</div>
+
+	<div class="search-row">
+		<input
+			type="search"
+			class="search-input"
+			placeholder={t('inventory.searchPlaceholder')}
+			bind:value={searchQuery}
+			aria-label={t('inventory.searchPlaceholder')}
+		/>
+		<select
+			class="sort-select"
+			value={inventorySortMode.current}
+			onchange={handleSortChange}
+			aria-label={t('inventory.sortAriaLabel')}
+		>
+			<option value="custom">{t('inventory.sortCustom')}</option>
+			<option value="name">{t('inventory.sortName')}</option>
+			<option value="expiration">{t('inventory.sortExpiration')}</option>
+			<option value="quantity">{t('inventory.sortQuantity')}</option>
+		</select>
 	</div>
 
 	<div class="chiprow">
@@ -117,7 +166,13 @@
 	</div>
 
 	{#if data.items.length === 0}
-		<p class="empty">{t('inventory.empty')}</p>
+		<EmptyState
+			message={t('inventory.empty')}
+			ctaLabel={t('inventory.newItem')}
+			ctaHref="/inventory/new"
+		/>
+	{:else if orderedItems.length === 0}
+		<p class="empty">{t('inventory.noSearchResults')}</p>
 	{:else}
 		<div class="list">
 			{#each orderedItems as item (item._id)}
@@ -130,41 +185,45 @@
 						orderedItems.map((i) => i._id)
 					)}px)`}
 				>
-					<button
-						type="button"
-						class="drag-handle"
-						aria-label={t('recipeForm.dragToReorder')}
-						onpointerdown={(e) =>
-							drag.onPointerDown(
-								e,
-								item._id,
-								orderedItems.map((i) => i._id)
-							)}
-						onpointermove={(e) =>
-							drag.onPointerMove(
-								e,
-								item._id,
-								orderedItems.map((i) => i._id)
-							)}
-						onpointerup={() =>
-							drag.onPointerUp(item._id, (from, to) =>
-								inventoryOrder.reorder(
-									orderedItems.map((i) => i._id),
-									from,
-									to
-								)
-							)}
-						onpointercancel={() => drag.cancel()}
-					>
-						<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-							<circle cx="9" cy="6" r="1.8" />
-							<circle cx="15" cy="6" r="1.8" />
-							<circle cx="9" cy="12" r="1.8" />
-							<circle cx="15" cy="12" r="1.8" />
-							<circle cx="9" cy="18" r="1.8" />
-							<circle cx="15" cy="18" r="1.8" />
-						</svg>
-					</button>
+					{#if inventorySortMode.current === 'custom'}
+						<button
+							type="button"
+							class="drag-handle"
+							aria-label={t('recipeForm.dragToReorder')}
+							onpointerdown={(e) =>
+								drag.onPointerDown(
+									e,
+									item._id,
+									orderedItems.map((i) => i._id)
+								)}
+							onpointermove={(e) =>
+								drag.onPointerMove(
+									e,
+									item._id,
+									orderedItems.map((i) => i._id)
+								)}
+							onpointerup={() =>
+								drag.onPointerUp(item._id, (from, to) =>
+									inventoryOrder.reorder(
+										orderedItems.map((i) => i._id),
+										from,
+										to
+									)
+								)}
+							onpointercancel={() => drag.cancel()}
+						>
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+								<circle cx="9" cy="6" r="1.8" />
+								<circle cx="15" cy="6" r="1.8" />
+								<circle cx="9" cy="12" r="1.8" />
+								<circle cx="15" cy="12" r="1.8" />
+								<circle cx="9" cy="18" r="1.8" />
+								<circle cx="15" cy="18" r="1.8" />
+							</svg>
+						</button>
+					{:else}
+						<div class="drag-handle-spacer" aria-hidden="true"></div>
+					{/if}
 					<div class="swipe-wrapper">
 						<button
 							type="button"
@@ -212,6 +271,7 @@
 		</div>
 	{/if}
 </div>
+</PullToRefresh>
 
 {#if quickAddItem}
 	<div
@@ -289,6 +349,33 @@
 		text-decoration: none;
 		color: var(--ink);
 		background: var(--paper-raised);
+	}
+	.search-row {
+		display: flex;
+		gap: 0.5rem;
+	}
+	.search-input {
+		flex: 1;
+		min-width: 0;
+		padding: 0.55rem 0.7rem;
+		border: 1px solid var(--line);
+		border-radius: 8px;
+		font-size: 0.9rem;
+		background: var(--paper-raised);
+		color: var(--ink);
+	}
+	.sort-select {
+		flex: 0 0 auto;
+		padding: 0.55rem 0.5rem;
+		border: 1px solid var(--line);
+		border-radius: 8px;
+		font-size: 0.85rem;
+		background: var(--paper-raised);
+		color: var(--ink);
+	}
+	.drag-handle-spacer {
+		flex: 0 0 auto;
+		width: 2.2rem;
 	}
 	.chiprow {
 		display: flex;

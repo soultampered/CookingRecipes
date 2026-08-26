@@ -1,22 +1,60 @@
 <script lang="ts">
-	import { invalidate } from '$app/navigation';
+	import { goto, invalidate } from '$app/navigation';
+	import { page } from '$app/state';
 	import { t } from '$lib/i18n/index.svelte';
 	import { swipeToDelete } from '$lib/utils/swipeToDelete.svelte';
 	import { dragToReorder } from '$lib/utils/dragToReorder.svelte';
 	import { shoppingListOrder } from '$lib/state/shoppingListOrder.svelte';
-	import { deleteShoppingList } from '$lib/api/shoppingLists';
+	import { deleteShoppingList, createShoppingList, addItem } from '$lib/api/shoppingLists';
 	import { ApiError } from '$lib/api/client';
 	import { toast } from '$lib/state/toast.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
+	import PullToRefresh from '$lib/components/PullToRefresh.svelte';
+	import EmptyState from '$lib/components/EmptyState.svelte';
+	import { shoppingListTemplates } from '$lib/state/shoppingListTemplates.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
+
+	let showTemplatePicker = $state(false);
+	let creatingFromTemplateId = $state<string | null>(null);
+
+	async function createFromTemplate(templateId: string) {
+		const template = shoppingListTemplates.current.find((t) => t.id === templateId);
+		if (!template) return;
+		creatingFromTemplateId = templateId;
+		try {
+			const list = await createShoppingList({ name: template.name, items: [] });
+			await Promise.all(template.items.map((item) => addItem(list._id!, item)));
+			await invalidate('app:shopping-lists');
+			showTemplatePicker = false;
+			await goto(`/shopping-lists/${list._id}`);
+		} catch (err) {
+			toast.push(err instanceof ApiError ? err.message : t('shoppingListNew.error'));
+		} finally {
+			creatingFromTemplateId = null;
+		}
+	}
+
+	async function deleteTemplate(templateId: string) {
+		await shoppingListTemplates.remove(templateId);
+	}
 
 	function uncheckedCount(items: { checked?: boolean }[]) {
 		return items.filter((i) => !i.checked).length;
 	}
 
 	let orderedLists = $derived(shoppingListOrder.apply(data.lists));
+
+	// STO-74: the home-screen widget deep-links here with ?quickAdd=1 — jump straight into
+	// whichever list is first in the user's own ordering (same "active list" concept the
+	// widget has no way to know about itself, since it has no data/auth access of its own)
+	// and land on its add-item input already focused.
+	$effect(() => {
+		if (page.url.searchParams.get('quickAdd') === '1' && orderedLists.length > 0) {
+			goto(`/shopping-lists/${orderedLists[0]._id}?focus=1`, { replaceState: true });
+		}
+	});
 
 	const swipe = swipeToDelete();
 	const drag = dragToReorder();
@@ -47,14 +85,30 @@
 	}
 </script>
 
+<PullToRefresh dependency="app:shopping-lists">
 <div class="page">
 	<div class="header">
 		<h1>{t('shoppingLists.title')}</h1>
-		<a class="btn-outline" href="/shopping-lists/new">{t('shoppingLists.newList')}</a>
+		<div class="header-actions">
+			{#if shoppingListTemplates.current.length > 0}
+				<button
+					type="button"
+					class="btn-outline"
+					onclick={() => (showTemplatePicker = true)}
+				>
+					{t('shoppingLists.fromTemplate')}
+				</button>
+			{/if}
+			<a class="btn-outline" href="/shopping-lists/new">{t('shoppingLists.newList')}</a>
+		</div>
 	</div>
 
 	{#if data.lists.length === 0}
-		<p class="empty">{t('shoppingLists.empty')}</p>
+		<EmptyState
+			message={t('shoppingLists.empty')}
+			ctaLabel={t('shoppingLists.newList')}
+			ctaHref="/shopping-lists/new"
+		/>
 	{:else}
 		<div class="list">
 			{#each orderedLists as list (list._id)}
@@ -142,6 +196,57 @@
 		</div>
 	{/if}
 </div>
+</PullToRefresh>
+
+{#if showTemplatePicker}
+	<div
+		class="backdrop"
+		role="presentation"
+		onclick={() => (showTemplatePicker = false)}
+		onkeydown={(e) => e.key === 'Escape' && (showTemplatePicker = false)}
+	>
+		<div
+			class="picker"
+			role="dialog"
+			aria-modal="true"
+			tabindex="-1"
+			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => e.stopPropagation()}
+		>
+			<h2>{t('shoppingLists.fromTemplateTitle')}</h2>
+			<div class="list-options">
+				{#each shoppingListTemplates.current as template (template.id)}
+					<div class="template-row">
+						<button
+							type="button"
+							class="list-option"
+							onclick={() => createFromTemplate(template.id)}
+							disabled={creatingFromTemplateId === template.id}
+						>
+							{creatingFromTemplateId === template.id
+								? t('common.adding')
+								: t('shoppingLists.templateItemCount', {
+										name: template.name,
+										count: template.items.length
+									})}
+						</button>
+						<button
+							type="button"
+							class="template-remove"
+							onclick={() => deleteTemplate(template.id)}
+							aria-label={t('shoppingLists.deleteTemplateAriaLabel', { name: template.name })}
+						>
+							×
+						</button>
+					</div>
+				{/each}
+			</div>
+			<button type="button" class="outline" onclick={() => (showTemplatePicker = false)}>
+				{t('common.cancel')}
+			</button>
+		</div>
+	</div>
+{/if}
 
 <ConfirmModal
 	open={removingListId !== null}
@@ -170,15 +275,87 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+		gap: 0.5rem;
+	}
+	.header-actions {
+		display: flex;
+		gap: 0.5rem;
+		flex-wrap: wrap;
 	}
 	.btn-outline {
 		border: 1px solid var(--line);
 		border-radius: 8px;
 		padding: 0.4rem 0.75rem;
 		font-size: 0.85rem;
+		font-family: inherit;
 		text-decoration: none;
 		color: var(--ink);
 		background: var(--paper-raised);
+		cursor: pointer;
+	}
+	.backdrop {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.45);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1.25rem;
+		z-index: 100;
+	}
+	.picker {
+		width: 100%;
+		max-width: 340px;
+		background: var(--paper-raised);
+		border: 1px solid var(--line);
+		border-radius: 12px;
+		padding: 1.25rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+	.picker h2 {
+		margin: 0;
+		font-size: 1rem;
+	}
+	.list-options {
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
+	}
+	.template-row {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+	}
+	.list-option {
+		flex: 1;
+		min-width: 0;
+		text-align: left;
+		padding: 0.6rem 0.7rem;
+		border-radius: 8px;
+		border: 1px solid var(--line);
+		background: var(--paper);
+		color: var(--ink);
+		cursor: pointer;
+	}
+	.template-remove {
+		flex: 0 0 auto;
+		border: none;
+		background: none;
+		color: var(--bad);
+		font-size: 1.1rem;
+		cursor: pointer;
+		padding: 0 0.3rem;
+	}
+	.picker .outline {
+		padding: 0.6rem;
+		border-radius: 8px;
+		border: 1px solid var(--line);
+		background: var(--paper-raised);
+		color: var(--ink);
+		font-weight: 600;
+		cursor: pointer;
 	}
 	.list {
 		display: flex;
@@ -254,9 +431,5 @@
 		font-size: 0.8rem;
 		color: var(--ink-soft);
 		margin-top: 0.25rem;
-	}
-	.empty {
-		color: var(--ink-soft);
-		font-size: 0.9rem;
 	}
 </style>

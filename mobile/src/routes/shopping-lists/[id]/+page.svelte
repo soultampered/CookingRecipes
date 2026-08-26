@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { goto, invalidate } from '$app/navigation';
+	import { page } from '$app/state';
+	import { onMount } from 'svelte';
 	import {
 		addItem,
 		deleteShoppingList,
@@ -14,12 +16,25 @@
 	import { t, tRaw } from '$lib/i18n/index.svelte';
 	import { swipeToDelete } from '$lib/utils/swipeToDelete.svelte';
 	import { dragToReorder } from '$lib/utils/dragToReorder.svelte';
+	import QuantityStepper from '$lib/components/QuantityStepper.svelte';
+	import { hapticLight } from '$lib/utils/haptics';
+	import EmptyState from '$lib/components/EmptyState.svelte';
+	import { shoppingListTemplates } from '$lib/state/shoppingListTemplates.svelte';
 	import type { ShoppingListItem } from '$lib/types/shoppingList';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
 	let itemName = $state('');
+	let itemNameInput: HTMLInputElement | undefined = $state();
+
+	function focusAddItem() {
+		itemNameInput?.focus();
+	}
+
+	onMount(() => {
+		if (page.url.searchParams.get('focus') === '1') focusAddItem();
+	});
 	let itemQuantity = $state(1);
 	let adding = $state(false);
 	let deleting = $state(false);
@@ -27,6 +42,113 @@
 	let confirmingDeleteList = $state(false);
 	const itemSwipe = swipeToDelete();
 	const itemDrag = dragToReorder();
+
+	let editingQuantityId = $state<string | null>(null);
+	let quantityDraft = $state(1);
+	let savingQuantity = $state(false);
+
+	function startEditQuantity(item: ShoppingListItem) {
+		editingQuantityId = item._id!;
+		quantityDraft = item.quantity;
+	}
+
+	async function commitQuantity(itemId: string) {
+		savingQuantity = true;
+		try {
+			const reordered = data.list.items.map((i) =>
+				i._id === itemId ? { ...i, quantity: quantityDraft } : i
+			);
+			await updateShoppingList(data.list._id!, { items: reordered });
+			await invalidate(`app:shopping-list:${data.list._id}`);
+			editingQuantityId = null;
+		} catch (err) {
+			toast.push(err instanceof ApiError ? err.message : t('shoppingList.errorUpdateItem'));
+		} finally {
+			savingQuantity = false;
+		}
+	}
+
+	let selectMode = $state(false);
+	let selectedIds = $state<Set<string>>(new Set());
+	let bulkActing = $state(false);
+	let confirmingBulkDelete = $state(false);
+
+	function toggleSelectMode() {
+		selectMode = !selectMode;
+		selectedIds = new Set();
+	}
+
+	function toggleSelected(id: string) {
+		const next = new Set(selectedIds);
+		if (next.has(id)) next.delete(id);
+		else next.add(id);
+		selectedIds = next;
+	}
+
+	// Selection is a client-only mode overlay, not a gesture — drag/swipe stay wired up but
+	// only actually engage when selectMode is off, so the two interactions never fight.
+	function rowPointerDown(e: PointerEvent, id: string) {
+		if (!selectMode) itemSwipe.onPointerDown(e, id);
+	}
+	function rowPointerMove(e: PointerEvent, id: string) {
+		if (!selectMode) itemSwipe.onPointerMove(e, id);
+	}
+	function rowPointerUp(id: string) {
+		if (!selectMode) itemSwipe.onPointerUp(id);
+	}
+
+	async function bulkMarkChecked() {
+		// toggleItemChecked flips server-side state with no body, so only touch items that are
+		// currently unchecked — otherwise an already-checked item selected alongside unchecked
+		// ones would get flipped back off instead of staying checked.
+		const ids = [...selectedIds].filter((id) => !data.list.items.find((i) => i._id === id)?.checked);
+		if (ids.length === 0) {
+			toggleSelectMode();
+			return;
+		}
+		bulkActing = true;
+		try {
+			await Promise.all(ids.map((id) => toggleItemChecked(data.list._id!, id)));
+			await invalidate(`app:shopping-list:${data.list._id}`);
+			toggleSelectMode();
+		} catch (err) {
+			toast.push(err instanceof ApiError ? err.message : t('shoppingList.errorUpdateItem'));
+		} finally {
+			bulkActing = false;
+		}
+	}
+
+	async function confirmBulkDelete() {
+		bulkActing = true;
+		try {
+			await Promise.all([...selectedIds].map((id) => removeItem(data.list._id!, id)));
+			await invalidate(`app:shopping-list:${data.list._id}`);
+			confirmingBulkDelete = false;
+			toggleSelectMode();
+		} catch (err) {
+			toast.push(err instanceof ApiError ? err.message : t('shoppingList.errorRemoveItem'));
+		} finally {
+			bulkActing = false;
+		}
+	}
+
+	let checkedCount = $derived(data.list.items.filter((i) => i.checked).length);
+	let confirmingClearChecked = $state(false);
+	let clearingChecked = $state(false);
+
+	async function confirmClearChecked() {
+		clearingChecked = true;
+		try {
+			const checkedIds = data.list.items.filter((i) => i.checked).map((i) => i._id!);
+			await Promise.all(checkedIds.map((id) => removeItem(data.list._id!, id)));
+			await invalidate(`app:shopping-list:${data.list._id}`);
+			confirmingClearChecked = false;
+		} catch (err) {
+			toast.push(err instanceof ApiError ? err.message : t('shoppingList.errorRemoveItem'));
+		} finally {
+			clearingChecked = false;
+		}
+	}
 
 	// Item order is real server data (not a client-only preference like categoryOrder/
 	// shoppingListOrder), so a drag needs to end in a single PATCH. dragToReorder never
@@ -101,6 +223,7 @@
 	});
 
 	async function handleToggle(itemId: string) {
+		hapticLight();
 		try {
 			await toggleItemChecked(data.list._id!, itemId);
 			await invalidate(`app:shopping-list:${data.list._id}`);
@@ -169,6 +292,23 @@
 			confirmingDeleteList = false;
 		}
 	}
+
+	let savingTemplate = $state(false);
+	let templateSaved = $state(false);
+
+	async function saveAsTemplate() {
+		savingTemplate = true;
+		try {
+			await shoppingListTemplates.save(
+				data.list.name,
+				data.list.items.map((i) => ({ name: i.name, quantity: i.quantity }))
+			);
+			templateSaved = true;
+			setTimeout(() => (templateSaved = false), 2000);
+		} finally {
+			savingTemplate = false;
+		}
+	}
 </script>
 
 <div class="page">
@@ -210,8 +350,53 @@
 	{/if}
 
 	{#if data.list.items.length === 0}
-		<p class="empty">{t('shoppingList.empty')}</p>
+		<EmptyState
+			message={t('shoppingList.empty')}
+			ctaLabel={t('shoppingList.addFirstItem')}
+			onCta={focusAddItem}
+		/>
 	{:else}
+		<div class="select-toolbar">
+			{#if selectMode}
+				<span class="select-count">{t('shoppingList.selectedCount', { count: selectedIds.size })}</span>
+				<div class="select-actions">
+					<button
+						type="button"
+						class="select-action"
+						disabled={selectedIds.size === 0 || bulkActing}
+						onclick={bulkMarkChecked}
+					>
+						{t('shoppingList.checkSelected')}
+					</button>
+					<button
+						type="button"
+						class="select-action danger"
+						disabled={selectedIds.size === 0 || bulkActing}
+						onclick={() => (confirmingBulkDelete = true)}
+					>
+						{t('shoppingList.deleteSelected')}
+					</button>
+					<button type="button" class="select-action outline" onclick={toggleSelectMode}>
+						{t('common.cancel')}
+					</button>
+				</div>
+			{:else}
+				<div class="select-actions">
+					<button type="button" class="select-action outline" onclick={toggleSelectMode}>
+						{t('shoppingList.selectItems')}
+					</button>
+					{#if checkedCount > 0}
+						<button
+							type="button"
+							class="select-action outline"
+							onclick={() => (confirmingClearChecked = true)}
+						>
+							{t('shoppingList.clearChecked', { count: checkedCount })}
+						</button>
+					{/if}
+				</div>
+			{/if}
+		</div>
 		{#each groupedItems as [category, items] (category || '__uncategorized')}
 			{#if groupedItems.length > 1}
 				<div class="category-header">{category ? tRaw('category', category) : t('common.other')}</div>
@@ -227,37 +412,47 @@
 							items.map((i) => i._id!)
 						)}px)`}
 					>
-						<button
-							type="button"
-							class="drag-handle"
-							aria-label={t('recipeForm.dragToReorder')}
-							onpointerdown={(e) =>
-								itemDrag.onPointerDown(
-									e,
-									item._id!,
-									items.map((i) => i._id!)
-								)}
-							onpointermove={(e) =>
-								itemDrag.onPointerMove(
-									e,
-									item._id!,
-									items.map((i) => i._id!)
-								)}
-							onpointerup={() =>
-								itemDrag.onPointerUp(item._id!, (from, to) =>
-									reorderItemsInCategory(category, from, to)
-								)}
-							onpointercancel={() => itemDrag.cancel()}
-						>
-							<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-								<circle cx="9" cy="6" r="1.8" />
-								<circle cx="15" cy="6" r="1.8" />
-								<circle cx="9" cy="12" r="1.8" />
-								<circle cx="15" cy="12" r="1.8" />
-								<circle cx="9" cy="18" r="1.8" />
-								<circle cx="15" cy="18" r="1.8" />
-							</svg>
-						</button>
+						{#if selectMode}
+							<input
+								type="checkbox"
+								class="select-checkbox"
+								checked={selectedIds.has(item._id!)}
+								onchange={() => toggleSelected(item._id!)}
+								aria-label={t('shoppingList.selectItemAriaLabel', { name: item.name })}
+							/>
+						{:else}
+							<button
+								type="button"
+								class="drag-handle"
+								aria-label={t('recipeForm.dragToReorder')}
+								onpointerdown={(e) =>
+									itemDrag.onPointerDown(
+										e,
+										item._id!,
+										items.map((i) => i._id!)
+									)}
+								onpointermove={(e) =>
+									itemDrag.onPointerMove(
+										e,
+										item._id!,
+										items.map((i) => i._id!)
+									)}
+								onpointerup={() =>
+									itemDrag.onPointerUp(item._id!, (from, to) =>
+										reorderItemsInCategory(category, from, to)
+									)}
+								onpointercancel={() => itemDrag.cancel()}
+							>
+								<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+									<circle cx="9" cy="6" r="1.8" />
+									<circle cx="15" cy="6" r="1.8" />
+									<circle cx="9" cy="12" r="1.8" />
+									<circle cx="15" cy="12" r="1.8" />
+									<circle cx="9" cy="18" r="1.8" />
+									<circle cx="15" cy="18" r="1.8" />
+								</svg>
+							</button>
+						{/if}
 						<div class="swipe-wrapper">
 							<button
 								type="button"
@@ -276,10 +471,10 @@
 								style:transform={`translateX(${itemSwipe.offsetFor(item._id!)}px)`}
 								role="group"
 								aria-label={item.name}
-								onpointerdown={(e) => itemSwipe.onPointerDown(e, item._id!)}
-								onpointermove={(e) => itemSwipe.onPointerMove(e, item._id!)}
-								onpointerup={() => itemSwipe.onPointerUp(item._id!)}
-								onpointercancel={() => itemSwipe.onPointerUp(item._id!)}
+								onpointerdown={(e) => rowPointerDown(e, item._id!)}
+								onpointermove={(e) => rowPointerMove(e, item._id!)}
+								onpointerup={() => rowPointerUp(item._id!)}
+								onpointercancel={() => rowPointerUp(item._id!)}
 							>
 								<input
 									type="checkbox"
@@ -287,8 +482,44 @@
 									onchange={() => handleToggle(item._id!)}
 								/>
 								<span class="item-name" class:checked={item.checked}>{item.name}</span>
-								<span class="item-qty">{item.quantity}</span>
-								<button type="button" class="remove" onclick={() => (removingItemId = item._id!)}>×</button>
+								{#if editingQuantityId === item._id && !selectMode}
+									<div class="qty-edit">
+										<QuantityStepper
+											bind:value={quantityDraft}
+											min={1}
+											decreaseLabel={t('shoppingList.decreaseQuantity')}
+											increaseLabel={t('shoppingList.increaseQuantity')}
+											quantityLabel={t('shoppingList.quantityAriaLabel')}
+										/>
+										<button
+											type="button"
+											class="qty-done"
+											disabled={savingQuantity}
+											onclick={() => commitQuantity(item._id!)}
+											aria-label={t('shoppingList.confirmQuantity')}
+										>
+											✓
+										</button>
+									</div>
+								{:else}
+									<button
+										type="button"
+										class="item-qty"
+										disabled={selectMode}
+										onclick={() => startEditQuantity(item)}
+										aria-label={t('shoppingList.editQuantityAriaLabel', { name: item.name })}
+									>
+										{item.quantity}
+									</button>
+								{/if}
+								<button
+									type="button"
+									class="remove"
+									onclick={() => (removingItemId = item._id!)}
+									aria-label={t('shoppingList.removeItemAriaLabel', { name: item.name })}
+								>
+									×
+								</button>
 							</div>
 						</div>
 					</div>
@@ -313,10 +544,37 @@
 	{/if}
 
 	<form class="add-item-form" onsubmit={handleAddItem}>
-		<input type="text" placeholder={t('shoppingList.itemNamePlaceholder')} bind:value={itemName} required />
-		<input type="number" min="1" bind:value={itemQuantity} />
+		<input
+			type="text"
+			placeholder={t('shoppingList.itemNamePlaceholder')}
+			bind:value={itemName}
+			bind:this={itemNameInput}
+			required
+		/>
+		<QuantityStepper
+			bind:value={itemQuantity}
+			min={1}
+			decreaseLabel={t('shoppingList.decreaseQuantity')}
+			increaseLabel={t('shoppingList.increaseQuantity')}
+			quantityLabel={t('shoppingList.quantityAriaLabel')}
+		/>
 		<button type="submit" disabled={adding}>{adding ? t('common.adding') : t('shoppingList.add')}</button>
 	</form>
+
+	{#if data.list.items.length > 0}
+		<button
+			type="button"
+			class="save-template-btn"
+			onclick={saveAsTemplate}
+			disabled={savingTemplate}
+		>
+			{templateSaved
+				? t('shoppingList.templateSaved')
+				: savingTemplate
+					? t('common.saving')
+					: t('shoppingList.saveAsTemplate')}
+		</button>
+	{/if}
 
 	<div class="danger-zone">
 		<button type="button" class="danger-link" onclick={() => (confirmingDeleteList = true)}>
@@ -324,6 +582,30 @@
 		</button>
 	</div>
 </div>
+
+<ConfirmModal
+	open={confirmingClearChecked}
+	title={t('shoppingList.clearCheckedTitle')}
+	message={t('shoppingList.clearCheckedMessage', { count: checkedCount })}
+	confirmLabel={t('shoppingList.clearCheckedConfirm')}
+	confirmingLabel={t('shoppingList.removing')}
+	cancelLabel={t('common.cancel')}
+	confirming={clearingChecked}
+	onConfirm={confirmClearChecked}
+	onCancel={() => (confirmingClearChecked = false)}
+/>
+
+<ConfirmModal
+	open={confirmingBulkDelete}
+	title={t('shoppingList.removeSelectedTitle')}
+	message={t('shoppingList.removeSelectedMessage', { count: selectedIds.size })}
+	confirmLabel={t('shoppingList.remove')}
+	confirmingLabel={t('shoppingList.removing')}
+	cancelLabel={t('common.cancel')}
+	confirming={bulkActing}
+	onConfirm={confirmBulkDelete}
+	onCancel={() => (confirmingBulkDelete = false)}
+/>
 
 <ConfirmModal
 	open={removingItemId !== null}
@@ -411,13 +693,60 @@
 		background: var(--paper-raised);
 		color: var(--ink);
 	}
+	.select-toolbar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+	.select-count {
+		font-size: 0.8rem;
+		color: var(--ink-soft);
+	}
+	.select-actions {
+		display: flex;
+		gap: 0.5rem;
+	}
+	.select-action {
+		font-size: 0.8rem;
+		padding: 0.4rem 0.7rem;
+		border-radius: 8px;
+		border: none;
+		background: var(--accent);
+		color: var(--paper-raised);
+		font-weight: 600;
+		cursor: pointer;
+	}
+	.select-action:disabled {
+		opacity: 0.5;
+		cursor: default;
+	}
+	.select-action.danger {
+		background: var(--bad);
+	}
+	.select-action.outline {
+		border: 1px solid var(--line);
+		background: var(--paper-raised);
+		color: var(--ink);
+	}
+	.select-checkbox {
+		flex: 0 0 auto;
+		width: 2.2rem;
+		height: 2.2rem;
+	}
 	.category-header {
+		position: sticky;
+		top: 0;
+		z-index: 2;
+		background: var(--paper);
 		font-size: 0.75rem;
 		font-weight: 600;
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
 		color: var(--ink-soft);
 		margin-top: 0.6rem;
+		padding: 0.3rem 0;
 	}
 	.category-header:first-of-type {
 		margin-top: 0;
@@ -499,9 +828,40 @@
 		text-decoration: line-through;
 	}
 	.item-qty {
+		border: none;
+		background: none;
+		padding: 0.2rem 0.4rem;
+		border-radius: 6px;
 		font-size: 0.85rem;
 		color: var(--ink-soft);
 		font-variant-numeric: tabular-nums;
+		cursor: pointer;
+	}
+	.item-qty:disabled {
+		cursor: default;
+	}
+	.qty-edit {
+		display: flex;
+		align-items: center;
+		gap: 0.3rem;
+	}
+	.qty-edit :global(.stepper) {
+		width: 6.5rem;
+	}
+	.qty-done {
+		flex: 0 0 auto;
+		width: 1.8rem;
+		height: 1.8rem;
+		border: none;
+		border-radius: 6px;
+		background: var(--accent);
+		color: var(--paper-raised);
+		font-weight: 700;
+		cursor: pointer;
+	}
+	.qty-done:disabled {
+		opacity: 0.6;
+		cursor: default;
 	}
 	.remove {
 		border: none;
@@ -510,11 +870,11 @@
 		font-size: 1.1rem;
 		cursor: pointer;
 		flex: 0 0 auto;
-		padding: 0 0.3rem;
-	}
-	.empty {
-		color: var(--ink-soft);
-		font-size: 0.9rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 2.2rem;
+		min-height: 2.2rem;
 	}
 	.quick-add-chips {
 		display: flex;
@@ -544,7 +904,7 @@
 		flex: 2;
 		min-width: 0;
 	}
-	.add-item-form input[type='number'] {
+	.add-item-form :global(.stepper) {
 		flex: 1;
 		min-width: 0;
 	}
@@ -565,6 +925,20 @@
 		font-weight: 600;
 		cursor: pointer;
 		flex: 0 0 auto;
+	}
+	.save-template-btn {
+		align-self: flex-start;
+		border: 1px solid var(--line);
+		border-radius: 8px;
+		padding: 0.45rem 0.8rem;
+		font-size: 0.85rem;
+		background: var(--paper-raised);
+		color: var(--ink);
+		cursor: pointer;
+	}
+	.save-template-btn:disabled {
+		opacity: 0.6;
+		cursor: default;
 	}
 	.danger-zone {
 		margin-top: 1.5rem;

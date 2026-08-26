@@ -135,6 +135,7 @@
 		<label class="expiry-input-row">
 			<input
 				type="number"
+				inputmode="numeric"
 				min="0"
 				value={expirySettings.daysAhead}
 				onchange={(e) => expirySettings.set(Number(e.currentTarget.value) || 0)}

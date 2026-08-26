@@ -4,16 +4,23 @@
 	import NavBar from '$lib/components/NavBar.svelte';
 	import Toast from '$lib/components/Toast.svelte';
 	import { page, navigating } from '$app/state';
+	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
+	import { App as CapacitorApp } from '@capacitor/app';
 	import { fade } from 'svelte/transition';
 	import { theme } from '$lib/state/theme.svelte';
 	import { categoryOrder } from '$lib/state/categoryOrder.svelte';
 	import { shoppingListOrder } from '$lib/state/shoppingListOrder.svelte';
+	import { shoppingListTemplates } from '$lib/state/shoppingListTemplates.svelte';
 	import { inventoryOrder } from '$lib/state/inventoryOrder.svelte';
+	import { inventorySortMode } from '$lib/state/inventorySortMode.svelte';
 	import { recipeOrder } from '$lib/state/recipeOrder.svelte';
+	import { recipeViewMode } from '$lib/state/recipeViewMode.svelte';
 	import { expirySettings } from '$lib/state/expirySettings.svelte';
 	import { keyboardInset } from '$lib/state/keyboardInset.svelte';
 	import { locale } from '$lib/i18n/index.svelte';
+	import { onboarding } from '$lib/state/onboarding.svelte';
+	import SkeletonList from '$lib/components/SkeletonList.svelte';
 
 	let { children } = $props();
 
@@ -25,10 +32,35 @@
 		theme.restore();
 		categoryOrder.restore();
 		shoppingListOrder.restore();
+		shoppingListTemplates.restore();
 		inventoryOrder.restore();
+		inventorySortMode.restore();
 		recipeOrder.restore();
+		recipeViewMode.restore();
 		expirySettings.restore();
 		locale.restore();
+		onboarding.restore();
+
+		// STO-74: the home-screen widget is a static deep link (no native data/auth access
+		// of its own — see ShoppingListWidget's design note) into stokpot://widget-quick-add.
+		// Custom URL schemes parse the part after `scheme://` as `host`, not `pathname`.
+		const urlOpenHandle = CapacitorApp.addListener('appUrlOpen', (event) => {
+			const url = new URL(event.url);
+			if (url.host === 'widget-quick-add' || url.pathname === '/widget-quick-add') {
+				goto('/shopping-lists?quickAdd=1');
+			}
+		});
+
+		// STO-76: Android's hardware back button. window.history.back() triggers the same
+		// popstate SvelteKit's client router already listens for, so link clicks, goto(), and
+		// this all funnel through the same beforeNavigate — including unsavedChangesGuard's
+		// discard-changes prompt (STO-95), which cancels the navigation like it would for any
+		// other back trigger. canGoBack reflects the WebView's real history, which already
+		// includes every client-side route change (pushState), not just full page loads.
+		const backButtonHandle = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+			if (canGoBack) window.history.back();
+			else CapacitorApp.exitApp();
+		});
 
 		// The CSS-level html/body scroll-lock (app.css) stops the *page* from ever
 		// scrolling, but iOS's automatic keyboard avoidance repositions the WKWebView's
@@ -36,7 +68,13 @@
 		// entirely, which is why the nav bar could still drift after the keyboard dismissed.
 		// Disabling the webview's own scroll natively closes that gap; keyboardInset.watch()
 		// does that and tracks the live keyboard height so fixed/padded UI can stay clear of it.
-		return keyboardInset.watch();
+		const stopKeyboardWatch = keyboardInset.watch();
+
+		return () => {
+			urlOpenHandle.then((h) => h.remove());
+			backButtonHandle.then((h) => h.remove());
+			stopKeyboardWatch();
+		};
 	});
 
 	const noNavRoutes = ['/', '/welcome', '/verify-email', '/forgot-password'];
@@ -56,6 +94,13 @@
 		}
 		showNavProgress = false;
 	});
+
+	// STO-60: the three collection screens have an obvious list shape, so a matching
+	// skeleton reads better than the generic top progress bar alone while their data loads.
+	const listSkeletonRoutes = new Set(['/recipes', '/inventory', '/shopping-lists']);
+	let showListSkeleton = $derived(
+		showNavProgress && listSkeletonRoutes.has(navigating.to?.route.id ?? '')
+	);
 </script>
 
 <svelte:head>
@@ -68,6 +113,11 @@
 
 <div class="app-shell">
 	<main style:padding-bottom="{keyboardInset.current}px">
+		{#if showListSkeleton}
+			<div class="skeleton-overlay" in:fade={{ duration: 100 }}>
+				<SkeletonList />
+			</div>
+		{/if}
 		{#key page.url.pathname}
 			<div class="page-transition" in:fade={{ duration: 130 }}>
 				{@render children()}
@@ -100,11 +150,18 @@
 		padding-top: env(safe-area-inset-top);
 	}
 	main {
+		position: relative;
 		flex: 1 1 auto;
 		min-height: 0;
 		overflow-y: auto;
 		-webkit-overflow-scrolling: touch;
 		transition: padding-bottom 0.25s ease;
+	}
+	.skeleton-overlay {
+		position: absolute;
+		inset: 0;
+		z-index: 5;
+		background: var(--paper);
 	}
 	.nav-progress {
 		position: fixed;

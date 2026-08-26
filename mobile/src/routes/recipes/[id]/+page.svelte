@@ -1,21 +1,99 @@
 <script lang="ts">
 	import { goto, invalidate } from '$app/navigation';
 	import { deleteRecipe, getMissingIngredients, prepareRecipe } from '$lib/api/recipes';
+	import { listShoppingLists, addItem } from '$lib/api/shoppingLists';
 	import { ApiError } from '$lib/api/client';
 	import { toast } from '$lib/state/toast.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import StepTimer from '$lib/components/StepTimer.svelte';
 	import { parseDurationSeconds } from '$lib/utils/parseDuration';
 	import { t, tRaw } from '$lib/i18n/index.svelte';
+	import { recipeOrder } from '$lib/state/recipeOrder.svelte';
 	import type { MissingIngredient } from '$lib/types/recipe';
+	import { findSubstitution } from '$lib/data/substitutions';
+	import type { ShoppingList } from '$lib/types/shoppingList';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
+
+	// STO-72: sequential browsing follows the same order as the recipes list (custom drag
+	// order via recipeOrder, natural order otherwise) — it deliberately doesn't try to
+	// preserve whatever search/tag filter was active on the list screen the user tapped in
+	// from, since that state isn't passed through navigation.
+	let orderedIds = $derived(recipeOrder.apply(data.allRecipes).map((r) => r._id));
+	let currentIndex = $derived(orderedIds.indexOf(data.recipe._id));
+	let prevId = $derived(currentIndex > 0 ? orderedIds[currentIndex - 1] : null);
+	let nextId = $derived(
+		currentIndex >= 0 && currentIndex < orderedIds.length - 1 ? orderedIds[currentIndex + 1] : null
+	);
+
+	let swipeStartX = 0;
+	let swipeStartY = 0;
+
+	function onSwipeStart(e: PointerEvent) {
+		swipeStartX = e.clientX;
+		swipeStartY = e.clientY;
+	}
+
+	function onSwipeEnd(e: PointerEvent) {
+		const dx = e.clientX - swipeStartX;
+		const dy = e.clientY - swipeStartY;
+		if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+		if (dx < 0 && nextId) goto(`/recipes/${nextId}`);
+		else if (dx > 0 && prevId) goto(`/recipes/${prevId}`);
+	}
 
 	let preparing = $state(false);
 	let deleting = $state(false);
 	let confirmingDelete = $state(false);
 	let missing = $state<MissingIngredient[] | null>(null);
+
+	let addingMissingToList = $state(false);
+	let shoppingLists = $state<ShoppingList[] | null>(null);
+	let loadingLists = $state(false);
+	let addingListId = $state<string | null>(null);
+
+	async function openAddMissingToList() {
+		addingMissingToList = true;
+		if (!shoppingLists) {
+			loadingLists = true;
+			try {
+				shoppingLists = await listShoppingLists();
+			} catch (err) {
+				toast.push(err instanceof ApiError ? err.message : t('recipeDetail.errorLoadLists'));
+				addingMissingToList = false;
+			} finally {
+				loadingLists = false;
+			}
+		}
+	}
+
+	async function addMissingToList(listId: string) {
+		if (!missing) return;
+		addingListId = listId;
+		try {
+			await Promise.all(
+				missing.map((item) => addItem(listId, { name: item.name, quantity: item.needed }))
+			);
+			toast.push(t('recipeDetail.addedMissingToList'), 'info');
+			addingMissingToList = false;
+		} catch (err) {
+			toast.push(err instanceof ApiError ? err.message : t('recipeDetail.errorAddToList'));
+		} finally {
+			addingListId = null;
+		}
+	}
+
+	// STO-65: "have I gathered this from my kitchen for this recipe" — a per-visit cooking
+	// aid, deliberately not persisted or tied to the shopping-list checked concept at all.
+	let gathered = $state<Set<number>>(new Set());
+
+	function toggleGathered(index: number) {
+		const next = new Set(gathered);
+		if (next.has(index)) next.delete(index);
+		else next.add(index);
+		gathered = next;
+	}
 
 	let instructionSteps = $derived(
 		data.recipe.instructions.map((text) => ({ text, duration: parseDurationSeconds(text) }))
@@ -56,8 +134,30 @@
 	}
 </script>
 
-<div class="page">
-	<a class="back" href="/recipes">{t('recipeDetail.back')}</a>
+<div class="page" role="presentation" onpointerdown={onSwipeStart} onpointerup={onSwipeEnd}>
+	<div class="back-row">
+		<a class="back" href="/recipes">{t('recipeDetail.back')}</a>
+		{#if prevId || nextId}
+			<div class="prev-next">
+				<a
+					class="prev-next-link"
+					class:disabled={!prevId}
+					href={prevId ? `/recipes/${prevId}` : undefined}
+					aria-disabled={!prevId}
+				>
+					{t('recipeDetail.prevRecipe')}
+				</a>
+				<a
+					class="prev-next-link"
+					class:disabled={!nextId}
+					href={nextId ? `/recipes/${nextId}` : undefined}
+					aria-disabled={!nextId}
+				>
+					{t('recipeDetail.nextRecipe')}
+				</a>
+			</div>
+		{/if}
+	</div>
 	<div class="header">
 		<div>
 			<h1>{data.recipe.title}</h1>
@@ -74,13 +174,29 @@
 		<p class="description">{data.recipe.description}</p>
 	{/if}
 
-	<div class="field-label">{t('recipeDetail.ingredients')}</div>
+	<div class="field-label ingredients-label">
+		<span>{t('recipeDetail.ingredients')}</span>
+		{#if data.recipe.ingredients.length > 0}
+			<span class="gathered-count">
+				{t('recipeDetail.gatheredCount', {
+					done: gathered.size,
+					total: data.recipe.ingredients.length
+				})}
+			</span>
+		{/if}
+	</div>
 	<div class="ingredients">
-		{#each data.recipe.ingredients as ingredient}
-			<div class="ingredient-row">
-				<span>{inventoryName(ingredient.inventoryItemId)}</span>
+		{#each data.recipe.ingredients as ingredient, i}
+			<button
+				type="button"
+				class="ingredient-row"
+				class:gathered={gathered.has(i)}
+				onclick={() => toggleGathered(i)}
+			>
+				<span class="ingredient-check" aria-hidden="true">{gathered.has(i) ? '✓' : ''}</span>
+				<span class="ingredient-text">{inventoryName(ingredient.inventoryItemId)}</span>
 				<span class="qty">{ingredient.quantity}{ingredient.unit ? ` ${tRaw('unit', ingredient.unit)}` : ''}</span>
-			</div>
+			</button>
 		{/each}
 	</div>
 
@@ -108,8 +224,18 @@
 				})}
 			</strong>
 			{#each missing as item}
-				<div>{item.name} ({item.needed}{item.unit ? ` ${tRaw('unit', item.unit)}` : ''})</div>
+				<div>
+					{item.name} ({item.needed}{item.unit ? ` ${tRaw('unit', item.unit)}` : ''})
+					{#if findSubstitution(item.name)}
+						<div class="substitution-hint">
+							{t('recipeDetail.substitutionHint', { hint: findSubstitution(item.name)! })}
+						</div>
+					{/if}
+				</div>
 			{/each}
+			<button type="button" class="add-missing-btn" onclick={openAddMissingToList}>
+				{t('recipeDetail.addMissingToList')}
+			</button>
 		</div>
 	{/if}
 
@@ -119,6 +245,47 @@
 		</button>
 	</div>
 </div>
+
+{#if addingMissingToList}
+	<div
+		class="backdrop"
+		role="presentation"
+		onclick={() => (addingMissingToList = false)}
+		onkeydown={(e) => e.key === 'Escape' && (addingMissingToList = false)}
+	>
+		<div
+			class="picker"
+			role="dialog"
+			aria-modal="true"
+			tabindex="-1"
+			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => e.stopPropagation()}
+		>
+			<h2>{t('recipeDetail.addMissingToListTitle')}</h2>
+			{#if loadingLists}
+				<p class="hint">{t('inventory.loadingLists')}</p>
+			{:else if !shoppingLists || shoppingLists.length === 0}
+				<p class="hint">{t('inventory.noLists')}</p>
+			{:else}
+				<div class="list-options">
+					{#each shoppingLists as list (list._id)}
+						<button
+							type="button"
+							class="list-option"
+							onclick={() => addMissingToList(list._id!)}
+							disabled={addingListId === list._id}
+						>
+							{addingListId === list._id ? t('common.adding') : list.name}
+						</button>
+					{/each}
+				</div>
+			{/if}
+			<button type="button" class="outline" onclick={() => (addingMissingToList = false)}>
+				{t('common.cancel')}
+			</button>
+		</div>
+	</div>
+{/if}
 
 <ConfirmModal
 	open={confirmingDelete}
@@ -140,12 +307,33 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.9rem;
+		touch-action: pan-y;
+	}
+	.back-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 0.5rem;
 	}
 	.back {
 		align-self: flex-start;
 		font-size: 0.85rem;
 		color: var(--accent);
 		text-decoration: none;
+	}
+	.prev-next {
+		display: flex;
+		gap: 0.9rem;
+	}
+	.prev-next-link {
+		font-size: 0.85rem;
+		color: var(--accent);
+		text-decoration: none;
+	}
+	.prev-next-link.disabled {
+		color: var(--ink-soft);
+		opacity: 0.4;
+		pointer-events: none;
 	}
 	.header {
 		display: flex;
@@ -192,16 +380,56 @@
 		letter-spacing: 0.04em;
 		color: var(--ink-soft);
 	}
+	.ingredients-label {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+	}
+	.gathered-count {
+		font-variant-numeric: tabular-nums;
+		text-transform: none;
+	}
 	.ingredients {
 		display: flex;
 		flex-direction: column;
 	}
 	.ingredient-row {
 		display: flex;
-		justify-content: space-between;
+		align-items: center;
+		gap: 0.5rem;
+		width: 100%;
+		border: none;
+		background: none;
+		text-align: left;
 		font-size: 0.9rem;
 		padding: 0.4rem 0;
 		border-bottom: 1px solid var(--line);
+		color: inherit;
+		cursor: pointer;
+	}
+	.ingredient-check {
+		flex: 0 0 auto;
+		width: 1.2rem;
+		height: 1.2rem;
+		border: 1px solid var(--line);
+		border-radius: 4px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 0.75rem;
+		color: var(--paper-raised);
+	}
+	.ingredient-row.gathered .ingredient-check {
+		background: var(--accent);
+		border-color: var(--accent);
+	}
+	.ingredient-text {
+		flex: 1;
+		min-width: 0;
+	}
+	.ingredient-row.gathered .ingredient-text {
+		color: var(--ink-soft);
+		text-decoration: line-through;
 	}
 	.qty {
 		color: var(--ink-soft);
@@ -259,5 +487,70 @@
 	.banner strong {
 		display: block;
 		margin-bottom: 0.2rem;
+	}
+	.substitution-hint {
+		font-size: 0.8rem;
+		font-style: italic;
+		opacity: 0.85;
+		margin-top: 0.1rem;
+	}
+	.add-missing-btn {
+		margin-top: 0.6rem;
+		padding: 0.5rem 0.8rem;
+		border-radius: 8px;
+		border: 1px solid var(--bad);
+		background: var(--paper-raised);
+		color: var(--bad);
+		font-weight: 600;
+		font-size: 0.85rem;
+		cursor: pointer;
+	}
+	.backdrop {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.45);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1.25rem;
+		z-index: 100;
+	}
+	.picker {
+		width: 100%;
+		max-width: 340px;
+		background: var(--paper-raised);
+		border: 1px solid var(--line);
+		border-radius: 12px;
+		padding: 1.25rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+	.picker h2 {
+		margin: 0;
+		font-size: 1rem;
+	}
+	.list-options {
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
+	}
+	.list-option {
+		text-align: left;
+		padding: 0.6rem 0.7rem;
+		border-radius: 8px;
+		border: 1px solid var(--line);
+		background: var(--paper);
+		color: var(--ink);
+		cursor: pointer;
+	}
+	.picker .outline {
+		padding: 0.6rem;
+		border-radius: 8px;
+		border: 1px solid var(--line);
+		background: var(--paper-raised);
+		color: var(--ink);
+		font-weight: 600;
+		cursor: pointer;
 	}
 </style>

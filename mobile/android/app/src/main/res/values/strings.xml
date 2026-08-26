@@ -4,4 +4,6 @@
     <string name="title_activity_main">Stokpot</string>
     <string name="package_name">ca.stokpot.app</string>
     <string name="custom_url_scheme">ca.stokpot.app</string>
+    <string name="widget_add_to_list">Add to list</string>
+    <string name="widget_description">Quickly add an item to your active shopping list</string>
 </resources>
