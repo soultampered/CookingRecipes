@@ -4,7 +4,9 @@
 	import NavBar from '$lib/components/NavBar.svelte';
 	import Toast from '$lib/components/Toast.svelte';
 	import { page, navigating } from '$app/state';
+	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
+	import { App as CapacitorApp } from '@capacitor/app';
 	import { fade } from 'svelte/transition';
 	import { theme } from '$lib/state/theme.svelte';
 	import { categoryOrder } from '$lib/state/categoryOrder.svelte';
@@ -39,13 +41,28 @@
 		locale.restore();
 		onboarding.restore();
 
+		// STO-74: the home-screen widget is a static deep link (no native data/auth access
+		// of its own — see ShoppingListWidget's design note) into stokpot://widget-quick-add.
+		// Custom URL schemes parse the part after `scheme://` as `host`, not `pathname`.
+		const urlOpenHandle = CapacitorApp.addListener('appUrlOpen', (event) => {
+			const url = new URL(event.url);
+			if (url.host === 'widget-quick-add' || url.pathname === '/widget-quick-add') {
+				goto('/shopping-lists?quickAdd=1');
+			}
+		});
+
 		// The CSS-level html/body scroll-lock (app.css) stops the *page* from ever
 		// scrolling, but iOS's automatic keyboard avoidance repositions the WKWebView's
 		// native UIScrollView content offset directly at the OS layer — that bypasses CSS
 		// entirely, which is why the nav bar could still drift after the keyboard dismissed.
 		// Disabling the webview's own scroll natively closes that gap; keyboardInset.watch()
 		// does that and tracks the live keyboard height so fixed/padded UI can stay clear of it.
-		return keyboardInset.watch();
+		const stopKeyboardWatch = keyboardInset.watch();
+
+		return () => {
+			urlOpenHandle.then((h) => h.remove());
+			stopKeyboardWatch();
+		};
 	});
 
 	const noNavRoutes = ['/', '/welcome', '/verify-email', '/forgot-password'];

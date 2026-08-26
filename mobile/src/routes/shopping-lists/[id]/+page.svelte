@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { goto, invalidate } from '$app/navigation';
+	import { page } from '$app/state';
+	import { onMount } from 'svelte';
 	import {
 		addItem,
 		deleteShoppingList,
@@ -29,6 +31,10 @@
 	function focusAddItem() {
 		itemNameInput?.focus();
 	}
+
+	onMount(() => {
+		if (page.url.searchParams.get('focus') === '1') focusAddItem();
+	});
 	let itemQuantity = $state(1);
 	let adding = $state(false);
 	let deleting = $state(false);

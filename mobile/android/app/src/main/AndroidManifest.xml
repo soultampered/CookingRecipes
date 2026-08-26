@@ -18,7 +18,26 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- STO-74: opened by the home-screen widget's PendingIntent (see
+                 ShoppingListWidgetProvider) via stokpot://widget-quick-add. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="stokpot" android:host="widget-quick-add" />
+            </intent-filter>
         </activity>
+
+        <receiver
+            android:name=".ShoppingListWidgetProvider"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/shopping_list_widget_info" />
+        </receiver>
 
         <provider
             android:name="androidx.core.content.FileProvider"

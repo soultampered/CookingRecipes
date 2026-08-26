@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto, invalidate } from '$app/navigation';
+	import { page } from '$app/state';
 	import { t } from '$lib/i18n/index.svelte';
 	import { swipeToDelete } from '$lib/utils/swipeToDelete.svelte';
 	import { dragToReorder } from '$lib/utils/dragToReorder.svelte';
@@ -44,6 +45,16 @@
 	}
 
 	let orderedLists = $derived(shoppingListOrder.apply(data.lists));
+
+	// STO-74: the home-screen widget deep-links here with ?quickAdd=1 — jump straight into
+	// whichever list is first in the user's own ordering (same "active list" concept the
+	// widget has no way to know about itself, since it has no data/auth access of its own)
+	// and land on its add-item input already focused.
+	$effect(() => {
+		if (page.url.searchParams.get('quickAdd') === '1' && orderedLists.length > 0) {
+			goto(`/shopping-lists/${orderedLists[0]._id}?focus=1`, { replaceState: true });
+		}
+	});
 
 	const swipe = swipeToDelete();
 	const drag = dragToReorder();
