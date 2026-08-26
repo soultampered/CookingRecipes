@@ -3,7 +3,12 @@
 	import { keyboardInset } from '$lib/state/keyboardInset.svelte';
 </script>
 
-<div class="toasts" style:bottom="calc(5.5rem + {keyboardInset.current}px)">
+<div
+	class="toasts"
+	role="status"
+	aria-live="polite"
+	style:bottom="calc(5.5rem + {keyboardInset.current}px)"
+>
 	{#each toast.items as item (item.id)}
 		<div class="toast toast-{item.type}">
 			{item.message}

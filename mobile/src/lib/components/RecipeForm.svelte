@@ -299,7 +299,16 @@
 					<option value={unit}>{tRaw('unit', unit)}</option>
 				{/each}
 			</select>
-			<button type="button" class="remove" onclick={() => removeIngredient(index)}>×</button>
+			<button
+				type="button"
+				class="remove"
+				onclick={() => removeIngredient(index)}
+				aria-label={t('recipeForm.removeIngredientAriaLabel', {
+					name: inventoryName(ingredient.inventoryItemId)
+				})}
+			>
+				×
+			</button>
 		</div>
 	{/each}
 	<button type="button" class="link" onclick={addIngredient} disabled={!inventoryItems.length}>
@@ -348,7 +357,14 @@
 				</svg>
 			</button>
 			<textarea bind:value={row.text} rows="2"></textarea>
-			<button type="button" class="remove" onclick={() => removeInstruction(index)}>×</button>
+			<button
+				type="button"
+				class="remove"
+				onclick={() => removeInstruction(index)}
+				aria-label={t('recipeForm.removeStepAriaLabel', { step: index + 1 })}
+			>
+				×
+			</button>
 		</div>
 	{/each}
 	<button type="button" class="link" onclick={addInstruction}>{t('recipeForm.addStep')}</button>
@@ -521,7 +537,11 @@
 		font-size: 1.1rem;
 		cursor: pointer;
 		flex: 0 0 auto;
-		padding: 0 0.3rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 2.2rem;
+		min-height: 2.2rem;
 	}
 	.link {
 		align-self: flex-start;

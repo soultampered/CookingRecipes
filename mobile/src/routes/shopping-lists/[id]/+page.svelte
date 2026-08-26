@@ -512,7 +512,14 @@
 										{item.quantity}
 									</button>
 								{/if}
-								<button type="button" class="remove" onclick={() => (removingItemId = item._id!)}>×</button>
+								<button
+									type="button"
+									class="remove"
+									onclick={() => (removingItemId = item._id!)}
+									aria-label={t('shoppingList.removeItemAriaLabel', { name: item.name })}
+								>
+									×
+								</button>
 							</div>
 						</div>
 					</div>
@@ -863,7 +870,11 @@
 		font-size: 1.1rem;
 		cursor: pointer;
 		flex: 0 0 auto;
-		padding: 0 0.3rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 2.2rem;
+		min-height: 2.2rem;
 	}
 	.quick-add-chips {
 		display: flex;
