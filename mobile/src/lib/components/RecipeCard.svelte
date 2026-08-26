@@ -36,6 +36,13 @@
 			{#if recipe.totalTimeMinutes}<span>{t('recipes.minutes', { count: recipe.totalTimeMinutes })}</span>{/if}
 			{#if recipe.servings}<span>{t('recipes.servesCount', { count: recipe.servings })}</span>{/if}
 		</div>
+		{#if recipe.tags?.length}
+			<div class="tags">
+				{#each recipe.tags as tag}
+					<span class="tag">{tag}</span>
+				{/each}
+			</div>
+		{/if}
 	</div>
 {/snippet}
 
@@ -194,5 +201,18 @@
 	.pill-hard {
 		background: var(--bad-soft);
 		color: var(--bad);
+	}
+	.tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.3rem;
+		margin-top: 0.35rem;
+	}
+	.tag {
+		font-size: 0.72rem;
+		padding: 0.1rem 0.5rem;
+		border-radius: 999px;
+		background: var(--accent-soft);
+		color: var(--accent);
 	}
 </style>

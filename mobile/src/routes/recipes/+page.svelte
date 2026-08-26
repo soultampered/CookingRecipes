@@ -17,8 +17,21 @@
 	let { data }: PageProps = $props();
 
 	let searchQuery = $state('');
+	let activeTag = $state<string | null>(null);
+
+	let allTags = $derived.by(() => {
+		const tags = new Set<string>();
+		for (const recipe of data.recipes) {
+			for (const tag of recipe.tags ?? []) tags.add(tag);
+		}
+		return [...tags].sort((a, b) => a.localeCompare(b));
+	});
+
 	let orderedRecipes = $derived.by(() => {
-		const ordered = recipeOrder.apply(data.recipes);
+		let ordered = recipeOrder.apply(data.recipes);
+		if (activeTag) {
+			ordered = ordered.filter((recipe) => recipe.tags?.includes(activeTag!));
+		}
 		const query = searchQuery.trim().toLowerCase();
 		if (!query) return ordered;
 		return ordered.filter(
@@ -83,6 +96,21 @@
 		bind:value={searchQuery}
 		aria-label={t('recipes.searchPlaceholder')}
 	/>
+
+	{#if allTags.length > 0}
+		<div class="tag-chiprow">
+			{#each allTags as tag}
+				<button
+					type="button"
+					class="tag-chip-filter"
+					class:active={activeTag === tag}
+					onclick={() => (activeTag = activeTag === tag ? null : tag)}
+				>
+					{tag}
+				</button>
+			{/each}
+		</div>
+	{/if}
 
 	{#if data.recipes.length === 0}
 		<EmptyState
@@ -194,6 +222,28 @@
 		font-size: 0.9rem;
 		background: var(--paper-raised);
 		color: var(--ink);
+	}
+	.tag-chiprow {
+		display: flex;
+		gap: 0.4rem;
+		overflow-x: auto;
+		padding-bottom: 0.2rem;
+	}
+	.tag-chip-filter {
+		flex: 0 0 auto;
+		font-size: 0.78rem;
+		padding: 0.35rem 0.7rem;
+		border-radius: 999px;
+		border: 1px solid var(--line);
+		background: var(--paper-raised);
+		color: var(--ink-soft);
+		white-space: nowrap;
+		cursor: pointer;
+	}
+	.tag-chip-filter.active {
+		background: var(--accent);
+		color: var(--paper-raised);
+		border-color: var(--accent);
 	}
 	.list {
 		display: flex;

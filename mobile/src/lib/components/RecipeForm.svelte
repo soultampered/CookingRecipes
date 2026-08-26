@@ -28,6 +28,7 @@
 	const initialServings = initial?.servings ?? 4;
 	const initialPrepTime = initial?.prepTimeMinutes;
 	const initialCookTime = initial?.cookTimeMinutes;
+	const initialTags = initial?.tags?.length ? [...initial.tags] : [];
 	const initialInstructions = initial?.instructions?.length ? [...initial.instructions] : [''];
 	// Stable per-row ids for keyed reordering (drag AND the existing up/down buttons both need
 	// this — a plain string[] keyed by index would make Svelte reuse/mismatch DOM nodes across
@@ -51,7 +52,8 @@
 		prepTimeMinutes: initialPrepTime,
 		cookTimeMinutes: initialCookTime,
 		instructions: initialInstructions,
-		ingredients: initialIngredients
+		ingredients: initialIngredients,
+		tags: initialTags
 	});
 
 	let title = $state(initialTitle);
@@ -61,6 +63,8 @@
 	let servings = $state(initialServings);
 	let prepTimeMinutes = $state(initialPrepTime);
 	let cookTimeMinutes = $state(initialCookTime);
+	let tags = $state<string[]>(initialTags);
+	let tagDraft = $state('');
 	let instructionRows = $state(initialInstructions.map((text) => ({ id: makeInstructionId(), text })));
 	let ingredients = $state<RecipeIngredient[]>(initialIngredients);
 
@@ -80,9 +84,37 @@
 				prepTimeMinutes,
 				cookTimeMinutes,
 				instructions,
-				ingredients
+				ingredients,
+				tags
 			}) !== initialSnapshot;
 	});
+
+	function addTag() {
+		const raw = tagDraft.trim();
+		tagDraft = '';
+		if (!raw) return;
+		const existing = new Set(tags.map((t) => t.toLowerCase()));
+		for (const part of raw.split(',')) {
+			const tag = part.trim();
+			if (tag && !existing.has(tag.toLowerCase())) {
+				tags = [...tags, tag];
+				existing.add(tag.toLowerCase());
+			}
+		}
+	}
+
+	function removeTag(index: number) {
+		tags = tags.filter((_, i) => i !== index);
+	}
+
+	function handleTagKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter' || e.key === ',') {
+			e.preventDefault();
+			addTag();
+		} else if (e.key === 'Backspace' && tagDraft === '' && tags.length > 0) {
+			removeTag(tags.length - 1);
+		}
+	}
 
 	const instructionDrag = dragToReorder();
 
@@ -142,6 +174,7 @@
 	function handleSubmit(event: SubmitEvent) {
 		event.preventDefault();
 		if (!validate()) return;
+		addTag();
 		onSubmit({
 			title,
 			description: description || undefined,
@@ -154,6 +187,7 @@
 				(prepTimeMinutes ?? 0) + (cookTimeMinutes ?? 0) || undefined,
 			ingredients,
 			instructions: instructions.filter((line) => line.trim().length > 0),
+			tags: tags.length ? tags : undefined,
 			nutrition: []
 		});
 	}
@@ -199,6 +233,31 @@
 				{tRaw('difficulty', level)}
 			</button>
 		{/each}
+	</div>
+
+	<div class="field-label">{t('recipeForm.tags')}</div>
+	<div class="tag-input-row">
+		{#each tags as tag, index}
+			<span class="tag-chip">
+				{tag}
+				<button
+					type="button"
+					class="tag-remove"
+					onclick={() => removeTag(index)}
+					aria-label={t('recipeForm.removeTagAriaLabel', { tag })}
+				>
+					×
+				</button>
+			</span>
+		{/each}
+		<input
+			type="text"
+			class="tag-draft-input"
+			placeholder={t('recipeForm.tagsPlaceholder')}
+			bind:value={tagDraft}
+			onkeydown={handleTagKeydown}
+			onblur={addTag}
+		/>
 	</div>
 
 	<div class="row">
@@ -363,6 +422,42 @@
 		background: var(--ink);
 		color: var(--paper-raised);
 		border-color: var(--ink);
+	}
+	.tag-input-row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.4rem;
+		border: 1px solid var(--line);
+		border-radius: 8px;
+		padding: 0.4rem 0.5rem;
+		background: var(--paper-raised);
+	}
+	.tag-chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		border-radius: 999px;
+		padding: 0.25rem 0.4rem 0.25rem 0.7rem;
+		font-size: 0.8rem;
+		background: var(--accent-soft);
+		color: var(--accent);
+	}
+	.tag-remove {
+		border: none;
+		background: none;
+		color: inherit;
+		font-size: 0.9rem;
+		line-height: 1;
+		cursor: pointer;
+		padding: 0;
+	}
+	.tag-draft-input {
+		flex: 1;
+		min-width: 6rem;
+		border: none;
+		padding: 0.25rem 0;
+		background: none;
 	}
 	.ingredient-row,
 	.instruction-row {
