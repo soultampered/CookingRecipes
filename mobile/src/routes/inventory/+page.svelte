@@ -12,6 +12,7 @@
 	import { dragToReorder } from '$lib/utils/dragToReorder.svelte';
 	import { inventoryOrder } from '$lib/state/inventoryOrder.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
+	import PullToRefresh from '$lib/components/PullToRefresh.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -101,6 +102,7 @@
 	}
 </script>
 
+<PullToRefresh dependency="app:inventory">
 <div class="page">
 	<div class="header">
 		<h1>{t('inventory.title')}</h1>
@@ -228,6 +230,7 @@
 		</div>
 	{/if}
 </div>
+</PullToRefresh>
 
 {#if quickAddItem}
 	<div

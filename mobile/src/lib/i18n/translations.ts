@@ -17,6 +17,7 @@ export const translations = {
 		'common.adding': 'Adding…',
 		'common.deleting': 'Deleting…',
 		'common.creating': 'Creating…',
+		'common.refreshing': 'Refreshing…',
 		'common.other': 'Other',
 
 		'error.title': 'Something went wrong',
@@ -311,6 +312,7 @@ export const translations = {
 		'common.adding': 'Ajout…',
 		'common.deleting': 'Suppression…',
 		'common.creating': 'Création…',
+		'common.refreshing': 'Actualisation…',
 		'common.other': 'Autre',
 
 		'error.title': "Une erreur s'est produite",

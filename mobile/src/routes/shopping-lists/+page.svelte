@@ -8,6 +8,7 @@
 	import { ApiError } from '$lib/api/client';
 	import { toast } from '$lib/state/toast.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
+	import PullToRefresh from '$lib/components/PullToRefresh.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -47,6 +48,7 @@
 	}
 </script>
 
+<PullToRefresh dependency="app:shopping-lists">
 <div class="page">
 	<div class="header">
 		<h1>{t('shoppingLists.title')}</h1>
@@ -142,6 +144,7 @@
 		</div>
 	{/if}
 </div>
+</PullToRefresh>
 
 <ConfirmModal
 	open={removingListId !== null}

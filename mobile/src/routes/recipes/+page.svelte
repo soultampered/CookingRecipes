@@ -8,6 +8,7 @@
 	import { t } from '$lib/i18n/index.svelte';
 	import { dragToReorder } from '$lib/utils/dragToReorder.svelte';
 	import { recipeOrder } from '$lib/state/recipeOrder.svelte';
+	import PullToRefresh from '$lib/components/PullToRefresh.svelte';
 	import type { Recipe } from '$lib/types/recipe';
 	import type { PageProps } from './$types';
 
@@ -53,6 +54,7 @@
 	}
 </script>
 
+<PullToRefresh dependency="app:recipes">
 <div class="page">
 	<div class="header">
 		<h1>{t('recipes.title')}</h1>
@@ -129,6 +131,7 @@
 		</div>
 	{/if}
 </div>
+</PullToRefresh>
 
 <ConfirmModal
 	open={removingRecipe !== null}
