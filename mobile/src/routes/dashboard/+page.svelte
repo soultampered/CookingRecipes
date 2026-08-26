@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { t } from '$lib/i18n/index.svelte';
+	import { onboarding } from '$lib/state/onboarding.svelte';
+	import OnboardingWalkthrough from '$lib/components/OnboardingWalkthrough.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -12,6 +14,10 @@
 		)
 	);
 </script>
+
+{#if onboarding.restored && !onboarding.seen}
+	<OnboardingWalkthrough />
+{/if}
 
 <div class="page">
 	<h1>{t('dashboard.title')}</h1>
