@@ -8,11 +8,39 @@
 	import StepTimer from '$lib/components/StepTimer.svelte';
 	import { parseDurationSeconds } from '$lib/utils/parseDuration';
 	import { t, tRaw } from '$lib/i18n/index.svelte';
+	import { recipeOrder } from '$lib/state/recipeOrder.svelte';
 	import type { MissingIngredient } from '$lib/types/recipe';
 	import type { ShoppingList } from '$lib/types/shoppingList';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
+
+	// STO-72: sequential browsing follows the same order as the recipes list (custom drag
+	// order via recipeOrder, natural order otherwise) — it deliberately doesn't try to
+	// preserve whatever search/tag filter was active on the list screen the user tapped in
+	// from, since that state isn't passed through navigation.
+	let orderedIds = $derived(recipeOrder.apply(data.allRecipes).map((r) => r._id));
+	let currentIndex = $derived(orderedIds.indexOf(data.recipe._id));
+	let prevId = $derived(currentIndex > 0 ? orderedIds[currentIndex - 1] : null);
+	let nextId = $derived(
+		currentIndex >= 0 && currentIndex < orderedIds.length - 1 ? orderedIds[currentIndex + 1] : null
+	);
+
+	let swipeStartX = 0;
+	let swipeStartY = 0;
+
+	function onSwipeStart(e: PointerEvent) {
+		swipeStartX = e.clientX;
+		swipeStartY = e.clientY;
+	}
+
+	function onSwipeEnd(e: PointerEvent) {
+		const dx = e.clientX - swipeStartX;
+		const dy = e.clientY - swipeStartY;
+		if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+		if (dx < 0 && nextId) goto(`/recipes/${nextId}`);
+		else if (dx > 0 && prevId) goto(`/recipes/${prevId}`);
+	}
 
 	let preparing = $state(false);
 	let deleting = $state(false);
@@ -105,8 +133,30 @@
 	}
 </script>
 
-<div class="page">
-	<a class="back" href="/recipes">{t('recipeDetail.back')}</a>
+<div class="page" role="presentation" onpointerdown={onSwipeStart} onpointerup={onSwipeEnd}>
+	<div class="back-row">
+		<a class="back" href="/recipes">{t('recipeDetail.back')}</a>
+		{#if prevId || nextId}
+			<div class="prev-next">
+				<a
+					class="prev-next-link"
+					class:disabled={!prevId}
+					href={prevId ? `/recipes/${prevId}` : undefined}
+					aria-disabled={!prevId}
+				>
+					{t('recipeDetail.prevRecipe')}
+				</a>
+				<a
+					class="prev-next-link"
+					class:disabled={!nextId}
+					href={nextId ? `/recipes/${nextId}` : undefined}
+					aria-disabled={!nextId}
+				>
+					{t('recipeDetail.nextRecipe')}
+				</a>
+			</div>
+		{/if}
+	</div>
 	<div class="header">
 		<div>
 			<h1>{data.recipe.title}</h1>
@@ -249,12 +299,33 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.9rem;
+		touch-action: pan-y;
+	}
+	.back-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 0.5rem;
 	}
 	.back {
 		align-self: flex-start;
 		font-size: 0.85rem;
 		color: var(--accent);
 		text-decoration: none;
+	}
+	.prev-next {
+		display: flex;
+		gap: 0.9rem;
+	}
+	.prev-next-link {
+		font-size: 0.85rem;
+		color: var(--accent);
+		text-decoration: none;
+	}
+	.prev-next-link.disabled {
+		color: var(--ink-soft);
+		opacity: 0.4;
+		pointer-events: none;
 	}
 	.header {
 		display: flex;
