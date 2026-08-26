@@ -672,12 +672,17 @@
 		height: 2.2rem;
 	}
 	.category-header {
+		position: sticky;
+		top: 0;
+		z-index: 2;
+		background: var(--paper);
 		font-size: 0.75rem;
 		font-weight: 600;
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
 		color: var(--ink-soft);
 		margin-top: 0.6rem;
+		padding: 0.3rem 0;
 	}
 	.category-header:first-of-type {
 		margin-top: 0;
