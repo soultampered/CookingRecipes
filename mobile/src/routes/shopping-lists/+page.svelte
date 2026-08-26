@@ -70,7 +70,12 @@
 						type="button"
 						class="drag-handle"
 						aria-label={t('recipeForm.dragToReorder')}
-						onpointerdown={(e) => drag.onPointerDown(e, list._id!)}
+						onpointerdown={(e) =>
+						drag.onPointerDown(
+							e,
+							list._id!,
+							orderedLists.map((l) => l._id!)
+						)}
 						onpointermove={(e) =>
 							drag.onPointerMove(
 								e,
