@@ -9,6 +9,7 @@
 	import { theme } from '$lib/state/theme.svelte';
 	import { categoryOrder } from '$lib/state/categoryOrder.svelte';
 	import { shoppingListOrder } from '$lib/state/shoppingListOrder.svelte';
+	import { shoppingListTemplates } from '$lib/state/shoppingListTemplates.svelte';
 	import { inventoryOrder } from '$lib/state/inventoryOrder.svelte';
 	import { inventorySortMode } from '$lib/state/inventorySortMode.svelte';
 	import { recipeOrder } from '$lib/state/recipeOrder.svelte';
@@ -28,6 +29,7 @@
 		theme.restore();
 		categoryOrder.restore();
 		shoppingListOrder.restore();
+		shoppingListTemplates.restore();
 		inventoryOrder.restore();
 		inventorySortMode.restore();
 		recipeOrder.restore();

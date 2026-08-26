@@ -17,6 +17,7 @@
 	import QuantityStepper from '$lib/components/QuantityStepper.svelte';
 	import { hapticLight } from '$lib/utils/haptics';
 	import EmptyState from '$lib/components/EmptyState.svelte';
+	import { shoppingListTemplates } from '$lib/state/shoppingListTemplates.svelte';
 	import type { ShoppingListItem } from '$lib/types/shoppingList';
 	import type { PageProps } from './$types';
 
@@ -285,6 +286,23 @@
 			confirmingDeleteList = false;
 		}
 	}
+
+	let savingTemplate = $state(false);
+	let templateSaved = $state(false);
+
+	async function saveAsTemplate() {
+		savingTemplate = true;
+		try {
+			await shoppingListTemplates.save(
+				data.list.name,
+				data.list.items.map((i) => ({ name: i.name, quantity: i.quantity }))
+			);
+			templateSaved = true;
+			setTimeout(() => (templateSaved = false), 2000);
+		} finally {
+			savingTemplate = false;
+		}
+	}
 </script>
 
 <div class="page">
@@ -529,6 +547,21 @@
 		/>
 		<button type="submit" disabled={adding}>{adding ? t('common.adding') : t('shoppingList.add')}</button>
 	</form>
+
+	{#if data.list.items.length > 0}
+		<button
+			type="button"
+			class="save-template-btn"
+			onclick={saveAsTemplate}
+			disabled={savingTemplate}
+		>
+			{templateSaved
+				? t('shoppingList.templateSaved')
+				: savingTemplate
+					? t('common.saving')
+					: t('shoppingList.saveAsTemplate')}
+		</button>
+	{/if}
 
 	<div class="danger-zone">
 		<button type="button" class="danger-link" onclick={() => (confirmingDeleteList = true)}>
@@ -875,6 +908,20 @@
 		font-weight: 600;
 		cursor: pointer;
 		flex: 0 0 auto;
+	}
+	.save-template-btn {
+		align-self: flex-start;
+		border: 1px solid var(--line);
+		border-radius: 8px;
+		padding: 0.45rem 0.8rem;
+		font-size: 0.85rem;
+		background: var(--paper-raised);
+		color: var(--ink);
+		cursor: pointer;
+	}
+	.save-template-btn:disabled {
+		opacity: 0.6;
+		cursor: default;
 	}
 	.danger-zone {
 		margin-top: 1.5rem;
