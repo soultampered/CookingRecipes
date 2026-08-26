@@ -111,14 +111,6 @@
 		instructionRows = instructionRows.filter((_, i) => i !== index);
 	}
 
-	function moveInstruction(index: number, direction: -1 | 1) {
-		const target = index + direction;
-		if (target < 0 || target >= instructionRows.length) return;
-		const copy = [...instructionRows];
-		[copy[index], copy[target]] = [copy[target], copy[index]];
-		instructionRows = copy;
-	}
-
 	function inventoryName(id: string) {
 		return inventoryItems.find((i) => i._id === id)?.name ?? id;
 	}
@@ -264,7 +256,7 @@
 			class:dragging={instructionDrag.isDragging(row.id)}
 			use:registerInstructionRef={row.id}
 			style:transform={`translateY(${instructionDrag.offsetFor(row.id)}px)`}
-			animate:flip={{ duration: 200 }}
+			animate:flip={{ duration: instructionDrag.isDragging(row.id) ? 0 : 200 }}
 		>
 			<span class="step">{index + 1}.</span>
 			<button
@@ -272,37 +264,25 @@
 				class="drag-handle"
 				aria-label={t('recipeForm.dragToReorder')}
 				onpointerdown={(e) => instructionDrag.onPointerDown(e, row.id)}
-				onpointermove={(e) => instructionDrag.onPointerMove(e, row.id)}
-				onpointerup={() =>
-					instructionDrag.onPointerUp(
+				onpointermove={(e) =>
+					instructionDrag.onPointerMove(
+						e,
 						row.id,
 						instructionRows.map((r) => r.id),
 						reorderInstructions
 					)}
+				onpointerup={() => instructionDrag.onPointerUp(row.id)}
 				onpointercancel={() => instructionDrag.cancel()}
 			>
-				⠿
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+					<circle cx="9" cy="6" r="1.8" />
+					<circle cx="15" cy="6" r="1.8" />
+					<circle cx="9" cy="12" r="1.8" />
+					<circle cx="15" cy="12" r="1.8" />
+					<circle cx="9" cy="18" r="1.8" />
+					<circle cx="15" cy="18" r="1.8" />
+				</svg>
 			</button>
-			<div class="reorder-btns">
-				<button
-					type="button"
-					class="reorder"
-					onclick={() => moveInstruction(index, -1)}
-					disabled={index === 0}
-					aria-label={t('recipeForm.moveStepUp')}
-				>
-					↑
-				</button>
-				<button
-					type="button"
-					class="reorder"
-					onclick={() => moveInstruction(index, 1)}
-					disabled={index === instructionRows.length - 1}
-					aria-label={t('recipeForm.moveStepDown')}
-				>
-					↓
-				</button>
-			</div>
 			<textarea bind:value={row.text} rows="2"></textarea>
 			<button type="button" class="remove" onclick={() => removeInstruction(index)}>×</button>
 		</div>
@@ -388,18 +368,23 @@
 	.instruction-row {
 		position: relative;
 		background: var(--paper);
+		border-radius: 8px;
 	}
 	.instruction-row.dragging {
 		z-index: 10;
+		background: var(--paper-raised);
+		box-shadow: 0 6px 16px -4px rgba(0, 0, 0, 0.35);
 	}
 	.drag-handle {
 		flex: 0 0 auto;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 2.2rem;
+		height: 2.2rem;
 		border: none;
 		background: none;
 		color: var(--ink-soft);
-		font-size: 1.1rem;
-		line-height: 1;
-		padding: 0.2rem 0.15rem;
 		cursor: grab;
 		touch-action: none;
 	}
@@ -421,26 +406,6 @@
 	.instruction-row textarea {
 		flex: 1;
 		min-width: 0;
-	}
-	.reorder-btns {
-		display: flex;
-		flex-direction: column;
-		gap: 0.15rem;
-		flex: 0 0 auto;
-	}
-	.reorder {
-		border: 1px solid var(--line);
-		border-radius: 4px;
-		background: var(--paper-raised);
-		color: var(--ink);
-		font-size: 0.7rem;
-		line-height: 1;
-		padding: 0.15rem 0.35rem;
-		cursor: pointer;
-	}
-	.reorder:disabled {
-		opacity: 0.35;
-		cursor: default;
 	}
 	.step {
 		font-size: 0.8rem;

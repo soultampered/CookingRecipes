@@ -11,7 +11,19 @@
 	import { categoryOrder } from '$lib/state/categoryOrder.svelte';
 	import { expirySettings } from '$lib/state/expirySettings.svelte';
 	import { t, tRaw, locale } from '$lib/i18n/index.svelte';
+	import { flip } from 'svelte/animate';
+	import { dragToReorder } from '$lib/utils/dragToReorder.svelte';
 	import type { Locale } from '$lib/i18n/translations';
+
+	const categoryDrag = dragToReorder();
+	function registerCategoryRef(node: HTMLElement, id: string) {
+		categoryDrag.registerRef(id, node);
+		return {
+			destroy() {
+				categoryDrag.registerRef(id, null);
+			}
+		};
+	}
 
 	let confirmingDelete = $state(false);
 	let deleting = $state(false);
@@ -136,29 +148,36 @@
 		<span class="section-label">{t('account.shoppingListOrder')}</span>
 		<p class="section-hint">{t('account.shoppingListOrderHint')}</p>
 		<div class="category-order-list">
-			{#each categoryOrder.current as category, index (category)}
-				<div class="category-order-row">
+			{#each categoryOrder.current as category (category)}
+				<div
+					class="category-order-row"
+					class:dragging={categoryDrag.isDragging(category)}
+					use:registerCategoryRef={category}
+					style:transform={`translateY(${categoryDrag.offsetFor(category)}px)`}
+					animate:flip={{ duration: categoryDrag.isDragging(category) ? 0 : 200 }}
+				>
+					<button
+						type="button"
+						class="drag-handle"
+						aria-label={t('recipeForm.dragToReorder')}
+						onpointerdown={(e) => categoryDrag.onPointerDown(e, category)}
+						onpointermove={(e) =>
+							categoryDrag.onPointerMove(e, category, [...categoryOrder.current], (from, to) =>
+								categoryOrder.reorder(from, to)
+							)}
+						onpointerup={() => categoryDrag.onPointerUp(category)}
+						onpointercancel={() => categoryDrag.cancel()}
+					>
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+							<circle cx="9" cy="6" r="1.8" />
+							<circle cx="15" cy="6" r="1.8" />
+							<circle cx="9" cy="12" r="1.8" />
+							<circle cx="15" cy="12" r="1.8" />
+							<circle cx="9" cy="18" r="1.8" />
+							<circle cx="15" cy="18" r="1.8" />
+						</svg>
+					</button>
 					<span class="category-order-name">{tRaw('category', category)}</span>
-					<div class="reorder-btns">
-						<button
-							type="button"
-							class="reorder"
-							onclick={() => categoryOrder.move(index, -1)}
-							disabled={index === 0}
-							aria-label={t('account.moveUp', { name: tRaw('category', category) })}
-						>
-							↑
-						</button>
-						<button
-							type="button"
-							class="reorder"
-							onclick={() => categoryOrder.move(index, 1)}
-							disabled={index === categoryOrder.current.length - 1}
-							aria-label={t('account.moveDown', { name: tRaw('category', category) })}
-						>
-							↓
-						</button>
-					</div>
 				</div>
 			{/each}
 		</div>
@@ -379,36 +398,40 @@
 		border-radius: 8px;
 	}
 	.category-order-row {
+		position: relative;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		gap: 0.5rem;
 		padding: 0.5rem 0.7rem;
 		border-bottom: 1px solid var(--line);
+		background: var(--paper-raised);
 	}
 	.category-order-row:last-child {
 		border-bottom: none;
 	}
+	.category-order-row.dragging {
+		z-index: 10;
+		box-shadow: 0 6px 16px -4px rgba(0, 0, 0, 0.35);
+	}
+	.drag-handle {
+		flex: 0 0 auto;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 2.2rem;
+		height: 2.2rem;
+		border: none;
+		background: none;
+		color: var(--ink-soft);
+		cursor: grab;
+		touch-action: none;
+	}
+	.category-order-row.dragging .drag-handle {
+		cursor: grabbing;
+	}
 	.category-order-name {
 		font-size: 0.85rem;
-	}
-	.reorder-btns {
-		display: flex;
-		gap: 0.3rem;
-	}
-	.reorder {
-		border: 1px solid var(--line);
-		border-radius: 4px;
-		background: var(--paper-raised);
-		color: var(--ink);
-		font-size: 0.75rem;
-		line-height: 1;
-		padding: 0.25rem 0.5rem;
-		cursor: pointer;
-	}
-	.reorder:disabled {
-		opacity: 0.35;
-		cursor: default;
 	}
 	.legal-links {
 		display: flex;

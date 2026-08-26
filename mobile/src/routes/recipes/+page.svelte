@@ -6,10 +6,25 @@
 	import { ApiError } from '$lib/api/client';
 	import { toast } from '$lib/state/toast.svelte';
 	import { t } from '$lib/i18n/index.svelte';
+	import { dragToReorder } from '$lib/utils/dragToReorder.svelte';
+	import { flip } from 'svelte/animate';
+	import { recipeOrder } from '$lib/state/recipeOrder.svelte';
 	import type { Recipe } from '$lib/types/recipe';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
+
+	let orderedRecipes = $derived(recipeOrder.apply(data.recipes));
+
+	const drag = dragToReorder();
+	function registerRecipeRef(node: HTMLElement, id: string) {
+		drag.registerRef(id, node);
+		return {
+			destroy() {
+				drag.registerRef(id, null);
+			}
+		};
+	}
 
 	let removingRecipe = $state<Recipe | null>(null);
 	let removing = $state(false);
@@ -42,8 +57,42 @@
 		<p class="empty">{t('recipes.empty')}</p>
 	{:else}
 		<div class="list">
-			{#each data.recipes as recipe (recipe._id)}
-				<RecipeCard {recipe} onDelete={(r) => (removingRecipe = r)} />
+			{#each orderedRecipes as recipe (recipe._id)}
+				<div
+					class="recipe-drag-row"
+					class:dragging={drag.isDragging(recipe._id)}
+					use:registerRecipeRef={recipe._id}
+					style:transform={`translateY(${drag.offsetFor(recipe._id)}px)`}
+					animate:flip={{ duration: drag.isDragging(recipe._id) ? 0 : 200 }}
+				>
+					<button
+						type="button"
+						class="drag-handle"
+						aria-label={t('recipeForm.dragToReorder')}
+						onpointerdown={(e) => drag.onPointerDown(e, recipe._id)}
+						onpointermove={(e) =>
+							drag.onPointerMove(
+								e,
+								recipe._id,
+								orderedRecipes.map((r) => r._id),
+								(from, to) => recipeOrder.reorder(orderedRecipes.map((r) => r._id), from, to)
+							)}
+						onpointerup={() => drag.onPointerUp(recipe._id)}
+						onpointercancel={() => drag.cancel()}
+					>
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+							<circle cx="9" cy="6" r="1.8" />
+							<circle cx="15" cy="6" r="1.8" />
+							<circle cx="9" cy="12" r="1.8" />
+							<circle cx="15" cy="12" r="1.8" />
+							<circle cx="9" cy="18" r="1.8" />
+							<circle cx="15" cy="18" r="1.8" />
+						</svg>
+					</button>
+					<div class="card-flex">
+						<RecipeCard {recipe} onDelete={(r) => (removingRecipe = r)} />
+					</div>
+				</div>
 			{/each}
 		</div>
 	{/if}
@@ -84,6 +133,35 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.6rem;
+	}
+	.recipe-drag-row {
+		position: relative;
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+	}
+	.recipe-drag-row.dragging {
+		z-index: 10;
+	}
+	.card-flex {
+		flex: 1;
+		min-width: 0;
+	}
+	.drag-handle {
+		flex: 0 0 auto;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 2.2rem;
+		height: 2.2rem;
+		border: none;
+		background: none;
+		color: var(--ink-soft);
+		cursor: grab;
+		touch-action: none;
+	}
+	.recipe-drag-row.dragging .drag-handle {
+		cursor: grabbing;
 	}
 	.empty {
 		color: var(--ink-soft);

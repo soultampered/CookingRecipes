@@ -6,11 +6,13 @@
 //
 // Unlike swipeToDelete, this measures actual DOM positions (via registerRef) rather than
 // doing fixed-row-height math, since rows can have variable height (e.g. a multi-line
-// instruction textarea). The reorder itself is resolved once on release by comparing the
-// dragged item's live center against every sibling's midpoint — not continuously during the
-// drag — keeping this composable's own state simple; callers that want live reflow of
-// siblings while dragging get it for free from Svelte's `animate:flip` on their keyed
-// {#each} block once the backing array actually reorders.
+// instruction textarea). `draggedCenter` is always computed from the fixed pointer-down
+// startRect plus the running pointer offset — never from the dragged element's own live rect
+// — so it stays correct across any number of mid-drag reorders. Reordering itself is left to
+// the caller: `onPointerMove` reports the live target index on every move so the caller can
+// reorder its own array immediately (giving the classic "siblings shift out of the way as you
+// drag" feel via `animate:flip` on their keyed {#each}), while `onPointerUp` reports the final
+// index as a fallback for callers that only want a one-shot reorder on release.
 export function dragToReorder() {
 	let draggingId = $state<string | null>(null);
 	let dragOffsetY = $state(0);
@@ -41,11 +43,6 @@ export function dragToReorder() {
 		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
 	}
 
-	function onPointerMove(e: PointerEvent, id: string) {
-		if (draggingId !== id) return;
-		dragOffsetY = e.clientY - startY;
-	}
-
 	function resolveIndex(orderedIds: string[], draggedId: string): number {
 		if (!startRect) return orderedIds.indexOf(draggedId);
 		const draggedCenter = startRect.top + startRect.height / 2 + dragOffsetY;
@@ -60,18 +57,27 @@ export function dragToReorder() {
 		return index;
 	}
 
-	function onPointerUp(
+	// Reorders live as the pointer crosses a sibling's midpoint, not just once on release —
+	// without this the only visible feedback during the drag is the one held row sliding
+	// past otherwise-static siblings, which reads as broken rather than as a working drag.
+	function onPointerMove(
+		e: PointerEvent,
 		id: string,
 		orderedIds: string[],
 		onReorder: (fromIndex: number, toIndex: number) => void
 	) {
 		if (draggingId !== id) return;
+		dragOffsetY = e.clientY - startY;
 		const fromIndex = orderedIds.indexOf(id);
 		const toIndex = resolveIndex(orderedIds, id);
+		if (toIndex !== fromIndex && toIndex >= 0 && fromIndex >= 0) onReorder(fromIndex, toIndex);
+	}
+
+	function onPointerUp(id: string) {
+		if (draggingId !== id) return;
 		draggingId = null;
 		dragOffsetY = 0;
 		startRect = null;
-		if (toIndex !== fromIndex && toIndex >= 0 && fromIndex >= 0) onReorder(fromIndex, toIndex);
 	}
 
 	function cancel() {

@@ -2,6 +2,8 @@
 	import { invalidate } from '$app/navigation';
 	import { t } from '$lib/i18n/index.svelte';
 	import { swipeToDelete } from '$lib/utils/swipeToDelete.svelte';
+	import { dragToReorder } from '$lib/utils/dragToReorder.svelte';
+	import { flip } from 'svelte/animate';
 	import { shoppingListOrder } from '$lib/state/shoppingListOrder.svelte';
 	import { deleteShoppingList } from '$lib/api/shoppingLists';
 	import { ApiError } from '$lib/api/client';
@@ -18,6 +20,15 @@
 	let orderedLists = $derived(shoppingListOrder.apply(data.lists));
 
 	const swipe = swipeToDelete();
+	const drag = dragToReorder();
+	function registerListRef(node: HTMLElement, id: string) {
+		drag.registerRef(id, node);
+		return {
+			destroy() {
+				drag.registerRef(id, null);
+			}
+		};
+	}
 	let removingListId = $state<string | null>(null);
 	let removing = $state(false);
 
@@ -47,38 +58,38 @@
 		<p class="empty">{t('shoppingLists.empty')}</p>
 	{:else}
 		<div class="list">
-			{#each orderedLists as list, index (list._id)}
-				<div class="list-row">
-					<div class="reorder-btns">
-						<button
-							type="button"
-							class="reorder"
-							onclick={() =>
-								shoppingListOrder.move(
-									orderedLists.map((l) => l._id!),
-									index,
-									-1
-								)}
-							disabled={index === 0}
-							aria-label={t('account.moveUp', { name: list.name })}
-						>
-							↑
-						</button>
-						<button
-							type="button"
-							class="reorder"
-							onclick={() =>
-								shoppingListOrder.move(
-									orderedLists.map((l) => l._id!),
-									index,
-									1
-								)}
-							disabled={index === orderedLists.length - 1}
-							aria-label={t('account.moveDown', { name: list.name })}
-						>
-							↓
-						</button>
-					</div>
+			{#each orderedLists as list (list._id)}
+				<div
+					class="list-row"
+					class:dragging={drag.isDragging(list._id!)}
+					use:registerListRef={list._id!}
+					style:transform={`translateY(${drag.offsetFor(list._id!)}px)`}
+					animate:flip={{ duration: drag.isDragging(list._id!) ? 0 : 200 }}
+				>
+					<button
+						type="button"
+						class="drag-handle"
+						aria-label={t('recipeForm.dragToReorder')}
+						onpointerdown={(e) => drag.onPointerDown(e, list._id!)}
+						onpointermove={(e) =>
+							drag.onPointerMove(
+								e,
+								list._id!,
+								orderedLists.map((l) => l._id!),
+								(from, to) => shoppingListOrder.reorder(orderedLists.map((l) => l._id!), from, to)
+							)}
+						onpointerup={() => drag.onPointerUp(list._id!)}
+						onpointercancel={() => drag.cancel()}
+					>
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+							<circle cx="9" cy="6" r="1.8" />
+							<circle cx="15" cy="6" r="1.8" />
+							<circle cx="9" cy="12" r="1.8" />
+							<circle cx="15" cy="12" r="1.8" />
+							<circle cx="9" cy="18" r="1.8" />
+							<circle cx="15" cy="18" r="1.8" />
+						</svg>
+					</button>
 					<div class="swipe-wrapper">
 						<button
 							type="button"
@@ -163,29 +174,29 @@
 		gap: 0.6rem;
 	}
 	.list-row {
+		position: relative;
 		display: flex;
 		align-items: center;
 		gap: 0.4rem;
 	}
-	.reorder-btns {
-		display: flex;
-		flex-direction: column;
-		gap: 0.15rem;
+	.list-row.dragging {
+		z-index: 10;
+	}
+	.drag-handle {
 		flex: 0 0 auto;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 2.2rem;
+		height: 2.2rem;
+		border: none;
+		background: none;
+		color: var(--ink-soft);
+		cursor: grab;
+		touch-action: none;
 	}
-	.reorder {
-		border: 1px solid var(--line);
-		border-radius: 4px;
-		background: var(--paper-raised);
-		color: var(--ink);
-		font-size: 0.7rem;
-		line-height: 1;
-		padding: 0.15rem 0.35rem;
-		cursor: pointer;
-	}
-	.reorder:disabled {
-		opacity: 0.35;
-		cursor: default;
+	.list-row.dragging .drag-handle {
+		cursor: grabbing;
 	}
 	.swipe-wrapper {
 		position: relative;
