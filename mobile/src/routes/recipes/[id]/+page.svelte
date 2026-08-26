@@ -17,6 +17,17 @@
 	let confirmingDelete = $state(false);
 	let missing = $state<MissingIngredient[] | null>(null);
 
+	// STO-65: "have I gathered this from my kitchen for this recipe" — a per-visit cooking
+	// aid, deliberately not persisted or tied to the shopping-list checked concept at all.
+	let gathered = $state<Set<number>>(new Set());
+
+	function toggleGathered(index: number) {
+		const next = new Set(gathered);
+		if (next.has(index)) next.delete(index);
+		else next.add(index);
+		gathered = next;
+	}
+
 	let instructionSteps = $derived(
 		data.recipe.instructions.map((text) => ({ text, duration: parseDurationSeconds(text) }))
 	);
@@ -74,13 +85,29 @@
 		<p class="description">{data.recipe.description}</p>
 	{/if}
 
-	<div class="field-label">{t('recipeDetail.ingredients')}</div>
+	<div class="field-label ingredients-label">
+		<span>{t('recipeDetail.ingredients')}</span>
+		{#if data.recipe.ingredients.length > 0}
+			<span class="gathered-count">
+				{t('recipeDetail.gatheredCount', {
+					done: gathered.size,
+					total: data.recipe.ingredients.length
+				})}
+			</span>
+		{/if}
+	</div>
 	<div class="ingredients">
-		{#each data.recipe.ingredients as ingredient}
-			<div class="ingredient-row">
-				<span>{inventoryName(ingredient.inventoryItemId)}</span>
+		{#each data.recipe.ingredients as ingredient, i}
+			<button
+				type="button"
+				class="ingredient-row"
+				class:gathered={gathered.has(i)}
+				onclick={() => toggleGathered(i)}
+			>
+				<span class="ingredient-check" aria-hidden="true">{gathered.has(i) ? '✓' : ''}</span>
+				<span class="ingredient-text">{inventoryName(ingredient.inventoryItemId)}</span>
 				<span class="qty">{ingredient.quantity}{ingredient.unit ? ` ${tRaw('unit', ingredient.unit)}` : ''}</span>
-			</div>
+			</button>
 		{/each}
 	</div>
 
@@ -192,16 +219,56 @@
 		letter-spacing: 0.04em;
 		color: var(--ink-soft);
 	}
+	.ingredients-label {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+	}
+	.gathered-count {
+		font-variant-numeric: tabular-nums;
+		text-transform: none;
+	}
 	.ingredients {
 		display: flex;
 		flex-direction: column;
 	}
 	.ingredient-row {
 		display: flex;
-		justify-content: space-between;
+		align-items: center;
+		gap: 0.5rem;
+		width: 100%;
+		border: none;
+		background: none;
+		text-align: left;
 		font-size: 0.9rem;
 		padding: 0.4rem 0;
 		border-bottom: 1px solid var(--line);
+		color: inherit;
+		cursor: pointer;
+	}
+	.ingredient-check {
+		flex: 0 0 auto;
+		width: 1.2rem;
+		height: 1.2rem;
+		border: 1px solid var(--line);
+		border-radius: 4px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 0.75rem;
+		color: var(--paper-raised);
+	}
+	.ingredient-row.gathered .ingredient-check {
+		background: var(--accent);
+		border-color: var(--accent);
+	}
+	.ingredient-text {
+		flex: 1;
+		min-width: 0;
+	}
+	.ingredient-row.gathered .ingredient-text {
+		color: var(--ink-soft);
+		text-decoration: line-through;
 	}
 	.qty {
 		color: var(--ink-soft);
