@@ -14,7 +14,6 @@
 	import { t, tRaw } from '$lib/i18n/index.svelte';
 	import { swipeToDelete } from '$lib/utils/swipeToDelete.svelte';
 	import { dragToReorder } from '$lib/utils/dragToReorder.svelte';
-	import { flip } from 'svelte/animate';
 	import type { ShoppingListItem } from '$lib/types/shoppingList';
 	import type { PageProps } from './$types';
 
@@ -27,30 +26,22 @@
 	let removingItemId = $state<string | null>(null);
 	let confirmingDeleteList = $state(false);
 	const itemSwipe = swipeToDelete();
-
-	// Item order is real server data (not a client-only preference like categoryOrder/
-	// shoppingListOrder), so a drag has to end in a PATCH — but persisting on every pointermove
-	// during a live drag would spam the API once per sibling crossed. draftItems holds the
-	// live-reordered full item list locally while a drag is in progress (null = "just use
-	// data.list.items"); the actual PATCH only fires once, on release.
-	let draftItems = $state<ShoppingListItem[] | null>(null);
-	let displayItems = $derived(draftItems ?? data.list.items);
 	const itemDrag = dragToReorder();
 
-	function reorderItemsInCategory(category: string, fromIndex: number, toIndex: number) {
-		const base = draftItems ?? data.list.items;
-		const group = base.filter((i) => (i.category ?? '') === category);
+	// Item order is real server data (not a client-only preference like categoryOrder/
+	// shoppingListOrder), so a drag needs to end in a single PATCH. dragToReorder never
+	// touches the backing array during the drag itself (only visual per-row offsets, resolved
+	// once on release), so there's exactly one reorder call — and therefore exactly one PATCH
+	// — per drag gesture, not one per sibling crossed.
+	async function reorderItemsInCategory(category: string, fromIndex: number, toIndex: number) {
+		const group = data.list.items.filter((i) => (i.category ?? '') === category);
 		const copy = [...group];
 		const [moved] = copy.splice(fromIndex, 1);
 		copy.splice(toIndex, 0, moved);
 		let cursor = 0;
-		draftItems = base.map((i) => ((i.category ?? '') === category ? copy[cursor++] : i));
-	}
-
-	async function commitItemOrder() {
-		if (!draftItems) return;
-		const reordered = draftItems;
-		draftItems = null;
+		const reordered = data.list.items.map((i) =>
+			(i.category ?? '') === category ? copy[cursor++] : i
+		);
 		try {
 			await updateShoppingList(data.list._id!, { items: reordered });
 			await invalidate(`app:shopping-list:${data.list._id}`);
@@ -82,7 +73,7 @@
 	// User's own aisle-order preference first (see STO-26), uncategorized items last.
 	let groupedItems = $derived.by(() => {
 		const groups = new Map<string, ShoppingListItem[]>();
-		for (const item of displayItems) {
+		for (const item of data.list.items) {
 			const key = item.category ?? '';
 			if (!groups.has(key)) groups.set(key, []);
 			groups.get(key)!.push(item);
@@ -217,30 +208,31 @@
 						class="item-drag-row"
 						class:dragging={itemDrag.isDragging(item._id!)}
 						use:registerItemDragRef={item._id!}
-						style:transform={`translateY(${itemDrag.offsetFor(item._id!)}px)`}
-						animate:flip={{ duration: itemDrag.isDragging(item._id!) ? 0 : 200 }}
+						style:transform={`translateY(${itemDrag.offsetFor(
+							item._id!,
+							items.map((i) => i._id!)
+						)}px)`}
 					>
 						<button
 							type="button"
 							class="drag-handle"
 							aria-label={t('recipeForm.dragToReorder')}
 							onpointerdown={(e) =>
-							itemDrag.onPointerDown(
-								e,
-								item._id!,
-								items.map((i) => i._id!)
-							)}
+								itemDrag.onPointerDown(
+									e,
+									item._id!,
+									items.map((i) => i._id!)
+								)}
 							onpointermove={(e) =>
 								itemDrag.onPointerMove(
 									e,
 									item._id!,
-									items.map((i) => i._id!),
-									(from, to) => reorderItemsInCategory(category, from, to)
+									items.map((i) => i._id!)
 								)}
-							onpointerup={() => {
-								itemDrag.onPointerUp(item._id!);
-								commitItemOrder();
-							}}
+							onpointerup={() =>
+								itemDrag.onPointerUp(item._id!, (from, to) =>
+									reorderItemsInCategory(category, from, to)
+								)}
 							onpointercancel={() => itemDrag.cancel()}
 						>
 							<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -410,9 +402,11 @@
 		display: flex;
 		align-items: center;
 		gap: 0.4rem;
+		transition: transform 0.2s ease;
 	}
 	.item-drag-row.dragging {
 		z-index: 10;
+		transition: none;
 	}
 	.drag-handle {
 		flex: 0 0 auto;

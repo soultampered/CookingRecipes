@@ -10,7 +10,6 @@
 	import { t, tRaw } from '$lib/i18n/index.svelte';
 	import { swipeToDelete } from '$lib/utils/swipeToDelete.svelte';
 	import { dragToReorder } from '$lib/utils/dragToReorder.svelte';
-	import { flip } from 'svelte/animate';
 	import { inventoryOrder } from '$lib/state/inventoryOrder.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import type { PageProps } from './$types';
@@ -126,27 +125,35 @@
 					class="item-drag-row"
 					class:dragging={drag.isDragging(item._id)}
 					use:registerItemRef={item._id}
-					style:transform={`translateY(${drag.offsetFor(item._id)}px)`}
-					animate:flip={{ duration: drag.isDragging(item._id) ? 0 : 200 }}
+					style:transform={`translateY(${drag.offsetFor(
+						item._id,
+						orderedItems.map((i) => i._id)
+					)}px)`}
 				>
 					<button
 						type="button"
 						class="drag-handle"
 						aria-label={t('recipeForm.dragToReorder')}
 						onpointerdown={(e) =>
-						drag.onPointerDown(
-							e,
-							item._id,
-							orderedItems.map((i) => i._id)
-						)}
+							drag.onPointerDown(
+								e,
+								item._id,
+								orderedItems.map((i) => i._id)
+							)}
 						onpointermove={(e) =>
 							drag.onPointerMove(
 								e,
 								item._id,
-								orderedItems.map((i) => i._id),
-								(from, to) => inventoryOrder.reorder(orderedItems.map((i) => i._id), from, to)
+								orderedItems.map((i) => i._id)
 							)}
-						onpointerup={() => drag.onPointerUp(item._id)}
+						onpointerup={() =>
+							drag.onPointerUp(item._id, (from, to) =>
+								inventoryOrder.reorder(
+									orderedItems.map((i) => i._id),
+									from,
+									to
+								)
+							)}
 						onpointercancel={() => drag.cancel()}
 					>
 						<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -314,9 +321,11 @@
 		display: flex;
 		align-items: center;
 		gap: 0.4rem;
+		transition: transform 0.2s ease;
 	}
 	.item-drag-row.dragging {
 		z-index: 10;
+		transition: none;
 	}
 	.drag-handle {
 		flex: 0 0 auto;
