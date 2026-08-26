@@ -28,11 +28,12 @@ class CategoryOrderState {
 		}
 	}
 
-	async move(index: number, direction: -1 | 1) {
-		const target = index + direction;
-		if (target < 0 || target >= this.current.length) return;
+	// STO-108: drag-to-reorder replaced the up/down buttons that used to call an adjacent-swap
+	// move(index, direction) — this handles an arbitrary-distance move in one step.
+	async reorder(fromIndex: number, toIndex: number) {
 		const copy = [...this.current];
-		[copy[index], copy[target]] = [copy[target], copy[index]];
+		const [moved] = copy.splice(fromIndex, 1);
+		copy.splice(toIndex, 0, moved);
 		this.current = copy;
 		await Preferences.set({ key: CATEGORY_ORDER_KEY, value: JSON.stringify(copy) });
 	}

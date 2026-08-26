@@ -9,16 +9,30 @@
 	import { expirySettings } from '$lib/state/expirySettings.svelte';
 	import { t, tRaw } from '$lib/i18n/index.svelte';
 	import { swipeToDelete } from '$lib/utils/swipeToDelete.svelte';
+	import { dragToReorder } from '$lib/utils/dragToReorder.svelte';
+	import { flip } from 'svelte/animate';
+	import { inventoryOrder } from '$lib/state/inventoryOrder.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
+
+	let orderedItems = $derived(inventoryOrder.apply(data.items));
 
 	let quickAddItem = $state<Inventory | null>(null);
 	let shoppingLists = $state<ShoppingList[] | null>(null);
 	let loadingLists = $state(false);
 	let addingToListId = $state<string | null>(null);
 	const swipe = swipeToDelete();
+	const drag = dragToReorder();
+	function registerItemRef(node: HTMLElement, id: string) {
+		drag.registerRef(id, node);
+		return {
+			destroy() {
+				drag.registerRef(id, null);
+			}
+		};
+	}
 	let removingItemId = $state<string | null>(null);
 	let removing = $state(false);
 
@@ -107,47 +121,79 @@
 		<p class="empty">{t('inventory.empty')}</p>
 	{:else}
 		<div class="list">
-			{#each data.items as item (item._id)}
-				<div class="swipe-wrapper">
+			{#each orderedItems as item (item._id)}
+				<div
+					class="item-drag-row"
+					class:dragging={drag.isDragging(item._id)}
+					use:registerItemRef={item._id}
+					style:transform={`translateY(${drag.offsetFor(item._id)}px)`}
+					animate:flip={{ duration: drag.isDragging(item._id) ? 0 : 200 }}
+				>
 					<button
 						type="button"
-						class="swipe-delete-action"
-						onclick={() => {
-							removingItemId = item._id;
-							swipe.close(item._id);
-						}}
-						aria-label={t('shoppingList.deleteItemAriaLabel', { name: item.name })}
+						class="drag-handle"
+						aria-label={t('recipeForm.dragToReorder')}
+						onpointerdown={(e) => drag.onPointerDown(e, item._id)}
+						onpointermove={(e) =>
+							drag.onPointerMove(
+								e,
+								item._id,
+								orderedItems.map((i) => i._id),
+								(from, to) => inventoryOrder.reorder(orderedItems.map((i) => i._id), from, to)
+							)}
+						onpointerup={() => drag.onPointerUp(item._id)}
+						onpointercancel={() => drag.cancel()}
 					>
-						{t('shoppingList.deleteAction')}
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+							<circle cx="9" cy="6" r="1.8" />
+							<circle cx="15" cy="6" r="1.8" />
+							<circle cx="9" cy="12" r="1.8" />
+							<circle cx="15" cy="12" r="1.8" />
+							<circle cx="9" cy="18" r="1.8" />
+							<circle cx="15" cy="18" r="1.8" />
+						</svg>
 					</button>
-					<div
-						class="row"
-						class:dragging={swipe.isDragging(item._id)}
-						style:transform={`translateX(${swipe.offsetFor(item._id)}px)`}
-						role="group"
-						aria-label={item.name}
-						onpointerdown={(e) => swipe.onPointerDown(e, item._id)}
-						onpointermove={(e) => swipe.onPointerMove(e, item._id)}
-						onpointerup={() => swipe.onPointerUp(item._id)}
-						onpointercancel={() => swipe.onPointerUp(item._id)}
-					>
-						<a
-						class="row-link"
-						href={`/inventory/${item._id}/edit`}
-						onclick={(e) => swipe.handleClick(e, item._id)}
-					>
-							<span class="dot" class:out={item.quantity === 0}></span>
-							<span class="name">{item.name}</span>
-							<span class="qty">{item.quantity} {tRaw('unit', item.unit)}</span>
-						</a>
-						{#if isLowStock(item)}
-							<button type="button" class="low-stock-badge" onclick={() => openQuickAdd(item)}>
-								{t('inventory.lowBadge')}
-							</button>
-						{/if}
-						{#if isExpiringSoon(item)}
-							<span class="expiring-badge">{t('inventory.expiringBadge')}</span>
-						{/if}
+					<div class="swipe-wrapper">
+						<button
+							type="button"
+							class="swipe-delete-action"
+							onclick={() => {
+								removingItemId = item._id;
+								swipe.close(item._id);
+							}}
+							aria-label={t('shoppingList.deleteItemAriaLabel', { name: item.name })}
+						>
+							{t('shoppingList.deleteAction')}
+						</button>
+						<div
+							class="row"
+							class:dragging={swipe.isDragging(item._id)}
+							style:transform={`translateX(${swipe.offsetFor(item._id)}px)`}
+							role="group"
+							aria-label={item.name}
+							onpointerdown={(e) => swipe.onPointerDown(e, item._id)}
+							onpointermove={(e) => swipe.onPointerMove(e, item._id)}
+							onpointerup={() => swipe.onPointerUp(item._id)}
+							onpointercancel={() => swipe.onPointerUp(item._id)}
+						>
+							<a
+								class="row-link"
+								href={`/inventory/${item._id}/edit`}
+								onclick={(e) => swipe.handleClick(e, item._id)}
+							>
+								<span class="dot" class:out={item.quantity === 0}></span>
+								<span class="name">{item.name}</span>
+								<span class="qty">{item.quantity} {tRaw('unit', item.unit)}</span>
+							</a>
+							{#if isLowStock(item)}
+								<button type="button" class="low-stock-badge" onclick={() => openQuickAdd(item)}>
+									{t('inventory.lowBadge')}
+								</button>
+							{/if}
+							{#if isExpiringSoon(item)}
+								<span class="expiring-badge">{t('inventory.expiringBadge')}</span>
+							{/if}
+						</div>
 					</div>
 				</div>
 			{/each}
@@ -258,7 +304,34 @@
 		display: flex;
 		flex-direction: column;
 	}
+	.item-drag-row {
+		position: relative;
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+	}
+	.item-drag-row.dragging {
+		z-index: 10;
+	}
+	.drag-handle {
+		flex: 0 0 auto;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 2.2rem;
+		height: 2.2rem;
+		border: none;
+		background: none;
+		color: var(--ink-soft);
+		cursor: grab;
+		touch-action: none;
+	}
+	.item-drag-row.dragging .drag-handle {
+		cursor: grabbing;
+	}
 	.swipe-wrapper {
+		flex: 1;
+		min-width: 0;
 		position: relative;
 		overflow: hidden;
 	}

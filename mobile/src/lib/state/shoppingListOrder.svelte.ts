@@ -33,11 +33,12 @@ class ShoppingListOrderState {
 		return ordered;
 	}
 
-	async move(orderedIds: string[], index: number, direction: -1 | 1) {
-		const target = index + direction;
-		if (target < 0 || target >= orderedIds.length) return;
+	// STO-108: drag-to-reorder replaced the up/down buttons that used to call an adjacent-swap
+	// move(orderedIds, index, direction) — this handles an arbitrary-distance move in one step.
+	async reorder(orderedIds: string[], fromIndex: number, toIndex: number) {
 		const copy = [...orderedIds];
-		[copy[index], copy[target]] = [copy[target], copy[index]];
+		const [moved] = copy.splice(fromIndex, 1);
+		copy.splice(toIndex, 0, moved);
 		this.current = copy;
 		await Preferences.set({ key: SHOPPING_LIST_ORDER_KEY, value: JSON.stringify(copy) });
 	}

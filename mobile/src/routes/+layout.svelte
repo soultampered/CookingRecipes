@@ -9,6 +9,8 @@
 	import { theme } from '$lib/state/theme.svelte';
 	import { categoryOrder } from '$lib/state/categoryOrder.svelte';
 	import { shoppingListOrder } from '$lib/state/shoppingListOrder.svelte';
+	import { inventoryOrder } from '$lib/state/inventoryOrder.svelte';
+	import { recipeOrder } from '$lib/state/recipeOrder.svelte';
 	import { expirySettings } from '$lib/state/expirySettings.svelte';
 	import { keyboardInset } from '$lib/state/keyboardInset.svelte';
 	import { locale } from '$lib/i18n/index.svelte';
@@ -23,6 +25,8 @@
 		theme.restore();
 		categoryOrder.restore();
 		shoppingListOrder.restore();
+		inventoryOrder.restore();
+		recipeOrder.restore();
 		expirySettings.restore();
 		locale.restore();
 
