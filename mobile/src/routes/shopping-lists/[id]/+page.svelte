@@ -14,6 +14,7 @@
 	import { t, tRaw } from '$lib/i18n/index.svelte';
 	import { swipeToDelete } from '$lib/utils/swipeToDelete.svelte';
 	import { dragToReorder } from '$lib/utils/dragToReorder.svelte';
+	import QuantityStepper from '$lib/components/QuantityStepper.svelte';
 	import type { ShoppingListItem } from '$lib/types/shoppingList';
 	import type { PageProps } from './$types';
 
@@ -314,7 +315,13 @@
 
 	<form class="add-item-form" onsubmit={handleAddItem}>
 		<input type="text" placeholder={t('shoppingList.itemNamePlaceholder')} bind:value={itemName} required />
-		<input type="number" min="1" bind:value={itemQuantity} />
+		<QuantityStepper
+			bind:value={itemQuantity}
+			min={1}
+			decreaseLabel={t('shoppingList.decreaseQuantity')}
+			increaseLabel={t('shoppingList.increaseQuantity')}
+			quantityLabel={t('shoppingList.quantityAriaLabel')}
+		/>
 		<button type="submit" disabled={adding}>{adding ? t('common.adding') : t('shoppingList.add')}</button>
 	</form>
 
@@ -544,7 +551,7 @@
 		flex: 2;
 		min-width: 0;
 	}
-	.add-item-form input[type='number'] {
+	.add-item-form :global(.stepper) {
 		flex: 1;
 		min-width: 0;
 	}

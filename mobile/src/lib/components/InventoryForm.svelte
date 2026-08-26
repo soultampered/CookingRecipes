@@ -2,6 +2,7 @@
 	import type { NewInventory } from '$lib/types/inventory';
 	import { UNITS, type Unit } from '$lib/types/unit';
 	import { t, tRaw } from '$lib/i18n/index.svelte';
+	import QuantityStepper from './QuantityStepper.svelte';
 
 	let {
 		initial,
@@ -76,13 +77,12 @@
 	<div class="row">
 		<label>
 			{t('inventoryForm.quantity')}
-			<input
-				type="number"
-				min="0"
-				step="any"
+			<QuantityStepper
 				bind:value={quantity}
-				class:invalid={!!errors.quantity}
-				aria-invalid={!!errors.quantity}
+				min={0}
+				decreaseLabel={t('inventoryForm.decreaseQuantity')}
+				increaseLabel={t('inventoryForm.increaseQuantity')}
+				quantityLabel={t('inventoryForm.quantity')}
 			/>
 			{#if errors.quantity}<p class="field-error">{errors.quantity}</p>{/if}
 		</label>
