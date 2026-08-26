@@ -10,6 +10,7 @@
 	import { categoryOrder } from '$lib/state/categoryOrder.svelte';
 	import { shoppingListOrder } from '$lib/state/shoppingListOrder.svelte';
 	import { inventoryOrder } from '$lib/state/inventoryOrder.svelte';
+	import { inventorySortMode } from '$lib/state/inventorySortMode.svelte';
 	import { recipeOrder } from '$lib/state/recipeOrder.svelte';
 	import { recipeViewMode } from '$lib/state/recipeViewMode.svelte';
 	import { expirySettings } from '$lib/state/expirySettings.svelte';
@@ -28,6 +29,7 @@
 		categoryOrder.restore();
 		shoppingListOrder.restore();
 		inventoryOrder.restore();
+		inventorySortMode.restore();
 		recipeOrder.restore();
 		recipeViewMode.restore();
 		expirySettings.restore();
