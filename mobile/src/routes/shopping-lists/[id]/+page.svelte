@@ -29,6 +29,70 @@
 	const itemSwipe = swipeToDelete();
 	const itemDrag = dragToReorder();
 
+	let selectMode = $state(false);
+	let selectedIds = $state<Set<string>>(new Set());
+	let bulkActing = $state(false);
+	let confirmingBulkDelete = $state(false);
+
+	function toggleSelectMode() {
+		selectMode = !selectMode;
+		selectedIds = new Set();
+	}
+
+	function toggleSelected(id: string) {
+		const next = new Set(selectedIds);
+		if (next.has(id)) next.delete(id);
+		else next.add(id);
+		selectedIds = next;
+	}
+
+	// Selection is a client-only mode overlay, not a gesture — drag/swipe stay wired up but
+	// only actually engage when selectMode is off, so the two interactions never fight.
+	function rowPointerDown(e: PointerEvent, id: string) {
+		if (!selectMode) itemSwipe.onPointerDown(e, id);
+	}
+	function rowPointerMove(e: PointerEvent, id: string) {
+		if (!selectMode) itemSwipe.onPointerMove(e, id);
+	}
+	function rowPointerUp(id: string) {
+		if (!selectMode) itemSwipe.onPointerUp(id);
+	}
+
+	async function bulkMarkChecked() {
+		// toggleItemChecked flips server-side state with no body, so only touch items that are
+		// currently unchecked — otherwise an already-checked item selected alongside unchecked
+		// ones would get flipped back off instead of staying checked.
+		const ids = [...selectedIds].filter((id) => !data.list.items.find((i) => i._id === id)?.checked);
+		if (ids.length === 0) {
+			toggleSelectMode();
+			return;
+		}
+		bulkActing = true;
+		try {
+			await Promise.all(ids.map((id) => toggleItemChecked(data.list._id!, id)));
+			await invalidate(`app:shopping-list:${data.list._id}`);
+			toggleSelectMode();
+		} catch (err) {
+			toast.push(err instanceof ApiError ? err.message : t('shoppingList.errorUpdateItem'));
+		} finally {
+			bulkActing = false;
+		}
+	}
+
+	async function confirmBulkDelete() {
+		bulkActing = true;
+		try {
+			await Promise.all([...selectedIds].map((id) => removeItem(data.list._id!, id)));
+			await invalidate(`app:shopping-list:${data.list._id}`);
+			confirmingBulkDelete = false;
+			toggleSelectMode();
+		} catch (err) {
+			toast.push(err instanceof ApiError ? err.message : t('shoppingList.errorRemoveItem'));
+		} finally {
+			bulkActing = false;
+		}
+	}
+
 	// Item order is real server data (not a client-only preference like categoryOrder/
 	// shoppingListOrder), so a drag needs to end in a single PATCH. dragToReorder never
 	// touches the backing array during the drag itself (only visual per-row offsets, resolved
@@ -213,6 +277,36 @@
 	{#if data.list.items.length === 0}
 		<p class="empty">{t('shoppingList.empty')}</p>
 	{:else}
+		<div class="select-toolbar">
+			{#if selectMode}
+				<span class="select-count">{t('shoppingList.selectedCount', { count: selectedIds.size })}</span>
+				<div class="select-actions">
+					<button
+						type="button"
+						class="select-action"
+						disabled={selectedIds.size === 0 || bulkActing}
+						onclick={bulkMarkChecked}
+					>
+						{t('shoppingList.checkSelected')}
+					</button>
+					<button
+						type="button"
+						class="select-action danger"
+						disabled={selectedIds.size === 0 || bulkActing}
+						onclick={() => (confirmingBulkDelete = true)}
+					>
+						{t('shoppingList.deleteSelected')}
+					</button>
+					<button type="button" class="select-action outline" onclick={toggleSelectMode}>
+						{t('common.cancel')}
+					</button>
+				</div>
+			{:else}
+				<button type="button" class="select-action outline" onclick={toggleSelectMode}>
+					{t('shoppingList.selectItems')}
+				</button>
+			{/if}
+		</div>
 		{#each groupedItems as [category, items] (category || '__uncategorized')}
 			{#if groupedItems.length > 1}
 				<div class="category-header">{category ? tRaw('category', category) : t('common.other')}</div>
@@ -228,37 +322,47 @@
 							items.map((i) => i._id!)
 						)}px)`}
 					>
-						<button
-							type="button"
-							class="drag-handle"
-							aria-label={t('recipeForm.dragToReorder')}
-							onpointerdown={(e) =>
-								itemDrag.onPointerDown(
-									e,
-									item._id!,
-									items.map((i) => i._id!)
-								)}
-							onpointermove={(e) =>
-								itemDrag.onPointerMove(
-									e,
-									item._id!,
-									items.map((i) => i._id!)
-								)}
-							onpointerup={() =>
-								itemDrag.onPointerUp(item._id!, (from, to) =>
-									reorderItemsInCategory(category, from, to)
-								)}
-							onpointercancel={() => itemDrag.cancel()}
-						>
-							<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-								<circle cx="9" cy="6" r="1.8" />
-								<circle cx="15" cy="6" r="1.8" />
-								<circle cx="9" cy="12" r="1.8" />
-								<circle cx="15" cy="12" r="1.8" />
-								<circle cx="9" cy="18" r="1.8" />
-								<circle cx="15" cy="18" r="1.8" />
-							</svg>
-						</button>
+						{#if selectMode}
+							<input
+								type="checkbox"
+								class="select-checkbox"
+								checked={selectedIds.has(item._id!)}
+								onchange={() => toggleSelected(item._id!)}
+								aria-label={t('shoppingList.selectItemAriaLabel', { name: item.name })}
+							/>
+						{:else}
+							<button
+								type="button"
+								class="drag-handle"
+								aria-label={t('recipeForm.dragToReorder')}
+								onpointerdown={(e) =>
+									itemDrag.onPointerDown(
+										e,
+										item._id!,
+										items.map((i) => i._id!)
+									)}
+								onpointermove={(e) =>
+									itemDrag.onPointerMove(
+										e,
+										item._id!,
+										items.map((i) => i._id!)
+									)}
+								onpointerup={() =>
+									itemDrag.onPointerUp(item._id!, (from, to) =>
+										reorderItemsInCategory(category, from, to)
+									)}
+								onpointercancel={() => itemDrag.cancel()}
+							>
+								<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+									<circle cx="9" cy="6" r="1.8" />
+									<circle cx="15" cy="6" r="1.8" />
+									<circle cx="9" cy="12" r="1.8" />
+									<circle cx="15" cy="12" r="1.8" />
+									<circle cx="9" cy="18" r="1.8" />
+									<circle cx="15" cy="18" r="1.8" />
+								</svg>
+							</button>
+						{/if}
 						<div class="swipe-wrapper">
 							<button
 								type="button"
@@ -277,10 +381,10 @@
 								style:transform={`translateX(${itemSwipe.offsetFor(item._id!)}px)`}
 								role="group"
 								aria-label={item.name}
-								onpointerdown={(e) => itemSwipe.onPointerDown(e, item._id!)}
-								onpointermove={(e) => itemSwipe.onPointerMove(e, item._id!)}
-								onpointerup={() => itemSwipe.onPointerUp(item._id!)}
-								onpointercancel={() => itemSwipe.onPointerUp(item._id!)}
+								onpointerdown={(e) => rowPointerDown(e, item._id!)}
+								onpointermove={(e) => rowPointerMove(e, item._id!)}
+								onpointerup={() => rowPointerUp(item._id!)}
+								onpointercancel={() => rowPointerUp(item._id!)}
 							>
 								<input
 									type="checkbox"
@@ -331,6 +435,18 @@
 		</button>
 	</div>
 </div>
+
+<ConfirmModal
+	open={confirmingBulkDelete}
+	title={t('shoppingList.removeSelectedTitle')}
+	message={t('shoppingList.removeSelectedMessage', { count: selectedIds.size })}
+	confirmLabel={t('shoppingList.remove')}
+	confirmingLabel={t('shoppingList.removing')}
+	cancelLabel={t('common.cancel')}
+	confirming={bulkActing}
+	onConfirm={confirmBulkDelete}
+	onCancel={() => (confirmingBulkDelete = false)}
+/>
 
 <ConfirmModal
 	open={removingItemId !== null}
@@ -417,6 +533,48 @@
 		border: 1px solid var(--line);
 		background: var(--paper-raised);
 		color: var(--ink);
+	}
+	.select-toolbar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+	.select-count {
+		font-size: 0.8rem;
+		color: var(--ink-soft);
+	}
+	.select-actions {
+		display: flex;
+		gap: 0.5rem;
+	}
+	.select-action {
+		font-size: 0.8rem;
+		padding: 0.4rem 0.7rem;
+		border-radius: 8px;
+		border: none;
+		background: var(--accent);
+		color: var(--paper-raised);
+		font-weight: 600;
+		cursor: pointer;
+	}
+	.select-action:disabled {
+		opacity: 0.5;
+		cursor: default;
+	}
+	.select-action.danger {
+		background: var(--bad);
+	}
+	.select-action.outline {
+		border: 1px solid var(--line);
+		background: var(--paper-raised);
+		color: var(--ink);
+	}
+	.select-checkbox {
+		flex: 0 0 auto;
+		width: 2.2rem;
+		height: 2.2rem;
 	}
 	.category-header {
 		font-size: 0.75rem;
