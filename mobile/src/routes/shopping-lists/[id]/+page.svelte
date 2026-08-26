@@ -70,6 +70,20 @@
 		}
 	}
 
+	let quickAdding = $state<string | null>(null);
+
+	async function handleQuickAdd(name: string) {
+		quickAdding = name;
+		try {
+			await addItem(data.list._id!, { name, quantity: 1 });
+			await invalidate(`app:shopping-list:${data.list._id}`);
+		} catch (err) {
+			toast.push(err instanceof ApiError ? err.message : t('shoppingList.errorAddItem'));
+		} finally {
+			quickAdding = null;
+		}
+	}
+
 	// User's own aisle-order preference first (see STO-26), uncategorized items last.
 	let groupedItems = $derived.by(() => {
 		const groups = new Map<string, ShoppingListItem[]>();
@@ -283,6 +297,21 @@
 		{/each}
 	{/if}
 
+	{#if data.recentNames.length > 0}
+		<div class="quick-add-chips">
+			{#each data.recentNames as name (name)}
+				<button
+					type="button"
+					class="chip"
+					disabled={quickAdding !== null}
+					onclick={() => handleQuickAdd(name)}
+				>
+					{quickAdding === name ? t('common.adding') : `+ ${name}`}
+				</button>
+			{/each}
+		</div>
+	{/if}
+
 	<form class="add-item-form" onsubmit={handleAddItem}>
 		<input type="text" placeholder={t('shoppingList.itemNamePlaceholder')} bind:value={itemName} required />
 		<input type="number" min="1" bind:value={itemQuantity} />
@@ -486,6 +515,25 @@
 	.empty {
 		color: var(--ink-soft);
 		font-size: 0.9rem;
+	}
+	.quick-add-chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+		margin-top: 0.4rem;
+	}
+	.chip {
+		border: 1px solid var(--line);
+		border-radius: 999px;
+		padding: 0.35rem 0.75rem;
+		font-size: 0.8rem;
+		background: var(--paper-raised);
+		color: var(--ink);
+		cursor: pointer;
+	}
+	.chip:disabled {
+		opacity: 0.6;
+		cursor: default;
 	}
 	.add-item-form {
 		display: flex;
