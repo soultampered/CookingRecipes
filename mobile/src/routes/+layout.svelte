@@ -15,6 +15,7 @@
 	import { expirySettings } from '$lib/state/expirySettings.svelte';
 	import { keyboardInset } from '$lib/state/keyboardInset.svelte';
 	import { locale } from '$lib/i18n/index.svelte';
+	import SkeletonList from '$lib/components/SkeletonList.svelte';
 
 	let { children } = $props();
 
@@ -58,6 +59,13 @@
 		}
 		showNavProgress = false;
 	});
+
+	// STO-60: the three collection screens have an obvious list shape, so a matching
+	// skeleton reads better than the generic top progress bar alone while their data loads.
+	const listSkeletonRoutes = new Set(['/recipes', '/inventory', '/shopping-lists']);
+	let showListSkeleton = $derived(
+		showNavProgress && listSkeletonRoutes.has(navigating.to?.route.id ?? '')
+	);
 </script>
 
 <svelte:head>
@@ -70,6 +78,11 @@
 
 <div class="app-shell">
 	<main style:padding-bottom="{keyboardInset.current}px">
+		{#if showListSkeleton}
+			<div class="skeleton-overlay" in:fade={{ duration: 100 }}>
+				<SkeletonList />
+			</div>
+		{/if}
 		{#key page.url.pathname}
 			<div class="page-transition" in:fade={{ duration: 130 }}>
 				{@render children()}
@@ -102,11 +115,18 @@
 		padding-top: env(safe-area-inset-top);
 	}
 	main {
+		position: relative;
 		flex: 1 1 auto;
 		min-height: 0;
 		overflow-y: auto;
 		-webkit-overflow-scrolling: touch;
 		transition: padding-bottom 0.25s ease;
+	}
+	.skeleton-overlay {
+		position: absolute;
+		inset: 0;
+		z-index: 5;
+		background: var(--paper);
 	}
 	.nav-progress {
 		position: fixed;
