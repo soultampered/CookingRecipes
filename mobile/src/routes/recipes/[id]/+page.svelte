@@ -10,6 +10,7 @@
 	import { t, tRaw } from '$lib/i18n/index.svelte';
 	import { recipeOrder } from '$lib/state/recipeOrder.svelte';
 	import type { MissingIngredient } from '$lib/types/recipe';
+	import { findSubstitution } from '$lib/data/substitutions';
 	import type { ShoppingList } from '$lib/types/shoppingList';
 	import type { PageProps } from './$types';
 
@@ -223,7 +224,14 @@
 				})}
 			</strong>
 			{#each missing as item}
-				<div>{item.name} ({item.needed}{item.unit ? ` ${tRaw('unit', item.unit)}` : ''})</div>
+				<div>
+					{item.name} ({item.needed}{item.unit ? ` ${tRaw('unit', item.unit)}` : ''})
+					{#if findSubstitution(item.name)}
+						<div class="substitution-hint">
+							{t('recipeDetail.substitutionHint', { hint: findSubstitution(item.name)! })}
+						</div>
+					{/if}
+				</div>
 			{/each}
 			<button type="button" class="add-missing-btn" onclick={openAddMissingToList}>
 				{t('recipeDetail.addMissingToList')}
@@ -479,6 +487,12 @@
 	.banner strong {
 		display: block;
 		margin-bottom: 0.2rem;
+	}
+	.substitution-hint {
+		font-size: 0.8rem;
+		font-style: italic;
+		opacity: 0.85;
+		margin-top: 0.1rem;
 	}
 	.add-missing-btn {
 		margin-top: 0.6rem;
