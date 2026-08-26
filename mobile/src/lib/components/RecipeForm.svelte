@@ -3,7 +3,6 @@
 	import type { Inventory } from '$lib/types/inventory';
 	import { UNITS } from '$lib/types/unit';
 	import { t, tRaw } from '$lib/i18n/index.svelte';
-	import { flip } from 'svelte/animate';
 	import { dragToReorder } from '$lib/utils/dragToReorder.svelte';
 
 	let {
@@ -255,8 +254,10 @@
 			class="instruction-row"
 			class:dragging={instructionDrag.isDragging(row.id)}
 			use:registerInstructionRef={row.id}
-			style:transform={`translateY(${instructionDrag.offsetFor(row.id)}px)`}
-			animate:flip={{ duration: instructionDrag.isDragging(row.id) ? 0 : 200 }}
+			style:transform={`translateY(${instructionDrag.offsetFor(
+				row.id,
+				instructionRows.map((r) => r.id)
+			)}px)`}
 		>
 			<span class="step">{index + 1}.</span>
 			<button
@@ -273,10 +274,9 @@
 					instructionDrag.onPointerMove(
 						e,
 						row.id,
-						instructionRows.map((r) => r.id),
-						reorderInstructions
+						instructionRows.map((r) => r.id)
 					)}
-				onpointerup={() => instructionDrag.onPointerUp(row.id)}
+				onpointerup={() => instructionDrag.onPointerUp(row.id, reorderInstructions)}
 				onpointercancel={() => instructionDrag.cancel()}
 			>
 				<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -374,11 +374,13 @@
 		position: relative;
 		background: var(--paper);
 		border-radius: 8px;
+		transition: transform 0.2s ease;
 	}
 	.instruction-row.dragging {
 		z-index: 10;
 		background: var(--paper-raised);
 		box-shadow: 0 6px 16px -4px rgba(0, 0, 0, 0.35);
+		transition: none;
 	}
 	.drag-handle {
 		flex: 0 0 auto;

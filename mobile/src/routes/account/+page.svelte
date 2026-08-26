@@ -11,7 +11,6 @@
 	import { categoryOrder } from '$lib/state/categoryOrder.svelte';
 	import { expirySettings } from '$lib/state/expirySettings.svelte';
 	import { t, tRaw, locale } from '$lib/i18n/index.svelte';
-	import { flip } from 'svelte/animate';
 	import { dragToReorder } from '$lib/utils/dragToReorder.svelte';
 	import type { Locale } from '$lib/i18n/translations';
 
@@ -153,19 +152,16 @@
 					class="category-order-row"
 					class:dragging={categoryDrag.isDragging(category)}
 					use:registerCategoryRef={category}
-					style:transform={`translateY(${categoryDrag.offsetFor(category)}px)`}
-					animate:flip={{ duration: categoryDrag.isDragging(category) ? 0 : 200 }}
+					style:transform={`translateY(${categoryDrag.offsetFor(category, [...categoryOrder.current])}px)`}
 				>
 					<button
 						type="button"
 						class="drag-handle"
 						aria-label={t('recipeForm.dragToReorder')}
 						onpointerdown={(e) => categoryDrag.onPointerDown(e, category, [...categoryOrder.current])}
-						onpointermove={(e) =>
-							categoryDrag.onPointerMove(e, category, [...categoryOrder.current], (from, to) =>
-								categoryOrder.reorder(from, to)
-							)}
-						onpointerup={() => categoryDrag.onPointerUp(category)}
+						onpointermove={(e) => categoryDrag.onPointerMove(e, category, [...categoryOrder.current])}
+						onpointerup={() =>
+							categoryDrag.onPointerUp(category, (from, to) => categoryOrder.reorder(from, to))}
 						onpointercancel={() => categoryDrag.cancel()}
 					>
 						<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -406,6 +402,7 @@
 		padding: 0.5rem 0.7rem;
 		border-bottom: 1px solid var(--line);
 		background: var(--paper-raised);
+		transition: transform 0.2s ease;
 	}
 	.category-order-row:last-child {
 		border-bottom: none;
@@ -413,6 +410,7 @@
 	.category-order-row.dragging {
 		z-index: 10;
 		box-shadow: 0 6px 16px -4px rgba(0, 0, 0, 0.35);
+		transition: none;
 	}
 	.drag-handle {
 		flex: 0 0 auto;

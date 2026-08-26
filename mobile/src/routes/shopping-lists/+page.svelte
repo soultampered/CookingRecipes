@@ -3,7 +3,6 @@
 	import { t } from '$lib/i18n/index.svelte';
 	import { swipeToDelete } from '$lib/utils/swipeToDelete.svelte';
 	import { dragToReorder } from '$lib/utils/dragToReorder.svelte';
-	import { flip } from 'svelte/animate';
 	import { shoppingListOrder } from '$lib/state/shoppingListOrder.svelte';
 	import { deleteShoppingList } from '$lib/api/shoppingLists';
 	import { ApiError } from '$lib/api/client';
@@ -63,27 +62,35 @@
 					class="list-row"
 					class:dragging={drag.isDragging(list._id!)}
 					use:registerListRef={list._id!}
-					style:transform={`translateY(${drag.offsetFor(list._id!)}px)`}
-					animate:flip={{ duration: drag.isDragging(list._id!) ? 0 : 200 }}
+					style:transform={`translateY(${drag.offsetFor(
+						list._id!,
+						orderedLists.map((l) => l._id!)
+					)}px)`}
 				>
 					<button
 						type="button"
 						class="drag-handle"
 						aria-label={t('recipeForm.dragToReorder')}
 						onpointerdown={(e) =>
-						drag.onPointerDown(
-							e,
-							list._id!,
-							orderedLists.map((l) => l._id!)
-						)}
+							drag.onPointerDown(
+								e,
+								list._id!,
+								orderedLists.map((l) => l._id!)
+							)}
 						onpointermove={(e) =>
 							drag.onPointerMove(
 								e,
 								list._id!,
-								orderedLists.map((l) => l._id!),
-								(from, to) => shoppingListOrder.reorder(orderedLists.map((l) => l._id!), from, to)
+								orderedLists.map((l) => l._id!)
 							)}
-						onpointerup={() => drag.onPointerUp(list._id!)}
+						onpointerup={() =>
+							drag.onPointerUp(list._id!, (from, to) =>
+								shoppingListOrder.reorder(
+									orderedLists.map((l) => l._id!),
+									from,
+									to
+								)
+							)}
 						onpointercancel={() => drag.cancel()}
 					>
 						<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -183,9 +190,11 @@
 		display: flex;
 		align-items: center;
 		gap: 0.4rem;
+		transition: transform 0.2s ease;
 	}
 	.list-row.dragging {
 		z-index: 10;
+		transition: none;
 	}
 	.drag-handle {
 		flex: 0 0 auto;

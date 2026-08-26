@@ -7,7 +7,6 @@
 	import { toast } from '$lib/state/toast.svelte';
 	import { t } from '$lib/i18n/index.svelte';
 	import { dragToReorder } from '$lib/utils/dragToReorder.svelte';
-	import { flip } from 'svelte/animate';
 	import { recipeOrder } from '$lib/state/recipeOrder.svelte';
 	import type { Recipe } from '$lib/types/recipe';
 	import type { PageProps } from './$types';
@@ -62,27 +61,35 @@
 					class="recipe-drag-row"
 					class:dragging={drag.isDragging(recipe._id)}
 					use:registerRecipeRef={recipe._id}
-					style:transform={`translateY(${drag.offsetFor(recipe._id)}px)`}
-					animate:flip={{ duration: drag.isDragging(recipe._id) ? 0 : 200 }}
+					style:transform={`translateY(${drag.offsetFor(
+						recipe._id,
+						orderedRecipes.map((r) => r._id)
+					)}px)`}
 				>
 					<button
 						type="button"
 						class="drag-handle"
 						aria-label={t('recipeForm.dragToReorder')}
 						onpointerdown={(e) =>
-						drag.onPointerDown(
-							e,
-							recipe._id,
-							orderedRecipes.map((r) => r._id)
-						)}
+							drag.onPointerDown(
+								e,
+								recipe._id,
+								orderedRecipes.map((r) => r._id)
+							)}
 						onpointermove={(e) =>
 							drag.onPointerMove(
 								e,
 								recipe._id,
-								orderedRecipes.map((r) => r._id),
-								(from, to) => recipeOrder.reorder(orderedRecipes.map((r) => r._id), from, to)
+								orderedRecipes.map((r) => r._id)
 							)}
-						onpointerup={() => drag.onPointerUp(recipe._id)}
+						onpointerup={() =>
+							drag.onPointerUp(recipe._id, (from, to) =>
+								recipeOrder.reorder(
+									orderedRecipes.map((r) => r._id),
+									from,
+									to
+								)
+							)}
 						onpointercancel={() => drag.cancel()}
 					>
 						<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -144,9 +151,11 @@
 		display: flex;
 		align-items: center;
 		gap: 0.4rem;
+		transition: transform 0.2s ease;
 	}
 	.recipe-drag-row.dragging {
 		z-index: 10;
+		transition: none;
 	}
 	.card-flex {
 		flex: 1;
