@@ -105,6 +105,7 @@
 		{t('inventoryForm.lowStockAlert')}
 		<input
 			type="number"
+			inputmode="decimal"
 			min="0"
 			step="any"
 			placeholder={t('inventoryForm.lowStockPlaceholder')}

@@ -265,6 +265,7 @@
 			{t('recipeForm.servings')}
 			<input
 				type="number"
+				inputmode="numeric"
 				min="1"
 				bind:value={servings}
 				class:invalid={!!errors.servings}
@@ -274,11 +275,11 @@
 		</label>
 		<label>
 			{t('recipeForm.prepMinutes')}
-			<input type="number" min="0" bind:value={prepTimeMinutes} />
+			<input type="number" inputmode="numeric" min="0" bind:value={prepTimeMinutes} />
 		</label>
 		<label>
 			{t('recipeForm.cookMinutes')}
-			<input type="number" min="0" bind:value={cookTimeMinutes} />
+			<input type="number" inputmode="numeric" min="0" bind:value={cookTimeMinutes} />
 		</label>
 	</div>
 
@@ -293,7 +294,7 @@
 					<option value={item._id}>{item.name}</option>
 				{/each}
 			</select>
-			<input type="number" min="0" step="any" bind:value={ingredient.quantity} />
+			<input type="number" inputmode="decimal" min="0" step="any" bind:value={ingredient.quantity} />
 			<select bind:value={ingredient.unit}>
 				{#each UNITS as unit}
 					<option value={unit}>{tRaw('unit', unit)}</option>
