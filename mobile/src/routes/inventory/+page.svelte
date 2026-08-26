@@ -13,6 +13,7 @@
 	import { inventoryOrder } from '$lib/state/inventoryOrder.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import PullToRefresh from '$lib/components/PullToRefresh.svelte';
+	import EmptyState from '$lib/components/EmptyState.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -133,7 +134,11 @@
 	</div>
 
 	{#if data.items.length === 0}
-		<p class="empty">{t('inventory.empty')}</p>
+		<EmptyState
+			message={t('inventory.empty')}
+			ctaLabel={t('inventory.newItem')}
+			ctaHref="/inventory/new"
+		/>
 	{:else if orderedItems.length === 0}
 		<p class="empty">{t('inventory.noSearchResults')}</p>
 	{:else}

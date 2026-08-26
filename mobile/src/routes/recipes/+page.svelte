@@ -10,6 +10,7 @@
 	import { recipeOrder } from '$lib/state/recipeOrder.svelte';
 	import { recipeViewMode } from '$lib/state/recipeViewMode.svelte';
 	import PullToRefresh from '$lib/components/PullToRefresh.svelte';
+	import EmptyState from '$lib/components/EmptyState.svelte';
 	import type { Recipe } from '$lib/types/recipe';
 	import type { PageProps } from './$types';
 
@@ -84,7 +85,11 @@
 	/>
 
 	{#if data.recipes.length === 0}
-		<p class="empty">{t('recipes.empty')}</p>
+		<EmptyState
+			message={t('recipes.empty')}
+			ctaLabel={t('recipes.newRecipe')}
+			ctaHref="/recipes/new"
+		/>
 	{:else if orderedRecipes.length === 0}
 		<p class="empty">{t('recipes.noSearchResults')}</p>
 	{:else if recipeViewMode.current === 'grid'}

@@ -16,12 +16,18 @@
 	import { dragToReorder } from '$lib/utils/dragToReorder.svelte';
 	import QuantityStepper from '$lib/components/QuantityStepper.svelte';
 	import { hapticLight } from '$lib/utils/haptics';
+	import EmptyState from '$lib/components/EmptyState.svelte';
 	import type { ShoppingListItem } from '$lib/types/shoppingList';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
 	let itemName = $state('');
+	let itemNameInput: HTMLInputElement | undefined = $state();
+
+	function focusAddItem() {
+		itemNameInput?.focus();
+	}
 	let itemQuantity = $state(1);
 	let adding = $state(false);
 	let deleting = $state(false);
@@ -320,7 +326,11 @@
 	{/if}
 
 	{#if data.list.items.length === 0}
-		<p class="empty">{t('shoppingList.empty')}</p>
+		<EmptyState
+			message={t('shoppingList.empty')}
+			ctaLabel={t('shoppingList.addFirstItem')}
+			onCta={focusAddItem}
+		/>
 	{:else}
 		<div class="select-toolbar">
 			{#if selectMode}
@@ -503,7 +513,13 @@
 	{/if}
 
 	<form class="add-item-form" onsubmit={handleAddItem}>
-		<input type="text" placeholder={t('shoppingList.itemNamePlaceholder')} bind:value={itemName} required />
+		<input
+			type="text"
+			placeholder={t('shoppingList.itemNamePlaceholder')}
+			bind:value={itemName}
+			bind:this={itemNameInput}
+			required
+		/>
 		<QuantityStepper
 			bind:value={itemQuantity}
 			min={1}
@@ -809,10 +825,6 @@
 		cursor: pointer;
 		flex: 0 0 auto;
 		padding: 0 0.3rem;
-	}
-	.empty {
-		color: var(--ink-soft);
-		font-size: 0.9rem;
 	}
 	.quick-add-chips {
 		display: flex;

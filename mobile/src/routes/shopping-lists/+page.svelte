@@ -9,6 +9,7 @@
 	import { toast } from '$lib/state/toast.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import PullToRefresh from '$lib/components/PullToRefresh.svelte';
+	import EmptyState from '$lib/components/EmptyState.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -56,7 +57,11 @@
 	</div>
 
 	{#if data.lists.length === 0}
-		<p class="empty">{t('shoppingLists.empty')}</p>
+		<EmptyState
+			message={t('shoppingLists.empty')}
+			ctaLabel={t('shoppingLists.newList')}
+			ctaHref="/shopping-lists/new"
+		/>
 	{:else}
 		<div class="list">
 			{#each orderedLists as list (list._id)}
@@ -257,9 +262,5 @@
 		font-size: 0.8rem;
 		color: var(--ink-soft);
 		margin-top: 0.25rem;
-	}
-	.empty {
-		color: var(--ink-soft);
-		font-size: 0.9rem;
 	}
 </style>
