@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto, invalidate } from '$app/navigation';
 	import { deleteRecipe, getMissingIngredients, prepareRecipe } from '$lib/api/recipes';
+	import { listShoppingLists, addItem } from '$lib/api/shoppingLists';
 	import { ApiError } from '$lib/api/client';
 	import { toast } from '$lib/state/toast.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
@@ -8,6 +9,7 @@
 	import { parseDurationSeconds } from '$lib/utils/parseDuration';
 	import { t, tRaw } from '$lib/i18n/index.svelte';
 	import type { MissingIngredient } from '$lib/types/recipe';
+	import type { ShoppingList } from '$lib/types/shoppingList';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -16,6 +18,42 @@
 	let deleting = $state(false);
 	let confirmingDelete = $state(false);
 	let missing = $state<MissingIngredient[] | null>(null);
+
+	let addingMissingToList = $state(false);
+	let shoppingLists = $state<ShoppingList[] | null>(null);
+	let loadingLists = $state(false);
+	let addingListId = $state<string | null>(null);
+
+	async function openAddMissingToList() {
+		addingMissingToList = true;
+		if (!shoppingLists) {
+			loadingLists = true;
+			try {
+				shoppingLists = await listShoppingLists();
+			} catch (err) {
+				toast.push(err instanceof ApiError ? err.message : t('recipeDetail.errorLoadLists'));
+				addingMissingToList = false;
+			} finally {
+				loadingLists = false;
+			}
+		}
+	}
+
+	async function addMissingToList(listId: string) {
+		if (!missing) return;
+		addingListId = listId;
+		try {
+			await Promise.all(
+				missing.map((item) => addItem(listId, { name: item.name, quantity: item.needed }))
+			);
+			toast.push(t('recipeDetail.addedMissingToList'), 'info');
+			addingMissingToList = false;
+		} catch (err) {
+			toast.push(err instanceof ApiError ? err.message : t('recipeDetail.errorAddToList'));
+		} finally {
+			addingListId = null;
+		}
+	}
 
 	// STO-65: "have I gathered this from my kitchen for this recipe" — a per-visit cooking
 	// aid, deliberately not persisted or tied to the shopping-list checked concept at all.
@@ -137,6 +175,9 @@
 			{#each missing as item}
 				<div>{item.name} ({item.needed}{item.unit ? ` ${tRaw('unit', item.unit)}` : ''})</div>
 			{/each}
+			<button type="button" class="add-missing-btn" onclick={openAddMissingToList}>
+				{t('recipeDetail.addMissingToList')}
+			</button>
 		</div>
 	{/if}
 
@@ -146,6 +187,47 @@
 		</button>
 	</div>
 </div>
+
+{#if addingMissingToList}
+	<div
+		class="backdrop"
+		role="presentation"
+		onclick={() => (addingMissingToList = false)}
+		onkeydown={(e) => e.key === 'Escape' && (addingMissingToList = false)}
+	>
+		<div
+			class="picker"
+			role="dialog"
+			aria-modal="true"
+			tabindex="-1"
+			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => e.stopPropagation()}
+		>
+			<h2>{t('recipeDetail.addMissingToListTitle')}</h2>
+			{#if loadingLists}
+				<p class="hint">{t('inventory.loadingLists')}</p>
+			{:else if !shoppingLists || shoppingLists.length === 0}
+				<p class="hint">{t('inventory.noLists')}</p>
+			{:else}
+				<div class="list-options">
+					{#each shoppingLists as list (list._id)}
+						<button
+							type="button"
+							class="list-option"
+							onclick={() => addMissingToList(list._id!)}
+							disabled={addingListId === list._id}
+						>
+							{addingListId === list._id ? t('common.adding') : list.name}
+						</button>
+					{/each}
+				</div>
+			{/if}
+			<button type="button" class="outline" onclick={() => (addingMissingToList = false)}>
+				{t('common.cancel')}
+			</button>
+		</div>
+	</div>
+{/if}
 
 <ConfirmModal
 	open={confirmingDelete}
@@ -326,5 +408,64 @@
 	.banner strong {
 		display: block;
 		margin-bottom: 0.2rem;
+	}
+	.add-missing-btn {
+		margin-top: 0.6rem;
+		padding: 0.5rem 0.8rem;
+		border-radius: 8px;
+		border: 1px solid var(--bad);
+		background: var(--paper-raised);
+		color: var(--bad);
+		font-weight: 600;
+		font-size: 0.85rem;
+		cursor: pointer;
+	}
+	.backdrop {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.45);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1.25rem;
+		z-index: 100;
+	}
+	.picker {
+		width: 100%;
+		max-width: 340px;
+		background: var(--paper-raised);
+		border: 1px solid var(--line);
+		border-radius: 12px;
+		padding: 1.25rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+	.picker h2 {
+		margin: 0;
+		font-size: 1rem;
+	}
+	.list-options {
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
+	}
+	.list-option {
+		text-align: left;
+		padding: 0.6rem 0.7rem;
+		border-radius: 8px;
+		border: 1px solid var(--line);
+		background: var(--paper);
+		color: var(--ink);
+		cursor: pointer;
+	}
+	.picker .outline {
+		padding: 0.6rem;
+		border-radius: 8px;
+		border: 1px solid var(--line);
+		background: var(--paper-raised);
+		color: var(--ink);
+		font-weight: 600;
+		cursor: pointer;
 	}
 </style>
