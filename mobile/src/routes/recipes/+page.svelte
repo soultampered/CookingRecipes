@@ -8,6 +8,7 @@
 	import { t } from '$lib/i18n/index.svelte';
 	import { dragToReorder } from '$lib/utils/dragToReorder.svelte';
 	import { recipeOrder } from '$lib/state/recipeOrder.svelte';
+	import { recipeViewMode } from '$lib/state/recipeViewMode.svelte';
 	import PullToRefresh from '$lib/components/PullToRefresh.svelte';
 	import type { Recipe } from '$lib/types/recipe';
 	import type { PageProps } from './$types';
@@ -59,6 +60,16 @@
 	<div class="header">
 		<h1>{t('recipes.title')}</h1>
 		<div class="actions">
+			<button
+				type="button"
+				class="btn-outline"
+				onclick={() => recipeViewMode.set(recipeViewMode.current === 'list' ? 'grid' : 'list')}
+				aria-label={t(
+					recipeViewMode.current === 'list' ? 'recipes.gridViewAriaLabel' : 'recipes.listViewAriaLabel'
+				)}
+			>
+				{recipeViewMode.current === 'list' ? t('recipes.gridView') : t('recipes.listView')}
+			</button>
 			<a class="btn-outline" href="/recipes/suggestions">{t('recipes.suggestions')}</a>
 			<a class="btn-outline" href="/recipes/new">{t('recipes.newRecipe')}</a>
 		</div>
@@ -76,6 +87,12 @@
 		<p class="empty">{t('recipes.empty')}</p>
 	{:else if orderedRecipes.length === 0}
 		<p class="empty">{t('recipes.noSearchResults')}</p>
+	{:else if recipeViewMode.current === 'grid'}
+		<div class="grid">
+			{#each orderedRecipes as recipe (recipe._id)}
+				<RecipeCard {recipe} layout="grid" onDelete={(r) => (removingRecipe = r)} />
+			{/each}
+		</div>
 	{:else}
 		<div class="list">
 			{#each orderedRecipes as recipe (recipe._id)}
@@ -163,6 +180,7 @@
 	.actions {
 		display: flex;
 		gap: 0.5rem;
+		flex-wrap: wrap;
 	}
 	.search-input {
 		padding: 0.55rem 0.7rem;
@@ -176,6 +194,11 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.6rem;
+	}
+	.grid {
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+		gap: 0.75rem;
 	}
 	.recipe-drag-row {
 		position: relative;

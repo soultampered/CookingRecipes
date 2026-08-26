@@ -46,6 +46,10 @@ export const translations = {
 		'recipes.empty': 'No recipes yet. Create your first one.',
 		'recipes.searchPlaceholder': 'Search recipes…',
 		'recipes.noSearchResults': 'No recipes match your search.',
+		'recipes.gridView': 'Grid',
+		'recipes.listView': 'List',
+		'recipes.gridViewAriaLabel': 'Switch to grid view',
+		'recipes.listViewAriaLabel': 'Switch to list view',
 		'recipes.servesCount': 'serves {count}',
 		'recipes.minutes': '{count} min',
 
@@ -341,6 +345,10 @@ export const translations = {
 		'recipes.empty': 'Aucune recette pour le moment. Créez la première.',
 		'recipes.searchPlaceholder': 'Rechercher des recettes…',
 		'recipes.noSearchResults': 'Aucune recette ne correspond à votre recherche.',
+		'recipes.gridView': 'Grille',
+		'recipes.listView': 'Liste',
+		'recipes.gridViewAriaLabel': 'Passer en vue grille',
+		'recipes.listViewAriaLabel': 'Passer en vue liste',
 		'recipes.servesCount': 'pour {count}',
 		'recipes.minutes': '{count} min',
 

@@ -6,7 +6,11 @@
 	// onDelete is optional — recipes/suggestions/+page.svelte reuses this card without swipe-
 	// to-delete (deleting a recipe from "what's fully in stock" isn't a natural action there),
 	// while recipes/+page.svelte (see STO-105) passes it to enable the swipe gesture.
-	let { recipe, onDelete }: { recipe: Recipe; onDelete?: (recipe: Recipe) => void } = $props();
+	let {
+		recipe,
+		onDelete,
+		layout = 'list'
+	}: { recipe: Recipe; onDelete?: (recipe: Recipe) => void; layout?: 'list' | 'grid' } = $props();
 
 	// Warm, food-evocative placeholder palette (stands in for a real recipe photo).
 	// Picked deterministically per recipe so the same card always gets the same color.
@@ -35,7 +39,23 @@
 	</div>
 {/snippet}
 
-{#if onDelete && swipe}
+{#if layout === 'grid'}
+	<div class="grid-wrapper">
+		<a class="card grid" href={`/recipes/${recipe._id}`}>
+			{@render cardBody()}
+		</a>
+		{#if onDelete}
+			<button
+				type="button"
+				class="grid-delete"
+				onclick={() => onDelete(recipe)}
+				aria-label={t('shoppingList.deleteItemAriaLabel', { name: recipe.title })}
+			>
+				×
+			</button>
+		{/if}
+	</div>
+{:else if onDelete && swipe}
 	<div class="swipe-wrapper">
 		<button
 			type="button"
@@ -103,6 +123,38 @@
 	}
 	.card.dragging {
 		transition: none;
+	}
+	.grid-wrapper {
+		position: relative;
+	}
+	.card.grid {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 0.5rem;
+		padding: 0.6rem;
+	}
+	.card.grid .thumb {
+		width: 100%;
+		height: auto;
+		aspect-ratio: 1;
+		border-radius: 8px;
+	}
+	.card.grid .meta {
+		flex-wrap: wrap;
+	}
+	.grid-delete {
+		position: absolute;
+		top: 0.4rem;
+		right: 0.4rem;
+		width: 1.6rem;
+		height: 1.6rem;
+		border-radius: 50%;
+		border: none;
+		background: rgba(0, 0, 0, 0.55);
+		color: #fff;
+		font-size: 1rem;
+		line-height: 1;
+		cursor: pointer;
 	}
 	.thumb {
 		width: 40px;

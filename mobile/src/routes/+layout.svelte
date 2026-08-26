@@ -11,6 +11,7 @@
 	import { shoppingListOrder } from '$lib/state/shoppingListOrder.svelte';
 	import { inventoryOrder } from '$lib/state/inventoryOrder.svelte';
 	import { recipeOrder } from '$lib/state/recipeOrder.svelte';
+	import { recipeViewMode } from '$lib/state/recipeViewMode.svelte';
 	import { expirySettings } from '$lib/state/expirySettings.svelte';
 	import { keyboardInset } from '$lib/state/keyboardInset.svelte';
 	import { locale } from '$lib/i18n/index.svelte';
@@ -27,6 +28,7 @@
 		shoppingListOrder.restore();
 		inventoryOrder.restore();
 		recipeOrder.restore();
+		recipeViewMode.restore();
 		expirySettings.restore();
 		locale.restore();
 
