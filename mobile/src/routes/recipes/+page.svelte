@@ -13,7 +13,17 @@
 
 	let { data }: PageProps = $props();
 
-	let orderedRecipes = $derived(recipeOrder.apply(data.recipes));
+	let searchQuery = $state('');
+	let orderedRecipes = $derived.by(() => {
+		const ordered = recipeOrder.apply(data.recipes);
+		const query = searchQuery.trim().toLowerCase();
+		if (!query) return ordered;
+		return ordered.filter(
+			(recipe) =>
+				recipe.title.toLowerCase().includes(query) ||
+				(recipe.description ?? '').toLowerCase().includes(query)
+		);
+	});
 
 	const drag = dragToReorder();
 	function registerRecipeRef(node: HTMLElement, id: string) {
@@ -52,8 +62,18 @@
 		</div>
 	</div>
 
+	<input
+		type="search"
+		class="search-input"
+		placeholder={t('recipes.searchPlaceholder')}
+		bind:value={searchQuery}
+		aria-label={t('recipes.searchPlaceholder')}
+	/>
+
 	{#if data.recipes.length === 0}
 		<p class="empty">{t('recipes.empty')}</p>
+	{:else if orderedRecipes.length === 0}
+		<p class="empty">{t('recipes.noSearchResults')}</p>
 	{:else}
 		<div class="list">
 			{#each orderedRecipes as recipe (recipe._id)}
@@ -140,6 +160,14 @@
 	.actions {
 		display: flex;
 		gap: 0.5rem;
+	}
+	.search-input {
+		padding: 0.55rem 0.7rem;
+		border: 1px solid var(--line);
+		border-radius: 8px;
+		font-size: 0.9rem;
+		background: var(--paper-raised);
+		color: var(--ink);
 	}
 	.list {
 		display: flex;

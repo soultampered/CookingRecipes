@@ -16,7 +16,13 @@
 
 	let { data }: PageProps = $props();
 
-	let orderedItems = $derived(inventoryOrder.apply(data.items));
+	let searchQuery = $state('');
+	let orderedItems = $derived.by(() => {
+		const ordered = inventoryOrder.apply(data.items);
+		const query = searchQuery.trim().toLowerCase();
+		if (!query) return ordered;
+		return ordered.filter((item) => item.name.toLowerCase().includes(query));
+	});
 
 	let quickAddItem = $state<Inventory | null>(null);
 	let shoppingLists = $state<ShoppingList[] | null>(null);
@@ -101,6 +107,14 @@
 		<a class="btn-outline" href="/inventory/new">{t('inventory.newItem')}</a>
 	</div>
 
+	<input
+		type="search"
+		class="search-input"
+		placeholder={t('inventory.searchPlaceholder')}
+		bind:value={searchQuery}
+		aria-label={t('inventory.searchPlaceholder')}
+	/>
+
 	<div class="chiprow">
 		<button class="chip" class:active={!data.category} onclick={() => selectCategory(null)}>
 			{t('inventory.all')}
@@ -118,6 +132,8 @@
 
 	{#if data.items.length === 0}
 		<p class="empty">{t('inventory.empty')}</p>
+	{:else if orderedItems.length === 0}
+		<p class="empty">{t('inventory.noSearchResults')}</p>
 	{:else}
 		<div class="list">
 			{#each orderedItems as item (item._id)}
@@ -289,6 +305,14 @@
 		text-decoration: none;
 		color: var(--ink);
 		background: var(--paper-raised);
+	}
+	.search-input {
+		padding: 0.55rem 0.7rem;
+		border: 1px solid var(--line);
+		border-radius: 8px;
+		font-size: 0.9rem;
+		background: var(--paper-raised);
+		color: var(--ink);
 	}
 	.chiprow {
 		display: flex;
