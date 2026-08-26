@@ -15,6 +15,7 @@
 	import { swipeToDelete } from '$lib/utils/swipeToDelete.svelte';
 	import { dragToReorder } from '$lib/utils/dragToReorder.svelte';
 	import QuantityStepper from '$lib/components/QuantityStepper.svelte';
+	import { hapticLight } from '$lib/utils/haptics';
 	import type { ShoppingListItem } from '$lib/types/shoppingList';
 	import type { PageProps } from './$types';
 
@@ -209,6 +210,7 @@
 	});
 
 	async function handleToggle(itemId: string) {
+		hapticLight();
 		try {
 			await toggleItemChecked(data.list._id!, itemId);
 			await invalidate(`app:shopping-list:${data.list._id}`);

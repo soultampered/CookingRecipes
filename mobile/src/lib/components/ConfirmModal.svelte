@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { hapticMedium } from '$lib/utils/haptics';
+
 	let {
 		open,
 		title,
@@ -53,7 +55,15 @@
 				<button type="button" class="outline" onclick={onCancel} disabled={confirming}>
 					{cancelLabel}
 				</button>
-				<button type="button" class="danger" onclick={onConfirm} disabled={confirming}>
+				<button
+					type="button"
+					class="danger"
+					onclick={() => {
+						hapticMedium();
+						onConfirm();
+					}}
+					disabled={confirming}
+				>
 					{confirming ? confirmingLabel : confirmLabel}
 				</button>
 			</div>
