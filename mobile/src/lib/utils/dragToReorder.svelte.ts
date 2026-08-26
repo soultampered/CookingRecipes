@@ -4,20 +4,20 @@
 // pointer-events implementation, in the same spirit as swipeToDelete.svelte.ts (STO-105) but
 // for vertical reordering instead of a horizontal reveal.
 //
-// Unlike swipeToDelete, this measures actual DOM positions (via registerRef) rather than
-// doing fixed-row-height math, since rows can have variable height (e.g. a multi-line
-// instruction textarea). `draggedCenter` is always computed from the fixed pointer-down
-// startRect plus the running pointer offset — never from the dragged element's own live rect
-// — so it stays correct across any number of mid-drag reorders. Reordering itself is left to
-// the caller: `onPointerMove` reports the live target index on every move so the caller can
-// reorder its own array immediately (giving the classic "siblings shift out of the way as you
-// drag" feel via `animate:flip` on their keyed {#each}), while `onPointerUp` reports the final
-// index as a fallback for callers that only want a one-shot reorder on release.
+// The target index is resolved from pixel distance moved ÷ row spacing (measured once at
+// drag-start, from this row to its immediate next sibling), not by re-querying sibling
+// getBoundingClientRect() on every move. An earlier version did the latter and it was janky —
+// a sibling is mid-flight in its own ~200ms animate:flip animation right after a live reorder,
+// so comparing against its rect mid-animation feeds the index calculation a moving target,
+// which can trigger another reorder, whose own flip destabilizes the next comparison, and so
+// on. Distance-based math is immune to that: it's a pure function of the pointer's total
+// travel since drag-start, independent of any sibling's current animation state.
 export function dragToReorder() {
 	let draggingId = $state<string | null>(null);
 	let dragOffsetY = $state(0);
 	let startY = 0;
-	let startRect: DOMRect | null = null;
+	let startIndex = 0;
+	let rowSize = 0;
 	const refs = new Map<string, HTMLElement>();
 
 	function registerRef(id: string, el: HTMLElement | null) {
@@ -33,33 +33,31 @@ export function dragToReorder() {
 		return draggingId === id ? dragOffsetY : 0;
 	}
 
-	function onPointerDown(e: PointerEvent, id: string) {
+	function onPointerDown(e: PointerEvent, id: string, orderedIds: string[]) {
 		const el = refs.get(id);
 		if (!el) return;
 		draggingId = id;
 		startY = e.clientY;
-		startRect = el.getBoundingClientRect();
 		dragOffsetY = 0;
+		startIndex = orderedIds.indexOf(id);
+
+		const rect = el.getBoundingClientRect();
+		const nextId = orderedIds[startIndex + 1];
+		const nextEl = nextId ? refs.get(nextId) : undefined;
+		const prevId = orderedIds[startIndex - 1];
+		const prevEl = prevId ? refs.get(prevId) : undefined;
+		// Prefer the gap to the next row; fall back to the gap from the previous row (last
+		// item in the list) — either gives the real row-to-row spacing including this row's
+		// own height and any CSS gap between them.
+		rowSize = nextEl
+			? nextEl.getBoundingClientRect().top - rect.top
+			: prevEl
+				? rect.top - prevEl.getBoundingClientRect().top
+				: 0;
+
 		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
 	}
 
-	function resolveIndex(orderedIds: string[], draggedId: string): number {
-		if (!startRect) return orderedIds.indexOf(draggedId);
-		const draggedCenter = startRect.top + startRect.height / 2 + dragOffsetY;
-		let index = 0;
-		for (const id of orderedIds) {
-			if (id === draggedId) continue;
-			const el = refs.get(id);
-			if (!el) continue;
-			const rect = el.getBoundingClientRect();
-			if (draggedCenter > rect.top + rect.height / 2) index++;
-		}
-		return index;
-	}
-
-	// Reorders live as the pointer crosses a sibling's midpoint, not just once on release —
-	// without this the only visible feedback during the drag is the one held row sliding
-	// past otherwise-static siblings, which reads as broken rather than as a working drag.
 	function onPointerMove(
 		e: PointerEvent,
 		id: string,
@@ -68,22 +66,24 @@ export function dragToReorder() {
 	) {
 		if (draggingId !== id) return;
 		dragOffsetY = e.clientY - startY;
+		if (!rowSize) return;
+		const delta = Math.round(dragOffsetY / rowSize);
+		const toIndex = Math.max(0, Math.min(orderedIds.length - 1, startIndex + delta));
 		const fromIndex = orderedIds.indexOf(id);
-		const toIndex = resolveIndex(orderedIds, id);
-		if (toIndex !== fromIndex && toIndex >= 0 && fromIndex >= 0) onReorder(fromIndex, toIndex);
+		if (toIndex !== fromIndex && fromIndex >= 0) onReorder(fromIndex, toIndex);
 	}
 
 	function onPointerUp(id: string) {
 		if (draggingId !== id) return;
 		draggingId = null;
 		dragOffsetY = 0;
-		startRect = null;
+		rowSize = 0;
 	}
 
 	function cancel() {
 		draggingId = null;
 		dragOffsetY = 0;
-		startRect = null;
+		rowSize = 0;
 	}
 
 	return {
