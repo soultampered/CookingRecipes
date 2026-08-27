@@ -40,6 +40,12 @@ export const userModel = {
     },
 
     findByUsernameOrEmail: async (identifier: string): Promise<User | null> => {
+        // identifier arrives from a JSON body typed as `string` only at the TypeScript
+        // level — a client can send { "identifier": { "$ne": null } } and have it land
+        // here as an object. Without this guard that becomes { username: { $ne: null } }
+        // in the Mongo filter below: an operator-injection match against any user, not
+        // the intended equality check.
+        if (typeof identifier !== "string") return null;
         const db = await connectToDatabase();
         return db.collection<User>("user").findOne({
             $or: [{ username: identifier }, { email: identifier }]
@@ -85,6 +91,9 @@ export const userModel = {
     },
 
     findByRefreshToken: async (token: string): Promise<User | null> => {
+        // Same operator-injection risk as findByUsernameOrEmail above: token comes from a
+        // JSON body typed as `string` only at the TypeScript level.
+        if (typeof token !== "string") return null;
         const db = await connectToDatabase();
         return db.collection<User>("user").findOne({ "refreshTokens.token": token });
     },
