@@ -110,6 +110,11 @@ authRoute.post("/refresh", async (c) => {
     }
 });
 
+authRoute.get("/security-events", authMiddleware, async (c) => {
+    const events = await authService.listSecurityEvents(c.get("userId"));
+    return c.json(events, 200);
+});
+
 authRoute.post("/logout", authMiddleware, async (c) => {
     const { refreshToken } = await c.req.json<{ refreshToken: string }>();
     await authService.revokeRefreshToken(c.get("userId"), refreshToken);
