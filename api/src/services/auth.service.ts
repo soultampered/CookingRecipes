@@ -3,6 +3,7 @@ import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { userModel, stripPassword } from "../models/user.model.js";
 import { emailService } from "./email.service.js";
+import { securityEventService } from "./securityEvent.service.js";
 import type { NewUser, User } from "../types/user.js";
 
 const ACCESS_TOKEN_TTL = "15m";
@@ -73,6 +74,7 @@ export const authService = {
         }
 
         const { accessToken, refreshToken } = await issueTokenPair(created._id!.toString());
+        await securityEventService.record(created._id!.toString(), "register");
         return { accessToken, refreshToken, user: stripPassword(created) };
     },
 
@@ -84,9 +86,13 @@ export const authService = {
         if (!user) throw new Error("INVALID_CREDENTIALS");
 
         const valid = await bcrypt.compare(password, user.password);
-        if (!valid) throw new Error("INVALID_CREDENTIALS");
+        if (!valid) {
+            await securityEventService.record(user._id!.toString(), "login_failed");
+            throw new Error("INVALID_CREDENTIALS");
+        }
 
         const { accessToken, refreshToken } = await issueTokenPair(user._id!.toString());
+        await securityEventService.record(user._id!.toString(), "login_success");
         return { accessToken, refreshToken, user: stripPassword(user) };
     },
 
@@ -111,6 +117,7 @@ export const authService = {
             verificationCode: null,
             verificationCodeExpiresAt: null
         });
+        await securityEventService.record(userId, "email_verified");
         return stripPassword(updated);
     },
 
@@ -158,6 +165,7 @@ export const authService = {
             return;
         }
         await userModel.update(user._id!.toString(), { resetCode: code, resetCodeExpiresAt: expiresAt });
+        await securityEventService.record(user._id!.toString(), "password_reset_requested");
     },
 
     async resetPassword(identifier: string, code: string, newPassword: string): Promise<void> {
@@ -183,6 +191,7 @@ export const authService = {
             refreshTokens: [],
             mustResetPassword: false
         });
+        await securityEventService.record(user._id!.toString(), "password_reset_completed");
     },
 
     async refreshAccessToken(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
@@ -203,6 +212,7 @@ export const authService = {
             await userModel.removeRefreshTokenFamily(userId, entry.familyId);
             await userModel.update(userId, { mustResetPassword: true });
             console.warn(`Refresh token reuse detected for user ${userId} — family ${entry.familyId} revoked`);
+            await securityEventService.record(userId, "token_reuse_detected", { familyId: entry.familyId });
             throw new Error("TOKEN_REUSE_DETECTED");
         }
 
@@ -222,5 +232,9 @@ export const authService = {
         const entry = user.refreshTokens?.find((t) => t.token === refreshToken);
         if (!entry) return;
         await userModel.removeRefreshTokenFamily(userId, entry.familyId);
+    },
+
+    async listSecurityEvents(userId: string) {
+        return securityEventService.listForUser(userId);
     }
 };
