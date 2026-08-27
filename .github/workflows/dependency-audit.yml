@@ -1,0 +1,31 @@
+name: Dependency Audit
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # weekly, Monday 06:00 UTC
+  workflow_dispatch: {}
+  pull_request:
+    paths:
+      - "package.json"
+      - "package-lock.json"
+      - "mobile/package.json"
+      - "mobile/package-lock.json"
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        workdir: [".", "mobile"]
+    defaults:
+      run:
+        working-directory: ${{ matrix.workdir }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: npm audit (high and critical)
+        run: npm audit --audit-level=high
