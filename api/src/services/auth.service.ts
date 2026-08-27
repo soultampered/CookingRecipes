@@ -38,6 +38,15 @@ async function issueTokenPair(userId: string): Promise<{ accessToken: string; re
 const CODE_TTL_MS = 10 * 60 * 1000;
 const RESEND_COOLDOWN_MS = 60 * 1000;
 
+// Distinct from STO-31's IP-based rate limiting: this defends one specific account
+// against a distributed attack (many IPs), which IP rate limiting alone can't catch.
+const LOCKOUT_THRESHOLD = 5;
+const LOCKOUT_MAX_MINUTES = 60;
+
+function lockoutMinutesFor(failedAttempts: number): number {
+    return Math.min(2 ** (failedAttempts - LOCKOUT_THRESHOLD), LOCKOUT_MAX_MINUTES);
+}
+
 function generateCode(): { code: string; expiresAt: Date } {
     // Plaintext by design: unlike the password hash, this code is single-use, expires in
     // 10 minutes, and only useful to someone who already has DB access — at which point
@@ -88,14 +97,30 @@ export const authService = {
         const user = await userModel.findByUsernameOrEmail(identifier);
         if (!user) throw new Error("INVALID_CREDENTIALS");
 
+        const userId = user._id!.toString();
+
+        if (user.lockedUntil && user.lockedUntil > new Date()) {
+            throw new Error("ACCOUNT_LOCKED");
+        }
+
         const valid = await bcrypt.compare(password, user.password);
         if (!valid) {
-            await securityEventService.record(user._id!.toString(), "login_failed");
+            const failedLoginAttempts = (user.failedLoginAttempts ?? 0) + 1;
+            const update: Partial<User> = { failedLoginAttempts };
+            if (failedLoginAttempts >= LOCKOUT_THRESHOLD) {
+                update.lockedUntil = new Date(Date.now() + lockoutMinutesFor(failedLoginAttempts) * 60 * 1000);
+            }
+            await userModel.update(userId, update);
+            await securityEventService.record(userId, "login_failed");
             throw new Error("INVALID_CREDENTIALS");
         }
 
-        const { accessToken, refreshToken } = await issueTokenPair(user._id!.toString());
-        await securityEventService.record(user._id!.toString(), "login_success");
+        if (user.failedLoginAttempts || user.lockedUntil) {
+            await userModel.update(userId, { failedLoginAttempts: 0, lockedUntil: null });
+        }
+
+        const { accessToken, refreshToken } = await issueTokenPair(userId);
+        await securityEventService.record(userId, "login_success");
         return { accessToken, refreshToken, user: stripPassword(user) };
     },
 

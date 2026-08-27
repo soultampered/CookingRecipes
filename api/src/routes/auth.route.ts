@@ -34,8 +34,12 @@ authRoute.post("/login", loginLimiter, async (c) => {
         const result = await authService.login(body.identifier, body.password);
         return c.json(result, 200);
     } catch (err) {
-        if ((err as Error).message === "INVALID_CREDENTIALS") {
+        const message = (err as Error).message;
+        if (message === "INVALID_CREDENTIALS") {
             return c.json({ error: "Invalid username/email or password" }, 401);
+        }
+        if (message === "ACCOUNT_LOCKED") {
+            return c.json({ error: "Too many failed attempts, please try again later" }, 423);
         }
         return c.json({ error: "Failed to log in" }, 500);
     }

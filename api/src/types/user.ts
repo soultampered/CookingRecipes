@@ -16,6 +16,8 @@ export interface User {
     resetCode?: string | null;
     resetCodeExpiresAt?: Date | null;
     mustResetPassword: boolean;
+    failedLoginAttempts?: number;
+    lockedUntil?: Date | null;
     refreshTokens?: { token: string; familyId: string; expiresAt: Date; used: boolean }[];
     preferences?: {
         dietaryRestrictions?: string[];
