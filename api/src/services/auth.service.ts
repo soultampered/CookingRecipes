@@ -43,6 +43,11 @@ const RESEND_COOLDOWN_MS = 60 * 1000;
 const LOCKOUT_THRESHOLD = 5;
 const LOCKOUT_MAX_MINUTES = 60;
 
+// Independent of STO-31's per-endpoint rate limit: a per-account attempt counter that
+// invalidates the code itself once exhausted, so a generous rate limit elsewhere can't
+// leave the full 10-minute window open to guess all 1M combinations.
+const MAX_CODE_ATTEMPTS = 5;
+
 function lockoutMinutesFor(failedAttempts: number): number {
     return Math.min(2 ** (failedAttempts - LOCKOUT_THRESHOLD), LOCKOUT_MAX_MINUTES);
 }
@@ -133,7 +138,14 @@ export const authService = {
         const user = await userModel.findById(userId);
         if (user.emailVerified) return stripPassword(user);
 
+        if ((user.verificationCodeAttempts ?? 0) >= MAX_CODE_ATTEMPTS) {
+            throw new Error("TOO_MANY_ATTEMPTS");
+        }
+
         if (!user.verificationCode || user.verificationCode !== code) {
+            await userModel.update(userId, {
+                verificationCodeAttempts: (user.verificationCodeAttempts ?? 0) + 1
+            });
             throw new Error("INVALID_CODE");
         }
         if (!user.verificationCodeExpiresAt || user.verificationCodeExpiresAt < new Date()) {
@@ -143,7 +155,8 @@ export const authService = {
         const updated = await userModel.update(userId, {
             emailVerified: true,
             verificationCode: null,
-            verificationCodeExpiresAt: null
+            verificationCodeExpiresAt: null,
+            verificationCodeAttempts: 0
         });
         await securityEventService.record(userId, "email_verified");
         return stripPassword(updated);
@@ -168,7 +181,8 @@ export const authService = {
         await emailService.sendVerificationEmail(user.email, code);
         await userModel.update(userId, {
             verificationCode: code,
-            verificationCodeExpiresAt: expiresAt
+            verificationCodeExpiresAt: expiresAt,
+            verificationCodeAttempts: 0
         });
     },
 
@@ -192,12 +206,21 @@ export const authService = {
             console.error("Failed to send password reset email:", err);
             return;
         }
-        await userModel.update(user._id!.toString(), { resetCode: code, resetCodeExpiresAt: expiresAt });
+        await userModel.update(user._id!.toString(), {
+            resetCode: code,
+            resetCodeExpiresAt: expiresAt,
+            resetCodeAttempts: 0
+        });
         await securityEventService.record(user._id!.toString(), "password_reset_requested");
     },
 
     async resetPassword(identifier: string, code: string, newPassword: string): Promise<void> {
         const user = await userModel.findByUsernameOrEmail(identifier);
+
+        if (user && (user.resetCodeAttempts ?? 0) >= MAX_CODE_ATTEMPTS) {
+            throw new Error("INVALID_RESET");
+        }
+
         const valid =
             user &&
             user.resetCode &&
@@ -205,7 +228,14 @@ export const authService = {
             user.resetCodeExpiresAt &&
             user.resetCodeExpiresAt > new Date();
 
-        if (!valid) throw new Error("INVALID_RESET");
+        if (!valid) {
+            if (user) {
+                await userModel.update(user._id!.toString(), {
+                    resetCodeAttempts: (user.resetCodeAttempts ?? 0) + 1
+                });
+            }
+            throw new Error("INVALID_RESET");
+        }
         if (!isPasswordStrong(newPassword)) throw new Error("WEAK_PASSWORD");
 
         const hashed = await bcrypt.hash(newPassword, 10);
@@ -217,6 +247,7 @@ export const authService = {
             password: hashed,
             resetCode: null,
             resetCodeExpiresAt: null,
+            resetCodeAttempts: 0,
             refreshTokens: [],
             mustResetPassword: false
         });
