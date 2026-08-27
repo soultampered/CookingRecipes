@@ -2,10 +2,16 @@ import { Hono } from "hono";
 import type { NewUser } from "../types/user.js";
 import { authService } from "../services/auth.service.js";
 import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
+import { rateLimit } from "../middleware/rateLimit.middleware.js";
 
 const authRoute = new Hono<{ Variables: AuthVariables }>();
 
-authRoute.post("/register", async (c) => {
+const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, prefix: "login" });
+const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, prefix: "register" });
+const passwordResetLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, prefix: "password-reset" });
+const resendCodeLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, prefix: "resend-code" });
+
+authRoute.post("/register", registerLimiter, async (c) => {
     try {
         const body = await c.req.json<NewUser>();
         const result = await authService.register(body);
@@ -18,7 +24,7 @@ authRoute.post("/register", async (c) => {
     }
 });
 
-authRoute.post("/login", async (c) => {
+authRoute.post("/login", loginLimiter, async (c) => {
     try {
         const body = await c.req.json<{ identifier: string; password: string }>();
         const result = await authService.login(body.identifier, body.password);
@@ -57,7 +63,7 @@ authRoute.post("/verify-email", authMiddleware, async (c) => {
     }
 });
 
-authRoute.post("/forgot-password", async (c) => {
+authRoute.post("/forgot-password", passwordResetLimiter, async (c) => {
     const { identifier } = await c.req.json<{ identifier: string }>();
     await authService.requestPasswordReset(identifier);
     // Always the same response, regardless of what actually happened server-side —
@@ -65,7 +71,7 @@ authRoute.post("/forgot-password", async (c) => {
     return c.json({ message: "If that account exists, a reset code has been sent" }, 200);
 });
 
-authRoute.post("/reset-password", async (c) => {
+authRoute.post("/reset-password", passwordResetLimiter, async (c) => {
     try {
         const { identifier, code, newPassword } = await c.req.json<{
             identifier: string;
@@ -79,7 +85,7 @@ authRoute.post("/reset-password", async (c) => {
     }
 });
 
-authRoute.post("/resend-code", authMiddleware, async (c) => {
+authRoute.post("/resend-code", authMiddleware, resendCodeLimiter, async (c) => {
     try {
         await authService.resendCode(c.get("userId"));
         return c.json({ message: "Verification code sent" }, 200);
