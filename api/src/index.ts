@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { secureHeaders } from 'hono/secure-headers';
+import { secureHeaders, NONCE, type SecureHeadersVariables } from 'hono/secure-headers';
 import { bodyLimit } from 'hono/body-limit';
 import recipeRoutes from './routes/recipes.route.js';
 import inventoryRoutes from "./routes/inventory.route.js";
@@ -8,7 +8,7 @@ import shoppingListRoute from "./routes/shoppingList.route.js"
 import usersRoute from "./routes/users.route.js";
 import authRoute from "./routes/auth.route.js";
 
-const app = new Hono();
+const app = new Hono<{ Variables: SecureHeadersVariables }>();
 
 app.use('*', secureHeaders());
 
@@ -47,17 +47,37 @@ app.route('/inventory', inventoryRoutes);
 app.route('/shopping-lists', shoppingListRoute);
 app.route('/users', usersRoute);
 
-// Example root
-app.get('/', (c) =>   c.html(`
+// This page has no scripts and one small server-authored inline <style> block (no user
+// input reflected into it), so the tightest CSP that still lets the style render is
+// default-src 'none' plus a per-request nonce scoped to just that one style tag —
+// tighter than 'unsafe-inline', which would allow *any* inline style/script wholesale.
+app.use(
+    '/',
+    secureHeaders({
+        contentSecurityPolicy: {
+            defaultSrc: ["'none'"],
+            styleSrc: [NONCE],
+            baseUri: ["'none'"],
+            frameAncestors: ["'none'"]
+        }
+    })
+);
+
+app.get('/', (c) => {
+    // secureHeaders' CSP callback (the NONCE directive above) runs before this handler and
+    // already generated + stored the nonce it put in the header — read it back rather than
+    // generating a second one, or the header and the <style> tag would disagree.
+    const nonce = c.get('secureHeadersNonce');
+    return c.html(`
     <!DOCTYPE html>
     <html>
       <head>
         <title>Recipe API</title>
-        <style>
-          body { 
-            font-family: sans-serif; 
-            max-width: 600px; 
-            margin: 3rem auto; 
+        <style nonce="${nonce}">
+          body {
+            font-family: sans-serif;
+            max-width: 600px;
+            margin: 3rem auto;
             padding: 1rem;
             line-height: 1.6;
           }
@@ -75,7 +95,7 @@ app.get('/', (c) =>   c.html(`
         </ul>
       </body>
     </html>
-  `)
-);
+  `);
+});
 
 export default app;
