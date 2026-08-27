@@ -305,6 +305,7 @@ export const translations = {
 		'welcome.legalPrivacy': 'Privacy Policy.',
 		'welcome.errorLogin': 'Could not log in',
 		'welcome.errorRegister': 'Could not create account',
+		'welcome.passwordHint': 'At least 8 characters, with a letter and a number',
 
 		'session.expired': 'Your session expired — please sign in again.',
 
@@ -662,6 +663,7 @@ export const translations = {
 		'welcome.legalPrivacy': 'Politique de confidentialité.',
 		'welcome.errorLogin': 'Connexion impossible',
 		'welcome.errorRegister': 'Impossible de créer le compte',
+		'welcome.passwordHint': 'Au moins 8 caractères, avec une lettre et un chiffre',
 
 		'session.expired': 'Votre session a expiré — veuillez vous reconnecter.',
 

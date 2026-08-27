@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { userModel, stripPassword } from "../models/user.model.js";
 import { emailService } from "./email.service.js";
 import { securityEventService } from "./securityEvent.service.js";
+import { isPasswordStrong } from "./passwordPolicy.js";
 import type { NewUser, User } from "../types/user.js";
 
 const ACCESS_TOKEN_TTL = "15m";
@@ -50,6 +51,8 @@ export const authService = {
     async register(
         data: NewUser
     ): Promise<{ accessToken: string; refreshToken: string; user: Omit<User, "password"> }> {
+        if (!isPasswordStrong(data.password)) throw new Error("WEAK_PASSWORD");
+
         const existing = await userModel.findByUsernameOrEmail(data.username);
         const existingByEmail = await userModel.findByUsernameOrEmail(data.email);
         if (existing || existingByEmail) throw new Error("DUPLICATE_NAME");
@@ -178,6 +181,7 @@ export const authService = {
             user.resetCodeExpiresAt > new Date();
 
         if (!valid) throw new Error("INVALID_RESET");
+        if (!isPasswordStrong(newPassword)) throw new Error("WEAK_PASSWORD");
 
         const hashed = await bcrypt.hash(newPassword, 10);
         // A reset clears every refresh token (kill every session everywhere, not just this
