@@ -17,8 +17,12 @@ authRoute.post("/register", registerLimiter, async (c) => {
         const result = await authService.register(body);
         return c.json(result, 201);
     } catch (err) {
-        if ((err as Error).message === "DUPLICATE_NAME") {
+        const message = (err as Error).message;
+        if (message === "DUPLICATE_NAME") {
             return c.json({ error: "Username or email already in use" }, 400);
+        }
+        if (message === "WEAK_PASSWORD") {
+            return c.json({ error: "Password must be at least 8 characters and include a letter and a number" }, 400);
         }
         return c.json({ error: "Failed to register" }, 500);
     }
@@ -80,7 +84,10 @@ authRoute.post("/reset-password", passwordResetLimiter, async (c) => {
         }>();
         await authService.resetPassword(identifier, code, newPassword);
         return c.json({ message: "Password reset successful" }, 200);
-    } catch {
+    } catch (err) {
+        if ((err as Error).message === "WEAK_PASSWORD") {
+            return c.json({ error: "Password must be at least 8 characters and include a letter and a number" }, 400);
+        }
         return c.json({ error: "Invalid or expired code" }, 400);
     }
 });
