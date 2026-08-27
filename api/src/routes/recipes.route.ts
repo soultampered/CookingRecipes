@@ -91,7 +91,17 @@ recipeRoutes.post('/:id/prepare', async (c) => {
         const result = await recipeInventoryService.deductIngredients(c.req.param('id'));
         return c.json({ success: true, updatedInventory: result });
     } catch (err) {
-        return c.json({ error: (err as Error).message }, 400);
+        const message = (err as Error).message;
+        // NOT_FOUND here means either the recipe itself or one of its ingredients'
+        // inventory items — deductIngredients doesn't distinguish which.
+        if (message === 'NOT_FOUND') {
+            return c.json({ error: 'Recipe or inventory item not found' }, 404);
+        }
+        if (message === 'INSUFFICIENT_STOCK') {
+            return c.json({ error: 'Not enough stock to prepare this recipe' }, 400);
+        }
+        console.error('Failed to prepare recipe:', err);
+        return c.json({ error: 'Failed to prepare recipe' }, 500);
     }
 });
 
@@ -103,7 +113,11 @@ recipeRoutes.get('/:id/missing-ingredients', async (c) => {
         const missing = await recipeInventoryService.getMissingIngredients(c.req.param('id'));
         return c.json(missing);
     } catch (err) {
-        return c.json({ error: (err as Error).message }, 400);
+        if ((err as Error).message === 'NOT_FOUND') {
+            return c.json({ error: 'Recipe not found' }, 404);
+        }
+        console.error('Failed to get missing ingredients:', err);
+        return c.json({ error: 'Failed to get missing ingredients' }, 500);
     }
 });
 
