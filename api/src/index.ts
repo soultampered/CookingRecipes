@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { secureHeaders } from 'hono/secure-headers';
 import recipeRoutes from './routes/recipes.route.js';
 import inventoryRoutes from "./routes/inventory.route.js";
 import shoppingListRoute from "./routes/shoppingList.route.js"
@@ -7,6 +8,8 @@ import usersRoute from "./routes/users.route.js";
 import authRoute from "./routes/auth.route.js";
 
 const app = new Hono();
+
+app.use('*', secureHeaders());
 
 // Capacitor's WebView sends these origins by default (iOS: capacitor://localhost,
 // Android: http://localhost); https://localhost covers a custom server.hostname/scheme
