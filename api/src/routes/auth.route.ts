@@ -67,6 +67,9 @@ authRoute.post("/verify-email", authMiddleware, async (c) => {
         if (message === "CODE_EXPIRED") {
             return c.json({ error: "Verification code has expired, request a new one" }, 400);
         }
+        if (message === "TOO_MANY_ATTEMPTS") {
+            return c.json({ error: "Too many incorrect attempts, request a new code" }, 429);
+        }
         return c.json({ error: "Failed to verify email" }, 500);
     }
 });
