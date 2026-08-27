@@ -1,9 +1,17 @@
 import { Hono } from "hono";
-import type { NewUser } from "../types/user.js";
 import { authService } from "../services/auth.service.js";
 import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
 import { rateLimit } from "../middleware/rateLimit.middleware.js";
 import { tokenRevocation } from "../services/tokenRevocation.js";
+import { validateJson } from "../middleware/validate.middleware.js";
+import {
+    registerSchema,
+    loginSchema,
+    verifyEmailSchema,
+    forgotPasswordSchema,
+    resetPasswordSchema,
+    refreshTokenSchema
+} from "../schemas/auth.schema.js";
 
 const authRoute = new Hono<{ Variables: AuthVariables }>();
 
@@ -12,9 +20,9 @@ const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, prefix: "r
 const passwordResetLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, prefix: "password-reset" });
 const resendCodeLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, prefix: "resend-code" });
 
-authRoute.post("/register", registerLimiter, async (c) => {
+authRoute.post("/register", registerLimiter, validateJson(registerSchema), async (c) => {
     try {
-        const body = await c.req.json<NewUser>();
+        const body = c.req.valid("json");
         const result = await authService.register(body);
         return c.json(result, 201);
     } catch (err) {
@@ -29,9 +37,9 @@ authRoute.post("/register", registerLimiter, async (c) => {
     }
 });
 
-authRoute.post("/login", loginLimiter, async (c) => {
+authRoute.post("/login", loginLimiter, validateJson(loginSchema), async (c) => {
     try {
-        const body = await c.req.json<{ identifier: string; password: string }>();
+        const body = c.req.valid("json");
         const result = await authService.login(body.identifier, body.password);
         return c.json(result, 200);
     } catch (err) {
@@ -55,9 +63,9 @@ authRoute.get("/me", authMiddleware, async (c) => {
     }
 });
 
-authRoute.post("/verify-email", authMiddleware, async (c) => {
+authRoute.post("/verify-email", authMiddleware, validateJson(verifyEmailSchema), async (c) => {
     try {
-        const { code } = await c.req.json<{ code: string }>();
+        const { code } = c.req.valid("json");
         const user = await authService.verifyEmail(c.get("userId"), code);
         return c.json(user, 200);
     } catch (err) {
@@ -75,21 +83,17 @@ authRoute.post("/verify-email", authMiddleware, async (c) => {
     }
 });
 
-authRoute.post("/forgot-password", passwordResetLimiter, async (c) => {
-    const { identifier } = await c.req.json<{ identifier: string }>();
+authRoute.post("/forgot-password", passwordResetLimiter, validateJson(forgotPasswordSchema), async (c) => {
+    const { identifier } = c.req.valid("json");
     await authService.requestPasswordReset(identifier);
     // Always the same response, regardless of what actually happened server-side —
     // see the comment on authService.requestPasswordReset for why.
     return c.json({ message: "If that account exists, a reset code has been sent" }, 200);
 });
 
-authRoute.post("/reset-password", passwordResetLimiter, async (c) => {
+authRoute.post("/reset-password", passwordResetLimiter, validateJson(resetPasswordSchema), async (c) => {
     try {
-        const { identifier, code, newPassword } = await c.req.json<{
-            identifier: string;
-            code: string;
-            newPassword: string;
-        }>();
+        const { identifier, code, newPassword } = c.req.valid("json");
         await authService.resetPassword(identifier, code, newPassword);
         return c.json({ message: "Password reset successful" }, 200);
     } catch (err) {
@@ -112,9 +116,9 @@ authRoute.post("/resend-code", authMiddleware, resendCodeLimiter, async (c) => {
     }
 });
 
-authRoute.post("/refresh", async (c) => {
+authRoute.post("/refresh", validateJson(refreshTokenSchema), async (c) => {
     try {
-        const { refreshToken } = await c.req.json<{ refreshToken: string }>();
+        const { refreshToken } = c.req.valid("json");
         const result = await authService.refreshAccessToken(refreshToken);
         return c.json(result, 200);
     } catch {
@@ -130,8 +134,8 @@ authRoute.get("/security-events", authMiddleware, async (c) => {
     return c.json(events, 200);
 });
 
-authRoute.post("/logout", authMiddleware, async (c) => {
-    const { refreshToken } = await c.req.json<{ refreshToken: string }>();
+authRoute.post("/logout", authMiddleware, validateJson(refreshTokenSchema), async (c) => {
+    const { refreshToken } = c.req.valid("json");
     await authService.revokeRefreshToken(c.get("userId"), refreshToken);
     tokenRevocation.revoke(c.get("accessToken"), c.get("accessTokenExp") * 1000);
     return c.json({ message: "Logged out" }, 200);

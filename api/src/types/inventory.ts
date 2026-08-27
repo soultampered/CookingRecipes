@@ -39,3 +39,5 @@ export interface InventoryAdjustment {
     id: string;
     amount: number;
 }
+
+export type NewInventory = Omit<Inventory, "_id" | "createdAt" | "updatedAt">;

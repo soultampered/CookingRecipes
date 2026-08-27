@@ -78,7 +78,7 @@ function generateCode(): { code: string; expiresAt: Date } {
 
 export const authService = {
     async register(
-        data: NewUser
+        data: Pick<NewUser, "username" | "email" | "password">
     ): Promise<{ accessToken: string; refreshToken: string; user: Omit<User, "password"> }> {
         if (!isPasswordStrong(data.password)) throw new Error("WEAK_PASSWORD");
 
