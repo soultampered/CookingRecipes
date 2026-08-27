@@ -5,6 +5,7 @@
 	import { toast } from '$lib/state/toast.svelte';
 	import { ApiError } from '$lib/api/client';
 	import { t } from '$lib/i18n/index.svelte';
+	import { PASSWORD_PATTERN } from '$lib/passwordPolicy';
 
 	let required = $derived(page.url.searchParams.get('required') === '1');
 
@@ -83,7 +84,15 @@
 			</label>
 			<label>
 				{t('forgotPassword.newPassword')}
-				<input type="password" bind:value={newPassword} required />
+				<input
+					type="password"
+					bind:value={newPassword}
+					required
+					minlength="8"
+					pattern={PASSWORD_PATTERN}
+					title={t('welcome.passwordHint')}
+				/>
+				<small>{t('welcome.passwordHint')}</small>
 			</label>
 			<button type="submit" disabled={resetting}>
 				{resetting ? t('forgotPassword.resetting') : t('forgotPassword.resetPassword')}
