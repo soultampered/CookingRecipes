@@ -3,6 +3,8 @@ import type { User } from "../types/user.js";
 import { usersService } from "../services/users.service.js";
 import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
 import { requireVerified } from "../middleware/requireVerified.middleware.js";
+import { validateJson } from "../middleware/validate.middleware.js";
+import { patchUserSchema } from "../schemas/user.schema.js";
 
 const usersRoute = new Hono<{ Variables: AuthVariables }>();
 
@@ -39,13 +41,13 @@ usersRoute.get('/:id', requireVerified, async (c) => {
     }
 });
 
-usersRoute.patch('/:id', requireVerified, async (c) => {
+usersRoute.patch('/:id', requireVerified, validateJson(patchUserSchema), async (c) => {
     if (c.get('userId') !== c.req.param('id')) {
         return c.json({ error: 'Forbidden' }, 403);
     }
     try {
         const userId = c.req.param('id');
-        const body = await c.req.json<Partial<User>>();
+        const body = c.req.valid('json');
         const updatedUser = await usersService.updateUser(userId, pickPatchableFields(body));
         return c.json(updatedUser, 200);
     } catch (err) {

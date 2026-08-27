@@ -1,9 +1,14 @@
 import { Hono } from 'hono';
-import type { ShoppingList, ShoppingListItem } from "../types/shoppingList.js"
 import { shoppingListService } from "../services/shoppingList.service.js"
 import { shoppingListInventoryService } from "../services/shoppingListInventory.service.js"
 import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
 import { requireVerified } from "../middleware/requireVerified.middleware.js";
+import { validateJson } from "../middleware/validate.middleware.js";
+import {
+    createShoppingListSchema,
+    updateShoppingListSchema,
+    addShoppingListItemSchema
+} from "../schemas/shoppingList.schema.js";
 
 const shoppingListRoute = new Hono<{ Variables: AuthVariables }>();
 
@@ -19,9 +24,9 @@ shoppingListRoute.get('/', async (c) => {
     }
 });
 
-shoppingListRoute.post('/', async (c) => {
+shoppingListRoute.post('/', validateJson(createShoppingListSchema), async (c) => {
     try {
-        const body = await c.req.json<ShoppingList>();
+        const body = c.req.valid('json');
         const created = await shoppingListService.createShoppingList({
             ...body,
             userId: c.get('userId')
@@ -48,11 +53,11 @@ shoppingListRoute.get('/:id', async (c) => {
     }
 });
 
-shoppingListRoute.patch('/:id', async (c) => {
+shoppingListRoute.patch('/:id', validateJson(updateShoppingListSchema), async (c) => {
     try {
         const existing = await shoppingListService.getShoppingListById(c.req.param('id'));
         if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
-        const body = await c.req.json<Partial<ShoppingList>>();
+        const body = c.req.valid('json');
         const updated = await shoppingListService.updateShoppingList(c.req.param('id'), body);
         return c.json(updated, 200);
     } catch (err) {
@@ -77,11 +82,11 @@ shoppingListRoute.delete('/:id', async (c) => {
     }
 });
 
-shoppingListRoute.post('/:id/items', async (c) => {
+shoppingListRoute.post('/:id/items', validateJson(addShoppingListItemSchema), async (c) => {
     try {
         const existing = await shoppingListService.getShoppingListById(c.req.param('id'));
         if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
-        const body = await c.req.json<ShoppingListItem>();
+        const body = c.req.valid('json');
         const updated = await shoppingListService.addItem(c.req.param('id'), body);
         return c.json(updated, 201);
     } catch (err) {
