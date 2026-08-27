@@ -1,0 +1,36 @@
+name: Mongo Backup
+
+# Atlas's free/shared tiers don't include continuous backups — see STO-49. This is the
+# fallback: a periodic mongodump, kept as a workflow artifact. It's a floor, not a
+# replacement for Atlas's own backup features if the cluster is ever upgraded to a tier
+# that includes them.
+#
+# Requires a MONGO_URI repository secret (Settings -> Secrets and variables -> Actions).
+# Restore with: mongorestore --uri="$MONGO_URI" --archive=backup.gz --gzip
+
+on:
+  schedule:
+    - cron: "0 7 * * *" # daily, 07:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install mongodb-database-tools
+        run: |
+          wget -qO - https://www.mongodb.org/static/pgp/server-7.0.asc | sudo gpg --dearmor -o /usr/share/keyrings/mongodb-server-7.0.gpg
+          echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+          sudo apt-get update
+          sudo apt-get install -y mongodb-database-tools
+
+      - name: Dump database
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+        run: mongodump --uri="$MONGO_URI" --archive=backup.gz --gzip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mongo-backup-${{ github.run_id }}
+          path: backup.gz
+          retention-days: 30
