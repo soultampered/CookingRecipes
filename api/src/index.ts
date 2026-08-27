@@ -8,7 +8,23 @@ import authRoute from "./routes/auth.route.js";
 
 const app = new Hono();
 
-app.use('*', cors());
+// Capacitor's WebView sends these origins by default (iOS: capacitor://localhost,
+// Android: http://localhost); https://localhost covers a custom server.hostname/scheme
+// setup. Vite dev server origins are for local mobile-app development against a local
+// or remote API. Extra origins (e.g. a future web client's real domain) can be added
+// via CORS_ORIGIN without touching this default set.
+const DEFAULT_ALLOWED_ORIGINS = [
+    'capacitor://localhost',
+    'http://localhost',
+    'https://localhost',
+    'http://localhost:5173',
+    'http://localhost:5174',
+];
+const allowedOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map((origin) => origin.trim())
+    : DEFAULT_ALLOWED_ORIGINS;
+
+app.use('*', cors({ origin: allowedOrigins }));
 
 app.route('/auth', authRoute);
 app.route('/recipes', recipeRoutes);
