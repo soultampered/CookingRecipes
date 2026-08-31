@@ -1,9 +1,29 @@
 import type { MiddlewareHandler } from "hono";
 import jwt from "jsonwebtoken";
+import { verificationSecrets } from "../services/jwtSecrets.js";
 
 export type AuthVariables = {
     userId: string;
 };
+
+// Tries each verification secret in turn (current, then JWT_SECRET_PREVIOUS if set) so a
+// token signed just before a rotation still verifies — see jwtSecrets.ts for the rotation
+// plan. A TokenExpiredError from any secret means that secret's signature was valid and
+// only expiry failed, which is more informative than a signature mismatch against a
+// different secret — so it takes priority when deciding which error to report.
+function verifyWithAnySecret(token: string): { userId: string } {
+    let bestError: unknown;
+    for (const secret of verificationSecrets) {
+        try {
+            return jwt.verify(token, secret) as { userId: string };
+        } catch (err) {
+            if (!bestError || (err as Error).name === "TokenExpiredError") {
+                bestError = err;
+            }
+        }
+    }
+    throw bestError;
+}
 
 export const authMiddleware: MiddlewareHandler<{ Variables: AuthVariables }> = async (c, next) => {
     const header = c.req.header("Authorization");
@@ -14,7 +34,7 @@ export const authMiddleware: MiddlewareHandler<{ Variables: AuthVariables }> = a
     }
 
     try {
-        const payload = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
+        const payload = verifyWithAnySecret(token);
         c.set("userId", payload.userId);
         await next();
     } catch (err) {
