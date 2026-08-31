@@ -3,6 +3,7 @@ import type { NewUser } from "../types/user.js";
 import { authService } from "../services/auth.service.js";
 import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
 import { rateLimit } from "../middleware/rateLimit.middleware.js";
+import { tokenRevocation } from "../services/tokenRevocation.js";
 
 const authRoute = new Hono<{ Variables: AuthVariables }>();
 
@@ -132,6 +133,7 @@ authRoute.get("/security-events", authMiddleware, async (c) => {
 authRoute.post("/logout", authMiddleware, async (c) => {
     const { refreshToken } = await c.req.json<{ refreshToken: string }>();
     await authService.revokeRefreshToken(c.get("userId"), refreshToken);
+    tokenRevocation.revoke(c.get("accessToken"), c.get("accessTokenExp") * 1000);
     return c.json({ message: "Logged out" }, 200);
 });
 
