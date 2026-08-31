@@ -49,6 +49,20 @@ const LOCKOUT_MAX_MINUTES = 60;
 // leave the full 10-minute window open to guess all 1M combinations.
 const MAX_CODE_ATTEMPTS = 5;
 
+// requestPasswordReset's early-return branches (unknown identifier, cooldown active) return
+// near-instantly, while the full path does a DB write + email-send round trip — that gap is
+// itself a timing side-channel an attacker could use to enumerate valid accounts even though
+// the response body is identical either way. Padding every path out to the same floor closes
+// that gap without slowing the common case by much.
+const MIN_PASSWORD_RESET_REQUEST_MS = 300;
+
+async function padUntil(startedAt: number, minMs: number): Promise<void> {
+    const remaining = minMs - (Date.now() - startedAt);
+    if (remaining > 0) {
+        await new Promise((resolve) => setTimeout(resolve, remaining));
+    }
+}
+
 function lockoutMinutesFor(failedAttempts: number): number {
     return Math.min(2 ** (failedAttempts - LOCKOUT_THRESHOLD), LOCKOUT_MAX_MINUTES);
 }
@@ -192,12 +206,20 @@ export const authService = {
     // cooldown, or email delivery fails are all indistinguishable to the caller. Revealing
     // any of that would let someone enumerate which emails/usernames have accounts.
     async requestPasswordReset(identifier: string): Promise<void> {
+        const start = Date.now();
+
         const user = await userModel.findByUsernameOrEmail(identifier);
-        if (!user) return;
+        if (!user) {
+            await padUntil(start, MIN_PASSWORD_RESET_REQUEST_MS);
+            return;
+        }
 
         if (user.resetCodeExpiresAt) {
             const issuedAt = user.resetCodeExpiresAt.getTime() - CODE_TTL_MS;
-            if (Date.now() - issuedAt < RESEND_COOLDOWN_MS) return;
+            if (Date.now() - issuedAt < RESEND_COOLDOWN_MS) {
+                await padUntil(start, MIN_PASSWORD_RESET_REQUEST_MS);
+                return;
+            }
         }
 
         const { code, expiresAt } = generateCode();
@@ -205,6 +227,7 @@ export const authService = {
             await emailService.sendPasswordResetEmail(user.email, code);
         } catch (err) {
             console.error("Failed to send password reset email:", err);
+            await padUntil(start, MIN_PASSWORD_RESET_REQUEST_MS);
             return;
         }
         await userModel.update(user._id!.toString(), {
@@ -213,6 +236,7 @@ export const authService = {
             resetCodeAttempts: 0
         });
         await securityEventService.record(user._id!.toString(), "password_reset_requested");
+        await padUntil(start, MIN_PASSWORD_RESET_REQUEST_MS);
     },
 
     async resetPassword(identifier: string, code: string, newPassword: string): Promise<void> {
