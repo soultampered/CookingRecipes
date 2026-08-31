@@ -1,0 +1,56 @@
+name: Dependency Audit
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # weekly, Monday 06:00 UTC
+  workflow_dispatch: {}
+  pull_request:
+    paths:
+      - "package.json"
+      - "package-lock.json"
+      - "mobile/package.json"
+      - "mobile/package-lock.json"
+
+jobs:
+  # Blocking on PRs: production dependencies only. Every current high/critical advisory
+  # in this repo sits in build/test/asset-generation tooling (vite -> postcss/nanoid,
+  # @capacitor/assets -> sharp/tar/xcode, @sveltejs/kit) — none of it ships to users or
+  # runs in production. --omit=dev keeps the gate meaningful for the deps that actually
+  # matter (hono, mongodb, bcryptjs, jsonwebtoken) without blocking the whole stack on a
+  # devtool CVE that has no fixed release.
+  audit-prod:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        workdir: [".", "mobile"]
+    defaults:
+      run:
+        working-directory: ${{ matrix.workdir }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: npm audit (production deps, high and critical)
+        run: npm audit --omit=dev --audit-level=high
+
+  # Informational: the full tree, dev deps included. Runs on the weekly schedule and on
+  # manual dispatch only, and never fails the build — it's a visibility signal for
+  # devtool advisories, not a merge gate. Check its logs when triaging Dependabot PRs.
+  audit-full:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        workdir: [".", "mobile"]
+    defaults:
+      run:
+        working-directory: ${{ matrix.workdir }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: npm audit (full tree, informational)
+        run: npm audit --audit-level=high
+        continue-on-error: true
