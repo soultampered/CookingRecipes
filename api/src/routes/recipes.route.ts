@@ -1,18 +1,19 @@
 import { Hono } from 'hono';
-import type { Recipe } from "../types/recipe.js";
 import { recipeService } from "../services/recipes.service.js";
 import { recipeInventoryService } from "../services/recipeInventory.service.js"
 import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
 import { requireVerified } from "../middleware/requireVerified.middleware.js";
+import { validateJson } from "../middleware/validate.middleware.js";
+import { createRecipeSchema, updateRecipeSchema } from "../schemas/recipe.schema.js";
 
 const recipeRoutes = new Hono<{ Variables: AuthVariables }>();
 
 recipeRoutes.use('*', authMiddleware);
 recipeRoutes.use('*', requireVerified);
 
-recipeRoutes.post('/', async (c) => {
+recipeRoutes.post('/', validateJson(createRecipeSchema), async (c) => {
     try {
-        const body = await c.req.json<Recipe>();
+        const body = c.req.valid('json');
         const newRecipe = await recipeService.createRecipe({ ...body, userId: c.get('userId') });
         return c.json(newRecipe, 201);
     } catch (err) {
@@ -54,11 +55,11 @@ recipeRoutes.get('/:id', async (c) => {
     }
 });
 
-recipeRoutes.patch('/:id', async (c) => {
+recipeRoutes.patch('/:id', validateJson(updateRecipeSchema), async (c) => {
     try {
         const existing = await recipeService.getRecipeById(c.req.param('id'));
         if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
-        const body = await c.req.json<Partial<Recipe>>();
+        const body = c.req.valid('json');
         const updated = await recipeService.updateRecipe(c.req.param('id'), body);
         return c.json(updated, 200);
     } catch (err) {

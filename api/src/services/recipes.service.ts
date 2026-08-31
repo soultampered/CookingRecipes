@@ -1,5 +1,5 @@
 import { recipeModel } from '../models/index.js';
-import type { Recipe } from '../types/recipe.js';
+import type { Recipe, NewRecipe } from '../types/recipe.js';
 
 export const recipeService = {
     async getAllRecipes(userId: string) {
@@ -12,7 +12,7 @@ export const recipeService = {
         return recipe;
     },
 
-    async createRecipe(recipe: Recipe) {
+    async createRecipe(recipe: NewRecipe) {
         const newRecipe = await recipeModel.create(recipe);
         if (!newRecipe) throw new Error('Recipe not created');
         return newRecipe;
