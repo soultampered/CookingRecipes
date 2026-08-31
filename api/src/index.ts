@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { secureHeaders } from 'hono/secure-headers';
+import { bodyLimit } from 'hono/body-limit';
 import recipeRoutes from './routes/recipes.route.js';
 import inventoryRoutes from "./routes/inventory.route.js";
 import shoppingListRoute from "./routes/shoppingList.route.js"
@@ -10,6 +11,17 @@ import authRoute from "./routes/auth.route.js";
 const app = new Hono();
 
 app.use('*', secureHeaders());
+
+// No route accepts file uploads — every body is JSON, so 1MB comfortably covers the
+// largest legitimate payload (a recipe with a long instructions/ingredients list) with
+// plenty of headroom, while still capping an oversized-payload DoS attempt.
+app.use(
+    '*',
+    bodyLimit({
+        maxSize: 1 * 1024 * 1024,
+        onError: (c) => c.json({ error: 'Request body too large' }, 413)
+    })
+);
 
 // Capacitor's WebView sends these origins by default (iOS: capacitor://localhost,
 // Android: http://localhost); https://localhost covers a custom server.hostname/scheme
