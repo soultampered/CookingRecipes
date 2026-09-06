@@ -846,7 +846,11 @@
 		gap: 0.3rem;
 	}
 	.qty-edit :global(.stepper) {
-		width: 6.5rem;
+		/* Was a fixed 6.5rem, which left ~1.7rem for the number input after the two
+		   2.4rem step buttons — clipped anything past 2 digits (STO-111). Size to
+		   content instead; QuantityStepper's input carries its own min-width floor. */
+		width: auto;
+		flex: 0 0 auto;
 	}
 	.qty-done {
 		flex: 0 0 auto;
