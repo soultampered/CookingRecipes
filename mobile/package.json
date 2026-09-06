@@ -19,7 +19,7 @@
 		"@capacitor/assets": "^3.0.5",
 		"@capacitor/cli": "8.4.2",
 		"@sveltejs/adapter-static": "^3.0.10",
-		"@sveltejs/kit": "^2.63.0",
+		"@sveltejs/kit": "^2.70.3",
 		"@sveltejs/vite-plugin-svelte": "^7.3.0",
 		"patch-package": "^8.0.1",
 		"svelte": "^5.57.0",
