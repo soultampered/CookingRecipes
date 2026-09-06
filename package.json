@@ -14,7 +14,7 @@
     "dotenv": "^17.2.0",
     "hono": "^4.8.5",
     "jsonwebtoken": "^9.0.3",
-    "mongodb": "^6.17.0",
+    "mongodb": "^7.6.0",
     "zod": "^4.5.4"
   },
   "devDependencies": {
