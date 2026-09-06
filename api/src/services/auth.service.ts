@@ -3,13 +3,16 @@ import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { userModel, stripPassword } from "../models/user.model.js";
 import { emailService } from "./email.service.js";
+import { securityEventService } from "./securityEvent.service.js";
+import { isPasswordStrong } from "./passwordPolicy.js";
+import { signingSecret } from "./jwtSecrets.js";
 import type { NewUser, User } from "../types/user.js";
 
 const ACCESS_TOKEN_TTL = "15m";
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 function signAccessToken(userId: string): string {
-    return jwt.sign({ userId }, process.env.JWT_SECRET!, { expiresIn: ACCESS_TOKEN_TTL });
+    return jwt.sign({ userId }, signingSecret, { expiresIn: ACCESS_TOKEN_TTL });
 }
 
 function generateRefreshToken(familyId: string): {
@@ -36,6 +39,20 @@ async function issueTokenPair(userId: string): Promise<{ accessToken: string; re
 const CODE_TTL_MS = 10 * 60 * 1000;
 const RESEND_COOLDOWN_MS = 60 * 1000;
 
+// Distinct from STO-31's IP-based rate limiting: this defends one specific account
+// against a distributed attack (many IPs), which IP rate limiting alone can't catch.
+const LOCKOUT_THRESHOLD = 5;
+const LOCKOUT_MAX_MINUTES = 60;
+
+// Independent of STO-31's per-endpoint rate limit: a per-account attempt counter that
+// invalidates the code itself once exhausted, so a generous rate limit elsewhere can't
+// leave the full 10-minute window open to guess all 1M combinations.
+const MAX_CODE_ATTEMPTS = 5;
+
+function lockoutMinutesFor(failedAttempts: number): number {
+    return Math.min(2 ** (failedAttempts - LOCKOUT_THRESHOLD), LOCKOUT_MAX_MINUTES);
+}
+
 function generateCode(): { code: string; expiresAt: Date } {
     // Plaintext by design: unlike the password hash, this code is single-use, expires in
     // 10 minutes, and only useful to someone who already has DB access — at which point
@@ -49,6 +66,8 @@ export const authService = {
     async register(
         data: NewUser
     ): Promise<{ accessToken: string; refreshToken: string; user: Omit<User, "password"> }> {
+        if (!isPasswordStrong(data.password)) throw new Error("WEAK_PASSWORD");
+
         const existing = await userModel.findByUsernameOrEmail(data.username);
         const existingByEmail = await userModel.findByUsernameOrEmail(data.email);
         if (existing || existingByEmail) throw new Error("DUPLICATE_NAME");
@@ -73,6 +92,7 @@ export const authService = {
         }
 
         const { accessToken, refreshToken } = await issueTokenPair(created._id!.toString());
+        await securityEventService.record(created._id!.toString(), "register");
         return { accessToken, refreshToken, user: stripPassword(created) };
     },
 
@@ -83,10 +103,30 @@ export const authService = {
         const user = await userModel.findByUsernameOrEmail(identifier);
         if (!user) throw new Error("INVALID_CREDENTIALS");
 
-        const valid = await bcrypt.compare(password, user.password);
-        if (!valid) throw new Error("INVALID_CREDENTIALS");
+        const userId = user._id!.toString();
 
-        const { accessToken, refreshToken } = await issueTokenPair(user._id!.toString());
+        if (user.lockedUntil && user.lockedUntil > new Date()) {
+            throw new Error("ACCOUNT_LOCKED");
+        }
+
+        const valid = await bcrypt.compare(password, user.password);
+        if (!valid) {
+            const failedLoginAttempts = (user.failedLoginAttempts ?? 0) + 1;
+            const update: Partial<User> = { failedLoginAttempts };
+            if (failedLoginAttempts >= LOCKOUT_THRESHOLD) {
+                update.lockedUntil = new Date(Date.now() + lockoutMinutesFor(failedLoginAttempts) * 60 * 1000);
+            }
+            await userModel.update(userId, update);
+            await securityEventService.record(userId, "login_failed");
+            throw new Error("INVALID_CREDENTIALS");
+        }
+
+        if (user.failedLoginAttempts || user.lockedUntil) {
+            await userModel.update(userId, { failedLoginAttempts: 0, lockedUntil: null });
+        }
+
+        const { accessToken, refreshToken } = await issueTokenPair(userId);
+        await securityEventService.record(userId, "login_success");
         return { accessToken, refreshToken, user: stripPassword(user) };
     },
 
@@ -99,7 +139,14 @@ export const authService = {
         const user = await userModel.findById(userId);
         if (user.emailVerified) return stripPassword(user);
 
+        if ((user.verificationCodeAttempts ?? 0) >= MAX_CODE_ATTEMPTS) {
+            throw new Error("TOO_MANY_ATTEMPTS");
+        }
+
         if (!user.verificationCode || user.verificationCode !== code) {
+            await userModel.update(userId, {
+                verificationCodeAttempts: (user.verificationCodeAttempts ?? 0) + 1
+            });
             throw new Error("INVALID_CODE");
         }
         if (!user.verificationCodeExpiresAt || user.verificationCodeExpiresAt < new Date()) {
@@ -109,8 +156,10 @@ export const authService = {
         const updated = await userModel.update(userId, {
             emailVerified: true,
             verificationCode: null,
-            verificationCodeExpiresAt: null
+            verificationCodeExpiresAt: null,
+            verificationCodeAttempts: 0
         });
+        await securityEventService.record(userId, "email_verified");
         return stripPassword(updated);
     },
 
@@ -133,7 +182,8 @@ export const authService = {
         await emailService.sendVerificationEmail(user.email, code);
         await userModel.update(userId, {
             verificationCode: code,
-            verificationCodeExpiresAt: expiresAt
+            verificationCodeExpiresAt: expiresAt,
+            verificationCodeAttempts: 0
         });
     },
 
@@ -157,11 +207,21 @@ export const authService = {
             console.error("Failed to send password reset email:", err);
             return;
         }
-        await userModel.update(user._id!.toString(), { resetCode: code, resetCodeExpiresAt: expiresAt });
+        await userModel.update(user._id!.toString(), {
+            resetCode: code,
+            resetCodeExpiresAt: expiresAt,
+            resetCodeAttempts: 0
+        });
+        await securityEventService.record(user._id!.toString(), "password_reset_requested");
     },
 
     async resetPassword(identifier: string, code: string, newPassword: string): Promise<void> {
         const user = await userModel.findByUsernameOrEmail(identifier);
+
+        if (user && (user.resetCodeAttempts ?? 0) >= MAX_CODE_ATTEMPTS) {
+            throw new Error("INVALID_RESET");
+        }
+
         const valid =
             user &&
             user.resetCode &&
@@ -169,7 +229,15 @@ export const authService = {
             user.resetCodeExpiresAt &&
             user.resetCodeExpiresAt > new Date();
 
-        if (!valid) throw new Error("INVALID_RESET");
+        if (!valid) {
+            if (user) {
+                await userModel.update(user._id!.toString(), {
+                    resetCodeAttempts: (user.resetCodeAttempts ?? 0) + 1
+                });
+            }
+            throw new Error("INVALID_RESET");
+        }
+        if (!isPasswordStrong(newPassword)) throw new Error("WEAK_PASSWORD");
 
         const hashed = await bcrypt.hash(newPassword, 10);
         // A reset clears every refresh token (kill every session everywhere, not just this
@@ -180,9 +248,11 @@ export const authService = {
             password: hashed,
             resetCode: null,
             resetCodeExpiresAt: null,
+            resetCodeAttempts: 0,
             refreshTokens: [],
             mustResetPassword: false
         });
+        await securityEventService.record(user._id!.toString(), "password_reset_completed");
     },
 
     async refreshAccessToken(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
@@ -203,6 +273,7 @@ export const authService = {
             await userModel.removeRefreshTokenFamily(userId, entry.familyId);
             await userModel.update(userId, { mustResetPassword: true });
             console.warn(`Refresh token reuse detected for user ${userId} — family ${entry.familyId} revoked`);
+            await securityEventService.record(userId, "token_reuse_detected", { familyId: entry.familyId });
             throw new Error("TOKEN_REUSE_DETECTED");
         }
 
@@ -222,5 +293,9 @@ export const authService = {
         const entry = user.refreshTokens?.find((t) => t.token === refreshToken);
         if (!entry) return;
         await userModel.removeRefreshTokenFamily(userId, entry.familyId);
+    },
+
+    async listSecurityEvents(userId: string) {
+        return securityEventService.listForUser(userId);
     }
 };

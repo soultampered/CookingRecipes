@@ -13,9 +13,13 @@ export interface User {
     emailVerified: boolean;
     verificationCode?: string | null;
     verificationCodeExpiresAt?: Date | null;
+    verificationCodeAttempts?: number;
     resetCode?: string | null;
     resetCodeExpiresAt?: Date | null;
+    resetCodeAttempts?: number;
     mustResetPassword: boolean;
+    failedLoginAttempts?: number;
+    lockedUntil?: Date | null;
     refreshTokens?: { token: string; familyId: string; expiresAt: Date; used: boolean }[];
     preferences?: {
         dietaryRestrictions?: string[];

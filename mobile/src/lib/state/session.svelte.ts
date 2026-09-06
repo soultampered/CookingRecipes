@@ -1,5 +1,5 @@
 import { goto } from '$app/navigation';
-import { Preferences } from '@capacitor/preferences';
+import { SecureStorage } from '@aparajita/capacitor-secure-storage';
 import type { User } from '$lib/types/user';
 import { getCurrentUser } from '$lib/api/auth';
 import { setAuthToken, setRefreshToken } from '$lib/api/client';
@@ -18,9 +18,9 @@ class SessionState {
 	ready = $state(false);
 
 	async restore() {
-		const [{ value: token }, { value: refreshToken }] = await Promise.all([
-			Preferences.get({ key: TOKEN_KEY }),
-			Preferences.get({ key: REFRESH_TOKEN_KEY })
+		const [token, refreshToken] = await Promise.all([
+			SecureStorage.getItem(TOKEN_KEY),
+			SecureStorage.getItem(REFRESH_TOKEN_KEY)
 		]);
 		if (!token || !refreshToken) {
 			this.ready = true;
@@ -39,10 +39,7 @@ class SessionState {
 		} catch {
 			setAuthToken(null);
 			setRefreshToken(null);
-			await Promise.all([
-				Preferences.remove({ key: TOKEN_KEY }),
-				Preferences.remove({ key: REFRESH_TOKEN_KEY })
-			]);
+			await Promise.all([SecureStorage.removeItem(TOKEN_KEY), SecureStorage.removeItem(REFRESH_TOKEN_KEY)]);
 		}
 		this.ready = true;
 	}
@@ -62,8 +59,8 @@ class SessionState {
 		setAuthToken(accessToken);
 		setRefreshToken(refreshToken);
 		await Promise.all([
-			Preferences.set({ key: TOKEN_KEY, value: accessToken }),
-			Preferences.set({ key: REFRESH_TOKEN_KEY, value: refreshToken })
+			SecureStorage.setItem(TOKEN_KEY, accessToken),
+			SecureStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
 		]);
 	}
 
@@ -79,10 +76,7 @@ class SessionState {
 		this.user = null;
 		setAuthToken(null);
 		setRefreshToken(null);
-		await Promise.all([
-			Preferences.remove({ key: TOKEN_KEY }),
-			Preferences.remove({ key: REFRESH_TOKEN_KEY })
-		]);
+		await Promise.all([SecureStorage.removeItem(TOKEN_KEY), SecureStorage.removeItem(REFRESH_TOKEN_KEY)]);
 	}
 }
 
@@ -106,6 +100,6 @@ onForceLogout(() => {
 onTokensRefreshed(({ accessToken, refreshToken }) => {
 	session.token = accessToken;
 	session.refreshToken = refreshToken;
-	Preferences.set({ key: TOKEN_KEY, value: accessToken });
-	Preferences.set({ key: REFRESH_TOKEN_KEY, value: refreshToken });
+	SecureStorage.setItem(TOKEN_KEY, accessToken);
+	SecureStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
 });

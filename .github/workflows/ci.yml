@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch: {}
+
+jobs:
+  # API type safety. The stacked security PRs change route signatures, shared types, and
+  # middleware Variables generics with nothing verifying they still compile — this closes
+  # that gap. `npm test` is deliberately not run here yet: the root `test` script is bare
+  # `vitest` (exits 0 even on a failed suite) and recipeRoute.spec.ts throws at import
+  # unless MONGO_URI is set. Wiring tests into CI needs `vitest run` + a Mongo test double
+  # (mongodb-memory-server) first — tracked separately.
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - name: tsc --noEmit
+        run: npx tsc --noEmit
+
+  # Mobile: svelte-check fails on type/template errors (not on warnings).
+  svelte-check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - name: svelte-check
+        run: npm run check

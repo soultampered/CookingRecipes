@@ -6,6 +6,7 @@
 	import { ApiError } from '$lib/api/client';
 	import { t } from '$lib/i18n/index.svelte';
 	import type { User } from '$lib/types/user';
+	import { PASSWORD_PATTERN } from '$lib/passwordPolicy';
 
 	function postAuthRedirect(user: User) {
 		if (user.mustResetPassword) return goto('/forgot-password?required=1');
@@ -92,7 +93,15 @@
 			</label>
 			<label>
 				{t('welcome.password')}
-				<input type="password" bind:value={registerPassword} required />
+				<input
+					type="password"
+					bind:value={registerPassword}
+					required
+					minlength="8"
+					pattern={PASSWORD_PATTERN}
+					title={t('welcome.passwordHint')}
+				/>
+				<small>{t('welcome.passwordHint')}</small>
 			</label>
 			<button type="submit" disabled={registering}>
 				{registering ? t('welcome.creating') : t('welcome.createAccount')}
