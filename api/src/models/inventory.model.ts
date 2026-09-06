@@ -1,6 +1,6 @@
 import { ObjectId } from "mongodb";
 import { connectToDatabase } from "../mongo.js";
-import type { Inventory } from "../types/inventory.js";
+import type { Inventory, NewInventory } from "../types/inventory.js";
 
 export const inventoryModel = {
     findAll: async (userId?: string): Promise<Inventory[]> => {
@@ -32,19 +32,20 @@ export const inventoryModel = {
         return items;
     },
 
-    create: async (data: Inventory): Promise<Inventory> => {
+    create: async (data: NewInventory): Promise<Inventory> => {
         const db = await connectToDatabase();
         const now = new Date();
+        // Generated here rather than left to insertOne's auto-generation so `item` can be
+        // fully typed as Inventory (which requires _id) without a second round-trip to
+        // reattach result.insertedId afterward.
         const item: Inventory = {
             ...data,
+            _id: new ObjectId(),
             createdAt: now,
             updatedAt: now
         };
-        const result = await db.collection<Inventory>("inventory").insertOne(item);
-        return {
-            ...item,
-            _id: result.insertedId
-        };
+        await db.collection<Inventory>("inventory").insertOne(item);
+        return item;
     },
 
     update: async (id: string, data: Partial<Inventory>): Promise<Inventory> => {

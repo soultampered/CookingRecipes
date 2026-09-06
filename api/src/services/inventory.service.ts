@@ -1,5 +1,5 @@
 import { inventoryModel } from "../models/index.js";
-import type { Inventory } from "../types/inventory.js"
+import type { Inventory, NewInventory } from "../types/inventory.js"
 import { categorizeItemName } from "./foodCategory.service.js";
 
 export const inventoryService = {
@@ -22,7 +22,7 @@ export const inventoryService = {
         return inventoryModel.findByIds(ids);
     },
 
-    async createInventory(data: Inventory) {
+    async createInventory(data: NewInventory) {
         if (!data.name || data.quantity == null) {
             throw new Error("INVALID_INPUT");
         }

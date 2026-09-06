@@ -2,7 +2,10 @@ import type {ObjectId} from "mongodb";
 import type { Unit } from  "./unit.js"
 
 export interface RecipeIngredient {
-    inventoryItemId: ObjectId;
+    // Never actually stored/read as a real ObjectId anywhere (recipeInventory.service.ts
+    // only ever calls .toString() on it) — it's the inventory item's id as a plain hex
+    // string, same as every other id that crosses the JSON boundary.
+    inventoryItemId: string;
     quantity: number;
     unit?: Unit;
 }
@@ -41,3 +44,5 @@ export interface MissingIngredient {
     needed: number;
     unit?: string;
 }
+
+export type NewRecipe = Omit<Recipe, "_id" | "createdAt" | "updatedAt">;

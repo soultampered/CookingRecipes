@@ -1,6 +1,6 @@
 import { ObjectId } from 'mongodb';
 import { connectToDatabase } from '../mongo.js';
-import type { Recipe } from '../types/recipe.js';
+import type { Recipe, NewRecipe } from '../types/recipe.js';
 
 export const recipeModel = {
     findAll: async (userId: string): Promise<Recipe[]> => {
@@ -20,16 +20,20 @@ export const recipeModel = {
         return recipe;
     },
 
-    create: async (data: Recipe): Promise<Recipe> => {
+    create: async (data: NewRecipe): Promise<Recipe> => {
         const db = await connectToDatabase();
         const now = new Date();
+        // Generated here rather than left to insertOne's auto-generation so `recipe` can be
+        // fully typed as Recipe (which requires _id) without a second round-trip to
+        // reattach result.insertedId afterward.
         const recipe: Recipe = {
             ...data,
+            _id: new ObjectId(),
             createdAt: now,
             updatedAt: now
         };
-        const result = await db.collection<Recipe>('recipes').insertOne(recipe);
-        return { ...recipe, _id: result.insertedId };
+        await db.collection<Recipe>('recipes').insertOne(recipe);
+        return recipe;
     },
 
     update: async (id: string, data: Partial<Recipe>): Promise<Recipe> => {

@@ -1,17 +1,18 @@
 import { Hono } from "hono";
-import type { Inventory } from "../types/inventory.js";
 import { inventoryService } from "../services/inventory.service.js";
 import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
 import { requireVerified } from "../middleware/requireVerified.middleware.js";
+import { validateJson } from "../middleware/validate.middleware.js";
+import { createInventorySchema, updateInventorySchema } from "../schemas/inventory.schema.js";
 
 const inventoryRoutes = new Hono<{ Variables: AuthVariables }>();
 
 inventoryRoutes.use('*', authMiddleware);
 inventoryRoutes.use('*', requireVerified);
 
-inventoryRoutes.post('/', async (c) => {
+inventoryRoutes.post('/', validateJson(createInventorySchema), async (c) => {
     try {
-        const body = await c.req.json<Inventory>();
+        const body = c.req.valid('json');
         const newInventory = await inventoryService.createInventory({ ...body, userId: c.get('userId') });
         return c.json(newInventory, 201);
     } catch (err) {
@@ -50,11 +51,11 @@ inventoryRoutes.get('/:id', async (c) => {
     }
 });
 
-inventoryRoutes.put('/:id', async (c) => {
+inventoryRoutes.put('/:id', validateJson(updateInventorySchema), async (c) => {
     try {
         const existing = await inventoryService.getInventoryById(c.req.param('id'));
         if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
-        const data = await c.req.json<Partial<Inventory>>();
+        const data = c.req.valid('json');
         const item = await inventoryService.updateInventory(c.req.param('id'), data);
         return c.json(item);
     } catch (err) {
