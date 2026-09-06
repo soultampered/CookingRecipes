@@ -32,7 +32,7 @@
 	}
 	.empty-message {
 		color: var(--ink-soft);
-		font-size: 0.9rem;
+		font-size: var(--text-base);
 		margin: 0;
 	}
 	.empty-cta {
@@ -42,7 +42,7 @@
 		background: var(--accent);
 		color: var(--paper-raised);
 		font-weight: 600;
-		font-size: 0.9rem;
+		font-size: var(--text-base);
 		text-decoration: none;
 		cursor: pointer;
 	}

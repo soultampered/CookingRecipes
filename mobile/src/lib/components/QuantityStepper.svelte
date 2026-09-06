@@ -67,7 +67,11 @@
 	}
 	.stepper input {
 		flex: 1;
-		min-width: 0;
+		/* Never collapse below ~4 glyphs so "100", "250" and "12.5" stay fully visible
+		   even in a width-constrained container (STO-111 — the shopping-list inline
+		   editor). Roomier call sites (add-item form, inventory/recipe forms) are
+		   unaffected; min-width only sets a floor. */
+		min-width: 3.75ch;
 		width: 100%;
 		border: none;
 		border-left: 1px solid var(--line);
