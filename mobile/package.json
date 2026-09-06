@@ -17,7 +17,7 @@
 	},
 	"devDependencies": {
 		"@capacitor/assets": "^3.0.5",
-		"@capacitor/cli": "8.4.2",
+		"@capacitor/cli": "8.5.1",
 		"@sveltejs/adapter-static": "^3.0.10",
 		"@sveltejs/kit": "^2.70.3",
 		"@sveltejs/vite-plugin-svelte": "^7.3.0",
