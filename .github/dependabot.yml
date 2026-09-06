@@ -9,6 +9,13 @@ updates:
     directory: "/mobile"
     schedule:
       interval: "weekly"
+    ignore:
+      # The Svelte toolchain (@sveltejs/kit, svelte-check) peer-caps TypeScript at ^6
+      # as of 2026-09. TS 7 (the native compiler) needs a transitional dual-install
+      # (typescript@~6 + @typescript/native) and a --tsgo flag, which svelte-check
+      # enforces. Revisit once svelte-check ships non-transitional TS 7 support.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
