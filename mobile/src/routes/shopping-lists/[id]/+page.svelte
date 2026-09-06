@@ -18,6 +18,7 @@
 	import { dragToReorder } from '$lib/utils/dragToReorder.svelte';
 	import QuantityStepper from '$lib/components/QuantityStepper.svelte';
 	import { hapticLight } from '$lib/utils/haptics';
+	import { keyboardInset } from '$lib/state/keyboardInset.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import { shoppingListTemplates } from '$lib/state/shoppingListTemplates.svelte';
 	import type { ShoppingListItem } from '$lib/types/shoppingList';
@@ -543,24 +544,6 @@
 		</div>
 	{/if}
 
-	<form class="add-item-form" onsubmit={handleAddItem}>
-		<input
-			type="text"
-			placeholder={t('shoppingList.itemNamePlaceholder')}
-			bind:value={itemName}
-			bind:this={itemNameInput}
-			required
-		/>
-		<QuantityStepper
-			bind:value={itemQuantity}
-			min={1}
-			decreaseLabel={t('shoppingList.decreaseQuantity')}
-			increaseLabel={t('shoppingList.increaseQuantity')}
-			quantityLabel={t('shoppingList.quantityAriaLabel')}
-		/>
-		<button type="submit" disabled={adding}>{adding ? t('common.adding') : t('shoppingList.add')}</button>
-	</form>
-
 	{#if data.list.items.length > 0}
 		<button
 			type="button"
@@ -582,6 +565,34 @@
 		</button>
 	</div>
 </div>
+
+<!-- STO-110: docked add-item bar. Fixed above the NavBar at rest; rides flush above
+	the keyboard when focused (keyboardInset is tracked on both platforms). Hidden while
+	the rename / inline-quantity editors hold the keyboard, since those aren't "adding". -->
+<form
+	class="add-item-form"
+	class:hidden={editingName || editingQuantityId !== null}
+	style:bottom={keyboardInset.current > 0
+		? `calc(env(safe-area-inset-bottom) + ${keyboardInset.current}px)`
+		: 'calc(env(safe-area-inset-bottom) + 4.75rem)'}
+	onsubmit={handleAddItem}
+>
+	<input
+		type="text"
+		placeholder={t('shoppingList.itemNamePlaceholder')}
+		bind:value={itemName}
+		bind:this={itemNameInput}
+		required
+	/>
+	<QuantityStepper
+		bind:value={itemQuantity}
+		min={1}
+		decreaseLabel={t('shoppingList.decreaseQuantity')}
+		increaseLabel={t('shoppingList.increaseQuantity')}
+		quantityLabel={t('shoppingList.quantityAriaLabel')}
+	/>
+	<button type="submit" disabled={adding}>{adding ? t('common.adding') : t('shoppingList.add')}</button>
+</form>
 
 <ConfirmModal
 	open={confirmingClearChecked}
@@ -637,6 +648,9 @@
 		max-width: 480px;
 		margin: 0 auto;
 		padding: 1.25rem;
+		/* Clear the fixed docked add-item bar (STO-110) so the last rows / danger zone
+		   stay scrollable above it. */
+		padding-bottom: 9rem;
 		display: flex;
 		flex-direction: column;
 		gap: 0.9rem;
@@ -900,9 +914,21 @@
 		cursor: default;
 	}
 	.add-item-form {
+		position: fixed;
+		left: 0;
+		right: 0;
+		z-index: 50;
 		display: flex;
 		gap: 0.5rem;
-		margin-top: 0.4rem;
+		max-width: 480px;
+		margin: 0 auto;
+		padding: 0.6rem 1.25rem;
+		background: var(--paper-raised);
+		border-top: 1px solid var(--line);
+		transition: bottom 0.18s ease;
+	}
+	.add-item-form.hidden {
+		display: none;
 	}
 	.add-item-form input[type='text'] {
 		flex: 2;
