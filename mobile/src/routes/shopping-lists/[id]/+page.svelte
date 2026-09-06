@@ -2,6 +2,7 @@
 	import { goto, invalidate } from '$app/navigation';
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
+	import { fly, fade } from 'svelte/transition';
 	import {
 		addItem,
 		deleteShoppingList,
@@ -194,6 +195,9 @@
 	}
 
 	let quickAdding = $state<string | null>(null);
+	// STO-112: suggestions live in a side panel, closed on load ("collapsed unless I
+	// click"). Transient — no persistence needed, a closed drawer is the resting state.
+	let showSuggestions = $state(false);
 
 	async function handleQuickAdd(name: string) {
 		quickAdding = name;
@@ -348,6 +352,17 @@
 				✎
 			</button>
 		</div>
+	{/if}
+
+	{#if data.recentNames.length > 0}
+		<button
+			type="button"
+			class="suggestions-trigger"
+			onclick={() => (showSuggestions = true)}
+		>
+			{t('shoppingList.suggestionsLabel')}
+			<span class="suggestions-count">{data.recentNames.length}</span>
+		</button>
 	{/if}
 
 	{#if data.list.items.length === 0}
@@ -529,21 +544,6 @@
 		{/each}
 	{/if}
 
-	{#if data.recentNames.length > 0}
-		<div class="quick-add-chips">
-			{#each data.recentNames as name (name)}
-				<button
-					type="button"
-					class="chip"
-					disabled={quickAdding !== null}
-					onclick={() => handleQuickAdd(name)}
-				>
-					{quickAdding === name ? t('common.adding') : `+ ${name}`}
-				</button>
-			{/each}
-		</div>
-	{/if}
-
 	{#if data.list.items.length > 0}
 		<button
 			type="button"
@@ -593,6 +593,45 @@
 	/>
 	<button type="submit" disabled={adding}>{adding ? t('common.adding') : t('shoppingList.add')}</button>
 </form>
+
+<!-- STO-112: Suggestions as a right-edge slide-in list (closed on load). -->
+{#if showSuggestions}
+	<button
+		type="button"
+		class="suggestions-backdrop"
+		aria-label={t('common.cancel')}
+		onclick={() => (showSuggestions = false)}
+		transition:fade={{ duration: 150 }}
+	></button>
+	<aside class="suggestions-panel" transition:fly={{ x: 320, duration: 200 }}>
+		<div class="suggestions-panel-head">
+			<span>{t('shoppingList.suggestionsLabel')}</span>
+			<button
+				type="button"
+				class="suggestions-panel-close"
+				aria-label={t('common.cancel')}
+				onclick={() => (showSuggestions = false)}
+			>
+				×
+			</button>
+		</div>
+		<ul class="suggestions-list">
+			{#each data.recentNames as name (name)}
+				<li>
+					<button
+						type="button"
+						class="suggestion-item"
+						disabled={quickAdding !== null}
+						onclick={() => handleQuickAdd(name)}
+					>
+						<span class="suggestion-name">{name}</span>
+						<span class="suggestion-add">{quickAdding === name ? t('common.adding') : '+'}</span>
+					</button>
+				</li>
+			{/each}
+		</ul>
+	</aside>
+{/if}
 
 <ConfirmModal
 	open={confirmingClearChecked}
@@ -894,24 +933,105 @@
 		min-width: 2.2rem;
 		min-height: 2.2rem;
 	}
-	.quick-add-chips {
-		display: flex;
-		flex-wrap: wrap;
+	/* STO-112: "Suggestions" is a pill trigger above the list that opens a right-edge
+	   slide-in list panel. Closed on load. */
+	.suggestions-trigger {
+		align-self: flex-start;
+		display: inline-flex;
+		align-items: center;
 		gap: 0.4rem;
-		margin-top: 0.4rem;
-	}
-	.chip {
 		border: 1px solid var(--line);
 		border-radius: 999px;
-		padding: 0.35rem 0.75rem;
-		font-size: var(--text-sm);
+		padding: 0.35rem 0.8rem;
 		background: var(--paper-raised);
 		color: var(--ink);
+		font-size: var(--text-sm);
+		font-weight: 600;
 		cursor: pointer;
 	}
-	.chip:disabled {
+	.suggestions-count {
+		background: var(--accent-soft);
+		color: var(--accent);
+		border-radius: 999px;
+		padding: 0 0.4rem;
+		font-size: var(--text-xs);
+		font-weight: 700;
+	}
+	.suggestions-backdrop {
+		position: fixed;
+		inset: 0;
+		z-index: 60;
+		border: none;
+		background: rgba(0, 0, 0, 0.4);
+		cursor: pointer;
+	}
+	.suggestions-panel {
+		position: fixed;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 61;
+		width: min(320px, 85vw);
+		display: flex;
+		flex-direction: column;
+		background: var(--paper-raised);
+		border-left: 1px solid var(--line);
+		box-shadow: -8px 0 24px -12px rgba(0, 0, 0, 0.35);
+		padding-top: env(safe-area-inset-top);
+		padding-bottom: env(safe-area-inset-bottom);
+	}
+	.suggestions-panel-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0.9rem 1rem;
+		border-bottom: 1px solid var(--line);
+		font-weight: 600;
+	}
+	.suggestions-panel-close {
+		border: none;
+		background: none;
+		color: var(--ink-soft);
+		font-size: 1.4rem;
+		line-height: 1;
+		cursor: pointer;
+		padding: 0 0.3rem;
+	}
+	.suggestions-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		flex: 1;
+		overflow-y: auto;
+	}
+	.suggestion-item {
+		width: 100%;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.6rem;
+		border: none;
+		border-bottom: 1px solid var(--line);
+		background: none;
+		color: var(--ink);
+		font-size: var(--text-base);
+		text-align: left;
+		padding: 0.75rem 1rem;
+		cursor: pointer;
+	}
+	.suggestion-item:disabled {
 		opacity: 0.6;
 		cursor: default;
+	}
+	.suggestion-name {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.suggestion-add {
+		flex: 0 0 auto;
+		color: var(--accent);
+		font-weight: 700;
 	}
 	.add-item-form {
 		position: fixed;
