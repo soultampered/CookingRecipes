@@ -209,6 +209,13 @@
 		justify-content: space-between;
 		align-items: center;
 		gap: 0.6rem;
+		/* STO-113: at a large text scale the h1 + 3 action buttons don't fit one row —
+		   let the actions block wrap under the title instead of overflowing. */
+		flex-wrap: wrap;
+	}
+	.header h1 {
+		flex: 1 1 auto;
+		min-width: 0;
 	}
 	.actions {
 		display: flex;
@@ -219,7 +226,7 @@
 		padding: 0.55rem 0.7rem;
 		border: 1px solid var(--line);
 		border-radius: 8px;
-		font-size: 0.9rem;
+		font-size: var(--text-base);
 		background: var(--paper-raised);
 		color: var(--ink);
 	}
@@ -231,7 +238,7 @@
 	}
 	.tag-chip-filter {
 		flex: 0 0 auto;
-		font-size: 0.78rem;
+		font-size: var(--text-xs);
 		padding: 0.35rem 0.7rem;
 		border-radius: 999px;
 		border: 1px solid var(--line);
@@ -288,13 +295,13 @@
 	}
 	.empty {
 		color: var(--ink-soft);
-		font-size: 0.9rem;
+		font-size: var(--text-base);
 	}
 	.btn-outline {
 		border: 1px solid var(--line);
 		border-radius: 8px;
 		padding: 0.4rem 0.75rem;
-		font-size: 0.85rem;
+		font-size: var(--text-sm);
 		text-decoration: none;
 		color: var(--ink);
 		background: var(--paper-raised);

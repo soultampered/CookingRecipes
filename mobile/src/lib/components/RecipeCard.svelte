@@ -133,6 +133,7 @@
 	}
 	.grid-wrapper {
 		position: relative;
+		min-width: 0;
 	}
 	.card.grid {
 		flex-direction: column;
@@ -148,6 +149,13 @@
 	}
 	.card.grid .meta {
 		flex-wrap: wrap;
+	}
+	.card.grid .title {
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
 	}
 	.grid-delete {
 		position: absolute;
@@ -179,16 +187,18 @@
 		display: flex;
 		gap: 0.5rem;
 		align-items: center;
-		font-size: 0.8rem;
+		flex-wrap: wrap;
+		font-size: var(--text-xs);
 		color: var(--ink-soft);
 		margin-top: 0.25rem;
 	}
 	.pill {
-		font-size: 0.7rem;
+		font-size: var(--text-xs);
 		font-weight: 600;
 		padding: 0.1rem 0.5rem;
 		border-radius: 999px;
 		text-transform: capitalize;
+		white-space: nowrap;
 	}
 	.pill-easy {
 		background: var(--good-soft);
@@ -207,12 +217,18 @@
 		flex-wrap: wrap;
 		gap: 0.3rem;
 		margin-top: 0.35rem;
+		min-width: 0;
 	}
 	.tag {
-		font-size: 0.72rem;
+		font-size: var(--text-xs);
 		padding: 0.1rem 0.5rem;
 		border-radius: 999px;
 		background: var(--accent-soft);
 		color: var(--accent);
+		/* Keep a long single tag from blowing out a narrow grid card (STO-113). */
+		max-width: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 </style>

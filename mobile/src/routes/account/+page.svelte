@@ -10,6 +10,7 @@
 	import { ApiError } from '$lib/api/client';
 	import { categoryOrder } from '$lib/state/categoryOrder.svelte';
 	import { expirySettings } from '$lib/state/expirySettings.svelte';
+	import { textScale, type TextScale } from '$lib/state/textScale.svelte';
 	import { t, tRaw, locale } from '$lib/i18n/index.svelte';
 	import { dragToReorder } from '$lib/utils/dragToReorder.svelte';
 	import type { Locale } from '$lib/i18n/translations';
@@ -57,6 +58,12 @@
 		{ value: 'en', label: 'English' },
 		{ value: 'fr', label: 'Français' }
 	];
+
+	const TEXT_SIZES = [
+		{ value: 'small', labelKey: 'account.textSizeSmall' },
+		{ value: 'normal', labelKey: 'account.textSizeNormal' },
+		{ value: 'large', labelKey: 'account.textSizeLarge' }
+	] as const satisfies { value: TextScale; labelKey: string }[];
 </script>
 
 <div class="account">
@@ -98,6 +105,22 @@
 					onclick={() => locale.set(lang.value)}
 				>
 					{lang.label}
+				</button>
+			{/each}
+		</div>
+	</div>
+
+	<div class="section language-section">
+		<span class="section-label">{t('account.textSize')}</span>
+		<div class="language-options">
+			{#each TEXT_SIZES as size (size.value)}
+				<button
+					type="button"
+					class="language-btn text-size-btn text-size-{size.value}"
+					class:active={textScale.current === size.value}
+					onclick={() => textScale.set(size.value)}
+				>
+					{t(size.labelKey)}
 				</button>
 			{/each}
 		</div>
@@ -366,6 +389,16 @@
 		color: var(--paper-raised);
 		border-color: var(--accent);
 	}
+	/* Each option previews its own size so the choice is legible before applying. */
+	.text-size-btn.text-size-small {
+		font-size: var(--text-xs);
+	}
+	.text-size-btn.text-size-normal {
+		font-size: var(--text-sm);
+	}
+	.text-size-btn.text-size-large {
+		font-size: var(--text-base);
+	}
 	.expiry-input-row {
 		display: flex;
 		align-items: center;
@@ -454,12 +487,14 @@
 	.danger-link {
 		align-self: flex-start;
 		border: none;
-		background: none;
-		color: var(--bad);
-		font-size: 0.85rem;
-		text-decoration: underline;
+		border-radius: 8px;
+		background: var(--bad);
+		color: var(--paper-raised);
+		font-size: var(--text-sm);
+		font-weight: 600;
+		text-decoration: none;
 		cursor: pointer;
-		padding: 0;
+		padding: 0.55rem 0.9rem;
 	}
 	.danger-copy {
 		font-size: 0.85rem;
@@ -478,9 +513,9 @@
 		flex: 1;
 		padding: 0.7rem;
 		border-radius: 8px;
-		border: 1px solid var(--bad);
-		background: var(--paper-raised);
-		color: var(--bad);
+		border: none;
+		background: var(--bad);
+		color: var(--paper-raised);
 		font-weight: 600;
 		cursor: pointer;
 	}

@@ -32,7 +32,7 @@
 		max-width: 320px;
 		padding: 0.6rem 0.9rem;
 		border-radius: 8px;
-		font-size: 0.85rem;
+		font-size: var(--text-sm);
 		box-shadow: 0 8px 20px -8px rgba(0, 0, 0, 0.3);
 	}
 	.toast-error {

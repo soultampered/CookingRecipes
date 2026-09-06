@@ -643,7 +643,7 @@
 	}
 	.back {
 		align-self: flex-start;
-		font-size: 0.85rem;
+		font-size: var(--text-sm);
 		color: var(--accent);
 		text-decoration: none;
 	}
@@ -709,7 +709,7 @@
 		gap: 0.5rem;
 	}
 	.select-action {
-		font-size: 0.8rem;
+		font-size: var(--text-sm);
 		padding: 0.4rem 0.7rem;
 		border-radius: 8px;
 		border: none;
@@ -740,7 +740,7 @@
 		top: 0;
 		z-index: 2;
 		background: var(--paper);
-		font-size: 0.75rem;
+		font-size: var(--text-xs);
 		font-weight: 600;
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
@@ -818,7 +818,7 @@
 	.item-name {
 		flex: 1;
 		min-width: 0;
-		font-size: 0.9rem;
+		font-size: var(--text-base);
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
@@ -886,7 +886,7 @@
 		border: 1px solid var(--line);
 		border-radius: 999px;
 		padding: 0.35rem 0.75rem;
-		font-size: 0.8rem;
+		font-size: var(--text-sm);
 		background: var(--paper-raised);
 		color: var(--ink);
 		cursor: pointer;
@@ -947,12 +947,15 @@
 		display: flex;
 	}
 	.danger-link {
+		align-self: flex-start;
 		border: none;
-		background: none;
-		color: var(--bad);
-		font-size: 0.85rem;
-		text-decoration: underline;
+		border-radius: 8px;
+		background: var(--bad);
+		color: var(--paper-raised);
+		font-size: var(--text-sm);
+		font-weight: 600;
+		text-decoration: none;
 		cursor: pointer;
-		padding: 0;
+		padding: 0.55rem 0.9rem;
 	}
 </style>

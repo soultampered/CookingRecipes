@@ -37,7 +37,9 @@
 		align-items: center;
 		gap: 0.15rem;
 		text-align: center;
-		font-size: 0.62rem;
+		/* Intentionally below the --text-* scale: 5 tabs across a fixed bar, icon-led.
+		   Nudged up slightly from 0.62rem for legibility without risking label wrap. */
+		font-size: 0.7rem;
 		color: var(--ink-soft);
 		text-decoration: none;
 		padding: 0.2rem 0;
