@@ -87,16 +87,33 @@
 		selectedIds = next;
 	}
 
-	// Selection is a client-only mode overlay, not a gesture — drag/swipe stay wired up but
-	// only actually engage when selectMode is off, so the two interactions never fight.
-	function rowPointerDown(e: PointerEvent, id: string) {
-		if (!selectMode) itemSwipe.onPointerDown(e, id);
+	// Selection is a client-only overlay — drag/swipe stay wired up but only engage when
+	// selectMode is off. itemDrag arms via long-press and hands off to itemSwipe on
+	// horizontal movement (see dragToReorder.svelte.ts), so the two never fight.
+	function rowPointerDown(e: PointerEvent, id: string, orderedIds: string[]) {
+		if (!selectMode) {
+			itemDrag.onPointerDown(e, id, orderedIds, (ev) => itemSwipe.onPointerDown(ev, id));
+		}
 	}
-	function rowPointerMove(e: PointerEvent, id: string) {
-		if (!selectMode) itemSwipe.onPointerMove(e, id);
+	function rowPointerMove(e: PointerEvent, id: string, orderedIds: string[]) {
+		if (!selectMode) {
+			itemDrag.onPointerMove(e, id, orderedIds);
+			itemSwipe.onPointerMove(e, id);
+		}
 	}
-	function rowPointerUp(id: string) {
-		if (!selectMode) itemSwipe.onPointerUp(id);
+	function rowPointerUp(
+		id: string,
+		orderedIds: string[],
+		onReorder: (fromIndex: number, toIndex: number) => void
+	) {
+		if (!selectMode) {
+			itemDrag.onPointerUp(id, onReorder);
+			itemSwipe.onPointerUp(id);
+		}
+	}
+	function rowPointerCancel(id: string) {
+		itemDrag.cancel();
+		itemSwipe.onPointerUp(id);
 	}
 
 	async function bulkMarkChecked() {
@@ -436,38 +453,6 @@
 								onchange={() => toggleSelected(item._id!)}
 								aria-label={t('shoppingList.selectItemAriaLabel', { name: item.name })}
 							/>
-						{:else}
-							<button
-								type="button"
-								class="drag-handle"
-								aria-label={t('recipeForm.dragToReorder')}
-								onpointerdown={(e) =>
-									itemDrag.onPointerDown(
-										e,
-										item._id!,
-										items.map((i) => i._id!)
-									)}
-								onpointermove={(e) =>
-									itemDrag.onPointerMove(
-										e,
-										item._id!,
-										items.map((i) => i._id!)
-									)}
-								onpointerup={() =>
-									itemDrag.onPointerUp(item._id!, (from, to) =>
-										reorderItemsInCategory(category, from, to)
-									)}
-								onpointercancel={() => itemDrag.cancel()}
-							>
-								<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-									<circle cx="9" cy="6" r="1.8" />
-									<circle cx="15" cy="6" r="1.8" />
-									<circle cx="9" cy="12" r="1.8" />
-									<circle cx="15" cy="12" r="1.8" />
-									<circle cx="9" cy="18" r="1.8" />
-									<circle cx="15" cy="18" r="1.8" />
-								</svg>
-							</button>
 						{/if}
 						<div class="swipe-wrapper">
 							<button
@@ -485,12 +470,16 @@
 								class="item-row"
 								class:dragging={itemSwipe.isDragging(item._id!)}
 								style:transform={`translateX(${itemSwipe.offsetFor(item._id!)}px)`}
+								style:touch-action={itemDrag.isDragging(item._id!) ? 'none' : 'auto'}
 								role="group"
 								aria-label={item.name}
-								onpointerdown={(e) => rowPointerDown(e, item._id!)}
-								onpointermove={(e) => rowPointerMove(e, item._id!)}
-								onpointerup={() => rowPointerUp(item._id!)}
-								onpointercancel={() => rowPointerUp(item._id!)}
+								onpointerdown={(e) => rowPointerDown(e, item._id!, items.map((i) => i._id!))}
+								onpointermove={(e) => rowPointerMove(e, item._id!, items.map((i) => i._id!))}
+								onpointerup={() =>
+									rowPointerUp(item._id!, items.map((i) => i._id!), (from, to) =>
+										reorderItemsInCategory(category, from, to)
+									)}
+								onpointercancel={() => rowPointerCancel(item._id!)}
 							>
 								<input
 									type="checkbox"
@@ -818,21 +807,6 @@
 	.item-drag-row.dragging {
 		z-index: 10;
 		transition: none;
-	}
-	.drag-handle {
-		flex: 0 0 auto;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 2.2rem;
-		height: 2.2rem;
-		border: none;
-		background: none;
-		color: var(--ink-soft);
-		cursor: grab;
-		touch-action: none;
-	}
-	.item-drag-row.dragging .drag-handle {
 		cursor: grabbing;
 	}
 	.swipe-wrapper {

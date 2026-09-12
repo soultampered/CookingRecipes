@@ -327,36 +327,23 @@
 				row.id,
 				instructionRows.map((r) => r.id)
 			)}px)`}
+			style:touch-action={instructionDrag.isDragging(row.id) ? 'none' : 'auto'}
+			onpointerdown={(e) =>
+				instructionDrag.onPointerDown(
+					e,
+					row.id,
+					instructionRows.map((r) => r.id)
+				)}
+			onpointermove={(e) =>
+				instructionDrag.onPointerMove(
+					e,
+					row.id,
+					instructionRows.map((r) => r.id)
+				)}
+			onpointerup={() => instructionDrag.onPointerUp(row.id, reorderInstructions)}
+			onpointercancel={() => instructionDrag.cancel()}
 		>
 			<span class="step">{index + 1}.</span>
-			<button
-				type="button"
-				class="drag-handle"
-				aria-label={t('recipeForm.dragToReorder')}
-				onpointerdown={(e) =>
-					instructionDrag.onPointerDown(
-						e,
-						row.id,
-						instructionRows.map((r) => r.id)
-					)}
-				onpointermove={(e) =>
-					instructionDrag.onPointerMove(
-						e,
-						row.id,
-						instructionRows.map((r) => r.id)
-					)}
-				onpointerup={() => instructionDrag.onPointerUp(row.id, reorderInstructions)}
-				onpointercancel={() => instructionDrag.cancel()}
-			>
-				<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-					<circle cx="9" cy="6" r="1.8" />
-					<circle cx="15" cy="6" r="1.8" />
-					<circle cx="9" cy="12" r="1.8" />
-					<circle cx="15" cy="12" r="1.8" />
-					<circle cx="9" cy="18" r="1.8" />
-					<circle cx="15" cy="18" r="1.8" />
-				</svg>
-			</button>
 			<textarea bind:value={row.text} rows="2"></textarea>
 			<button
 				type="button"
@@ -493,21 +480,6 @@
 		background: var(--paper-raised);
 		box-shadow: 0 6px 16px -4px rgba(0, 0, 0, 0.35);
 		transition: none;
-	}
-	.drag-handle {
-		flex: 0 0 auto;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 2.2rem;
-		height: 2.2rem;
-		border: none;
-		background: none;
-		color: var(--ink-soft);
-		cursor: grab;
-		touch-action: none;
-	}
-	.instruction-row.dragging .drag-handle {
 		cursor: grabbing;
 	}
 	.ingredient-row select:first-child {
@@ -530,6 +502,11 @@
 		font-size: 0.8rem;
 		color: var(--ink-soft);
 		flex: 0 0 auto;
+		/* STO-114: only non-interactive grab area left in the row — real touch target. */
+		min-width: 2.2rem;
+		min-height: 2.2rem;
+		display: flex;
+		align-items: center;
 	}
 	.remove {
 		border: none;

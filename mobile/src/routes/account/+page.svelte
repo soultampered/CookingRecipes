@@ -177,26 +177,13 @@
 					class:dragging={categoryDrag.isDragging(category)}
 					use:registerCategoryRef={category}
 					style:transform={`translateY(${categoryDrag.offsetFor(category, [...categoryOrder.current])}px)`}
+					style:touch-action={categoryDrag.isDragging(category) ? 'none' : 'auto'}
+					onpointerdown={(e) => categoryDrag.onPointerDown(e, category, [...categoryOrder.current])}
+					onpointermove={(e) => categoryDrag.onPointerMove(e, category, [...categoryOrder.current])}
+					onpointerup={() =>
+						categoryDrag.onPointerUp(category, (from, to) => categoryOrder.reorder(from, to))}
+					onpointercancel={() => categoryDrag.cancel()}
 				>
-					<button
-						type="button"
-						class="drag-handle"
-						aria-label={t('recipeForm.dragToReorder')}
-						onpointerdown={(e) => categoryDrag.onPointerDown(e, category, [...categoryOrder.current])}
-						onpointermove={(e) => categoryDrag.onPointerMove(e, category, [...categoryOrder.current])}
-						onpointerup={() =>
-							categoryDrag.onPointerUp(category, (from, to) => categoryOrder.reorder(from, to))}
-						onpointercancel={() => categoryDrag.cancel()}
-					>
-						<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-							<circle cx="9" cy="6" r="1.8" />
-							<circle cx="15" cy="6" r="1.8" />
-							<circle cx="9" cy="12" r="1.8" />
-							<circle cx="15" cy="12" r="1.8" />
-							<circle cx="9" cy="18" r="1.8" />
-							<circle cx="15" cy="18" r="1.8" />
-						</svg>
-					</button>
 					<span class="category-order-name">{tRaw('category', category)}</span>
 				</div>
 			{/each}
@@ -445,21 +432,6 @@
 		z-index: 10;
 		box-shadow: 0 6px 16px -4px rgba(0, 0, 0, 0.35);
 		transition: none;
-	}
-	.drag-handle {
-		flex: 0 0 auto;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 2.2rem;
-		height: 2.2rem;
-		border: none;
-		background: none;
-		color: var(--ink-soft);
-		cursor: grab;
-		touch-action: none;
-	}
-	.category-order-row.dragging .drag-handle {
 		cursor: grabbing;
 	}
 	.category-order-name {

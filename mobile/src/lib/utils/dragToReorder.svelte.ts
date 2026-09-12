@@ -23,13 +23,32 @@
 // shift for whichever siblings currently sit between the drag's start and live target index
 // (open a gap without reordering anything). The real splice only happens once, in the
 // onReorder callback fired from onPointerUp.
+//
+// STO-114: now bound to the whole row instead of a grip-icon button, so a press only
+// promotes to a drag after HOLD_DELAY ms within JITTER_TOLERANCE px ("long-press to
+// reorder"). touch-action stays default until promotion, so scrolling still works.
+//
+// Rows that also run swipeToDelete.svelte.ts pass `onHorizontalReject`: fired once if a
+// pending press is abandoned by horizontal movement, so the caller can hand that event to
+// swipeToDelete instead of both gestures racing the same touch.
+const HOLD_DELAY = 350;
+const JITTER_TOLERANCE = 10;
+// Excludes `a` on purpose — several rows use an anchor as the whole row's tap target
+// (RecipeCard, row-links), so excluding it would leave nothing to grab. No native
+// long-press-link menu to protect anyway; this only ever runs in a Capacitor WebView.
+const INTERACTIVE_SELECTOR = 'input, textarea, select, button, [contenteditable="true"], [role="button"]';
+
 export function dragToReorder() {
 	let draggingId = $state<string | null>(null);
 	let dragOffsetY = $state(0);
 	let startY = 0;
+	let startX = 0;
 	let startIndex = 0;
 	let targetIndex = $state(0);
 	let rowSize = 0;
+	let pendingId: string | null = null;
+	let holdTimer: ReturnType<typeof setTimeout> | null = null;
+	let onHorizontalReject: ((e: PointerEvent) => void) | null = null;
 	const refs = new Map<string, HTMLElement>();
 
 	function registerRef(id: string, el: HTMLElement | null) {
@@ -51,12 +70,13 @@ export function dragToReorder() {
 		return 0;
 	}
 
-	function onPointerDown(e: PointerEvent, id: string, orderedIds: string[]) {
+	function promote(id: string, orderedIds: string[]) {
+		holdTimer = null;
+		if (pendingId !== id) return;
+		pendingId = null;
 		const el = refs.get(id);
 		if (!el) return;
 		draggingId = id;
-		startY = e.clientY;
-		dragOffsetY = 0;
 		startIndex = orderedIds.indexOf(id);
 		targetIndex = startIndex;
 
@@ -73,11 +93,41 @@ export function dragToReorder() {
 			: prevEl
 				? rect.top - prevEl.getBoundingClientRect().top
 				: 0;
+	}
 
+	function onPointerDown(
+		e: PointerEvent,
+		id: string,
+		orderedIds: string[],
+		onReject?: (e: PointerEvent) => void
+	) {
+		const el = refs.get(id);
+		if (!el) return;
+		if (e.target instanceof Element && e.target.closest(INTERACTIVE_SELECTOR)) return;
+		pendingId = id;
+		startY = e.clientY;
+		startX = e.clientX;
+		dragOffsetY = 0;
+		onHorizontalReject = onReject ?? null;
 		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+		holdTimer = setTimeout(() => promote(id, orderedIds), HOLD_DELAY);
 	}
 
 	function onPointerMove(e: PointerEvent, id: string, orderedIds: string[]) {
+		if (pendingId === id) {
+			const dx = e.clientX - startX;
+			const dy = e.clientY - startY;
+			if (Math.hypot(dx, dy) > JITTER_TOLERANCE) {
+				// Not a hold — abandon it. Horizontal movement hands off to swipe; vertical
+				// is left to native scroll.
+				if (holdTimer) clearTimeout(holdTimer);
+				holdTimer = null;
+				pendingId = null;
+				if (Math.abs(dx) > Math.abs(dy)) onHorizontalReject?.(e);
+				onHorizontalReject = null;
+			}
+			return;
+		}
 		if (draggingId !== id) return;
 		dragOffsetY = e.clientY - startY;
 		if (!rowSize) return;
@@ -86,6 +136,13 @@ export function dragToReorder() {
 	}
 
 	function onPointerUp(id: string, onReorder: (fromIndex: number, toIndex: number) => void) {
+		if (holdTimer) clearTimeout(holdTimer);
+		holdTimer = null;
+		onHorizontalReject = null;
+		if (pendingId === id) {
+			pendingId = null;
+			return;
+		}
 		if (draggingId !== id) return;
 		const fromIndex = startIndex;
 		const toIndex = targetIndex;
@@ -96,6 +153,10 @@ export function dragToReorder() {
 	}
 
 	function cancel() {
+		if (holdTimer) clearTimeout(holdTimer);
+		holdTimer = null;
+		onHorizontalReject = null;
+		pendingId = null;
 		draggingId = null;
 		dragOffsetY = 0;
 		rowSize = 0;

@@ -6,11 +6,34 @@
 	// onDelete is optional — recipes/suggestions/+page.svelte reuses this card without swipe-
 	// to-delete (deleting a recipe from "what's fully in stock" isn't a natural action there),
 	// while recipes/+page.svelte (see STO-105) passes it to enable the swipe gesture.
+	//
+	// STO-114: recipes/+page.svelte also drag-to-reorders these cards. Since `<a class="card">`
+	// is the only element either gesture can bind to, the parent-owned drag/swipe merge is
+	// injected via `swipe` + onCardPointer* — falls back to self-contained swipe without them.
 	let {
 		recipe,
 		onDelete,
-		layout = 'list'
-	}: { recipe: Recipe; onDelete?: (recipe: Recipe) => void; layout?: 'list' | 'grid' } = $props();
+		layout = 'list',
+		swipe: externalSwipe,
+		swipeId = 'this',
+		dragging = false,
+		onCardPointerDown,
+		onCardPointerMove,
+		onCardPointerUp,
+		onCardPointerCancel
+	}: {
+		recipe: Recipe;
+		onDelete?: (recipe: Recipe) => void;
+		layout?: 'list' | 'grid';
+		swipe?: ReturnType<typeof swipeToDelete>;
+		// Key into a shared `swipe` instance; irrelevant for the private per-card default.
+		swipeId?: string;
+		dragging?: boolean;
+		onCardPointerDown?: (e: PointerEvent) => void;
+		onCardPointerMove?: (e: PointerEvent) => void;
+		onCardPointerUp?: () => void;
+		onCardPointerCancel?: () => void;
+	} = $props();
 
 	// Warm, food-evocative placeholder palette (stands in for a real recipe photo).
 	// Picked deterministically per recipe so the same card always gets the same color.
@@ -24,7 +47,7 @@
 
 	// Each card is its own component instance, so a local swipe id ('this') is enough — no
 	// need for the shared id-keyed instance the list-of-rows screens use.
-	const swipe = onDelete ? swipeToDelete() : null;
+	const swipe = externalSwipe ?? (onDelete ? swipeToDelete() : null);
 </script>
 
 {#snippet cardBody()}
@@ -69,7 +92,7 @@
 			class="swipe-delete-action"
 			onclick={() => {
 				onDelete(recipe);
-				swipe.close('this');
+				swipe.close(swipeId);
 			}}
 			aria-label={t('shoppingList.deleteItemAriaLabel', { name: recipe.title })}
 		>
@@ -77,14 +100,15 @@
 		</button>
 		<a
 			class="card"
-			class:dragging={swipe.isDragging('this')}
+			class:dragging={swipe.isDragging(swipeId) || dragging}
 			href={`/recipes/${recipe._id}`}
-			style:transform={`translateX(${swipe.offsetFor('this')}px)`}
-			onpointerdown={(e) => swipe.onPointerDown(e, 'this')}
-			onpointermove={(e) => swipe.onPointerMove(e, 'this')}
-			onpointerup={() => swipe.onPointerUp('this')}
-			onpointercancel={() => swipe.onPointerUp('this')}
-			onclick={(e) => swipe.handleClick(e, 'this')}
+			style:transform={`translateX(${swipe.offsetFor(swipeId)}px)`}
+			style:touch-action={dragging ? 'none' : 'pan-y'}
+			onpointerdown={(e) => (onCardPointerDown ? onCardPointerDown(e) : swipe.onPointerDown(e, swipeId))}
+			onpointermove={(e) => (onCardPointerMove ? onCardPointerMove(e) : swipe.onPointerMove(e, swipeId))}
+			onpointerup={() => (onCardPointerUp ? onCardPointerUp() : swipe.onPointerUp(swipeId))}
+			onpointercancel={() => (onCardPointerCancel ? onCardPointerCancel() : swipe.onPointerUp(swipeId))}
+			onclick={(e) => swipe.handleClick(e, swipeId)}
 		>
 			{@render cardBody()}
 		</a>

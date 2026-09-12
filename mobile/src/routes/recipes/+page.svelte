@@ -7,6 +7,7 @@
 	import { toast } from '$lib/state/toast.svelte';
 	import { t } from '$lib/i18n/index.svelte';
 	import { dragToReorder } from '$lib/utils/dragToReorder.svelte';
+	import { swipeToDelete } from '$lib/utils/swipeToDelete.svelte';
 	import { recipeOrder } from '$lib/state/recipeOrder.svelte';
 	import { recipeViewMode } from '$lib/state/recipeViewMode.svelte';
 	import PullToRefresh from '$lib/components/PullToRefresh.svelte';
@@ -42,6 +43,7 @@
 	});
 
 	const drag = dragToReorder();
+	const swipe = swipeToDelete();
 	function registerRecipeRef(node: HTMLElement, id: string) {
 		drag.registerRef(id, node);
 		return {
@@ -138,43 +140,43 @@
 						orderedRecipes.map((r) => r._id)
 					)}px)`}
 				>
-					<button
-						type="button"
-						class="drag-handle"
-						aria-label={t('recipeForm.dragToReorder')}
-						onpointerdown={(e) =>
-							drag.onPointerDown(
-								e,
-								recipe._id,
-								orderedRecipes.map((r) => r._id)
-							)}
-						onpointermove={(e) =>
-							drag.onPointerMove(
-								e,
-								recipe._id,
-								orderedRecipes.map((r) => r._id)
-							)}
-						onpointerup={() =>
-							drag.onPointerUp(recipe._id, (from, to) =>
-								recipeOrder.reorder(
-									orderedRecipes.map((r) => r._id),
-									from,
-									to
-								)
-							)}
-						onpointercancel={() => drag.cancel()}
-					>
-						<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-							<circle cx="9" cy="6" r="1.8" />
-							<circle cx="15" cy="6" r="1.8" />
-							<circle cx="9" cy="12" r="1.8" />
-							<circle cx="15" cy="12" r="1.8" />
-							<circle cx="9" cy="18" r="1.8" />
-							<circle cx="15" cy="18" r="1.8" />
-						</svg>
-					</button>
 					<div class="card-flex">
-						<RecipeCard {recipe} onDelete={(r) => (removingRecipe = r)} />
+						<RecipeCard
+							{recipe}
+							onDelete={(r) => (removingRecipe = r)}
+							{swipe}
+							swipeId={recipe._id}
+							dragging={drag.isDragging(recipe._id)}
+							onCardPointerDown={(e) =>
+								drag.onPointerDown(
+									e,
+									recipe._id,
+									orderedRecipes.map((r) => r._id),
+									(ev) => swipe.onPointerDown(ev, recipe._id)
+								)}
+							onCardPointerMove={(e) => {
+								drag.onPointerMove(
+									e,
+									recipe._id,
+									orderedRecipes.map((r) => r._id)
+								);
+								swipe.onPointerMove(e, recipe._id);
+							}}
+							onCardPointerUp={() => {
+								drag.onPointerUp(recipe._id, (from, to) =>
+									recipeOrder.reorder(
+										orderedRecipes.map((r) => r._id),
+										from,
+										to
+									)
+								);
+								swipe.onPointerUp(recipe._id);
+							}}
+							onCardPointerCancel={() => {
+								drag.cancel();
+								swipe.onPointerUp(recipe._id);
+							}}
+						/>
 					</div>
 				</div>
 			{/each}
@@ -277,20 +279,7 @@
 		flex: 1;
 		min-width: 0;
 	}
-	.drag-handle {
-		flex: 0 0 auto;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 2.2rem;
-		height: 2.2rem;
-		border: none;
-		background: none;
-		color: var(--ink-soft);
-		cursor: grab;
-		touch-action: none;
-	}
-	.recipe-drag-row.dragging .drag-handle {
+	.recipe-drag-row.dragging {
 		cursor: grabbing;
 	}
 	.empty {

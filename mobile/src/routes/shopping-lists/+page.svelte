@@ -121,41 +121,6 @@
 						orderedLists.map((l) => l._id!)
 					)}px)`}
 				>
-					<button
-						type="button"
-						class="drag-handle"
-						aria-label={t('recipeForm.dragToReorder')}
-						onpointerdown={(e) =>
-							drag.onPointerDown(
-								e,
-								list._id!,
-								orderedLists.map((l) => l._id!)
-							)}
-						onpointermove={(e) =>
-							drag.onPointerMove(
-								e,
-								list._id!,
-								orderedLists.map((l) => l._id!)
-							)}
-						onpointerup={() =>
-							drag.onPointerUp(list._id!, (from, to) =>
-								shoppingListOrder.reorder(
-									orderedLists.map((l) => l._id!),
-									from,
-									to
-								)
-							)}
-						onpointercancel={() => drag.cancel()}
-					>
-						<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-							<circle cx="9" cy="6" r="1.8" />
-							<circle cx="15" cy="6" r="1.8" />
-							<circle cx="9" cy="12" r="1.8" />
-							<circle cx="15" cy="12" r="1.8" />
-							<circle cx="9" cy="18" r="1.8" />
-							<circle cx="15" cy="18" r="1.8" />
-						</svg>
-					</button>
 					<div class="swipe-wrapper">
 						<button
 							type="button"
@@ -170,13 +135,39 @@
 						</button>
 						<a
 							class="card"
-							class:dragging={swipe.isDragging(list._id!)}
+							class:dragging={swipe.isDragging(list._id!) || drag.isDragging(list._id!)}
 							href={`/shopping-lists/${list._id}`}
 							style:transform={`translateX(${swipe.offsetFor(list._id!)}px)`}
-							onpointerdown={(e) => swipe.onPointerDown(e, list._id!)}
-							onpointermove={(e) => swipe.onPointerMove(e, list._id!)}
-							onpointerup={() => swipe.onPointerUp(list._id!)}
-							onpointercancel={() => swipe.onPointerUp(list._id!)}
+							style:touch-action={drag.isDragging(list._id!) ? 'none' : 'pan-y'}
+							onpointerdown={(e) =>
+								drag.onPointerDown(
+									e,
+									list._id!,
+									orderedLists.map((l) => l._id!),
+									(ev) => swipe.onPointerDown(ev, list._id!)
+								)}
+							onpointermove={(e) => {
+								drag.onPointerMove(
+									e,
+									list._id!,
+									orderedLists.map((l) => l._id!)
+								);
+								swipe.onPointerMove(e, list._id!);
+							}}
+							onpointerup={() => {
+								drag.onPointerUp(list._id!, (from, to) =>
+									shoppingListOrder.reorder(
+										orderedLists.map((l) => l._id!),
+										from,
+										to
+									)
+								);
+								swipe.onPointerUp(list._id!);
+							}}
+							onpointercancel={() => {
+								drag.cancel();
+								swipe.onPointerUp(list._id!);
+							}}
 							onclick={(e) => swipe.handleClick(e, list._id!)}
 						>
 							<div class="card-title">{list.name}</div>
@@ -372,21 +363,6 @@
 	.list-row.dragging {
 		z-index: 10;
 		transition: none;
-	}
-	.drag-handle {
-		flex: 0 0 auto;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 2.2rem;
-		height: 2.2rem;
-		border: none;
-		background: none;
-		color: var(--ink-soft);
-		cursor: grab;
-		touch-action: none;
-	}
-	.list-row.dragging .drag-handle {
 		cursor: grabbing;
 	}
 	.swipe-wrapper {
