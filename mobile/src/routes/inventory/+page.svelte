@@ -184,46 +184,46 @@
 						item._id,
 						orderedItems.map((i) => i._id)
 					)}px)`}
+					style:touch-action={drag.isDragging(item._id) ? 'none' : 'auto'}
+					onpointerdown={(e) => {
+						if (inventorySortMode.current === 'custom') {
+							drag.onPointerDown(
+								e,
+								item._id,
+								orderedItems.map((i) => i._id),
+								(ev) => swipe.onPointerDown(ev, item._id)
+							);
+						} else {
+							swipe.onPointerDown(e, item._id);
+						}
+					}}
+					onpointermove={(e) => {
+						if (inventorySortMode.current === 'custom') {
+							drag.onPointerMove(
+								e,
+								item._id,
+								orderedItems.map((i) => i._id)
+							);
+						}
+						swipe.onPointerMove(e, item._id);
+					}}
+					onpointerup={() => {
+						if (inventorySortMode.current === 'custom') {
+							drag.onPointerUp(item._id, (from, to) =>
+								inventoryOrder.reorder(
+									orderedItems.map((i) => i._id),
+									from,
+									to
+								)
+							);
+						}
+						swipe.onPointerUp(item._id);
+					}}
+					onpointercancel={() => {
+						drag.cancel();
+						swipe.onPointerUp(item._id);
+					}}
 				>
-					{#if inventorySortMode.current === 'custom'}
-						<button
-							type="button"
-							class="drag-handle"
-							aria-label={t('recipeForm.dragToReorder')}
-							onpointerdown={(e) =>
-								drag.onPointerDown(
-									e,
-									item._id,
-									orderedItems.map((i) => i._id)
-								)}
-							onpointermove={(e) =>
-								drag.onPointerMove(
-									e,
-									item._id,
-									orderedItems.map((i) => i._id)
-								)}
-							onpointerup={() =>
-								drag.onPointerUp(item._id, (from, to) =>
-									inventoryOrder.reorder(
-										orderedItems.map((i) => i._id),
-										from,
-										to
-									)
-								)}
-							onpointercancel={() => drag.cancel()}
-						>
-							<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-								<circle cx="9" cy="6" r="1.8" />
-								<circle cx="15" cy="6" r="1.8" />
-								<circle cx="9" cy="12" r="1.8" />
-								<circle cx="15" cy="12" r="1.8" />
-								<circle cx="9" cy="18" r="1.8" />
-								<circle cx="15" cy="18" r="1.8" />
-							</svg>
-						</button>
-					{:else}
-						<div class="drag-handle-spacer" aria-hidden="true"></div>
-					{/if}
 					<div class="swipe-wrapper">
 						<button
 							type="button"
@@ -242,10 +242,6 @@
 							style:transform={`translateX(${swipe.offsetFor(item._id)}px)`}
 							role="group"
 							aria-label={item.name}
-							onpointerdown={(e) => swipe.onPointerDown(e, item._id)}
-							onpointermove={(e) => swipe.onPointerMove(e, item._id)}
-							onpointerup={() => swipe.onPointerUp(item._id)}
-							onpointercancel={() => swipe.onPointerUp(item._id)}
 						>
 							<a
 								class="row-link"
@@ -373,10 +369,6 @@
 		background: var(--paper-raised);
 		color: var(--ink);
 	}
-	.drag-handle-spacer {
-		flex: 0 0 auto;
-		width: 2.2rem;
-	}
 	.chiprow {
 		display: flex;
 		gap: 0.4rem;
@@ -413,21 +405,6 @@
 	.item-drag-row.dragging {
 		z-index: 10;
 		transition: none;
-	}
-	.drag-handle {
-		flex: 0 0 auto;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 2.2rem;
-		height: 2.2rem;
-		border: none;
-		background: none;
-		color: var(--ink-soft);
-		cursor: grab;
-		touch-action: none;
-	}
-	.item-drag-row.dragging .drag-handle {
 		cursor: grabbing;
 	}
 	.swipe-wrapper {
