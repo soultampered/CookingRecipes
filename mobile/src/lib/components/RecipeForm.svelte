@@ -502,8 +502,7 @@
 		font-size: 0.8rem;
 		color: var(--ink-soft);
 		flex: 0 0 auto;
-		/* STO-114: this is now the row's only non-interactive grab area (textarea + remove
-		   button are excluded from arming a drag), so give it a real touch target. */
+		/* STO-114: only non-interactive grab area left in the row — real touch target. */
 		min-width: 2.2rem;
 		min-height: 2.2rem;
 		display: flex;

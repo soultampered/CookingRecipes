@@ -7,12 +7,9 @@
 	// to-delete (deleting a recipe from "what's fully in stock" isn't a natural action there),
 	// while recipes/+page.svelte (see STO-105) passes it to enable the swipe gesture.
 	//
-	// STO-114: recipes/+page.svelte's list view also drag-to-reorders these cards. That gesture
-	// is owned by the parent (it needs the whole ordered id list, not just this one card), but
-	// this card's own `<a class="card">` is the only element either gesture can bind to — so
-	// when the parent supplies `swipe` + the onCardPointer* callbacks, this card defers entirely
-	// to the parent's merged drag/swipe arbitration instead of running its own onPointerDown.
-	// Without those props it falls back to the original self-contained swipe behavior.
+	// STO-114: recipes/+page.svelte also drag-to-reorders these cards. Since `<a class="card">`
+	// is the only element either gesture can bind to, the parent-owned drag/swipe merge is
+	// injected via `swipe` + onCardPointer* — falls back to self-contained swipe without them.
 	let {
 		recipe,
 		onDelete,
@@ -29,9 +26,7 @@
 		onDelete?: (recipe: Recipe) => void;
 		layout?: 'list' | 'grid';
 		swipe?: ReturnType<typeof swipeToDelete>;
-		// Only meaningful with `swipe`: a shared, parent-owned instance is keyed by id across
-		// every card in the list, unlike the private per-instance swipe this card creates for
-		// itself when no `swipe` prop is given (where the constant default is fine).
+		// Key into a shared `swipe` instance; irrelevant for the private per-card default.
 		swipeId?: string;
 		dragging?: boolean;
 		onCardPointerDown?: (e: PointerEvent) => void;

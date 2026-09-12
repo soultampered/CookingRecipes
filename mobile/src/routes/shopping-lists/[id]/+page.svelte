@@ -87,14 +87,9 @@
 		selectedIds = next;
 	}
 
-	// Selection is a client-only mode overlay, not a gesture — drag/swipe stay wired up but
-	// only actually engage when selectMode is off, so the two interactions never fight.
-	//
-	// STO-114: this row also drops its separate drag-handle icon in favor of dragging the row
-	// itself, which now competes with the swipe gesture already living here. itemDrag arms via
-	// a long-press (see dragToReorder.svelte.ts); any real movement before that arms aborts the
-	// pending drag, and if that movement was horizontal it hands off to itemSwipe from the same
-	// event via the onHorizontalReject callback, so the two never both hold live pointer state.
+	// Selection is a client-only overlay — drag/swipe stay wired up but only engage when
+	// selectMode is off. itemDrag arms via long-press and hands off to itemSwipe on
+	// horizontal movement (see dragToReorder.svelte.ts), so the two never fight.
 	function rowPointerDown(e: PointerEvent, id: string, orderedIds: string[]) {
 		if (!selectMode) {
 			itemDrag.onPointerDown(e, id, orderedIds, (ev) => itemSwipe.onPointerDown(ev, id));
