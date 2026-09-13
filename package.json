@@ -12,7 +12,7 @@
     "@hono/zod-validator": "^0.9.1",
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.2.0",
-    "hono": "^4.8.5",
+    "hono": "^4.13.7",
     "jsonwebtoken": "^9.0.3",
     "mongodb": "^7.6.0",
     "zod": "^4.5.4"
