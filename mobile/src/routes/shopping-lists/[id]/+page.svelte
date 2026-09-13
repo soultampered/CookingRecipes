@@ -842,6 +842,9 @@
 	.item-row.dragging {
 		transition: none;
 	}
+	.item-row:active {
+		opacity: 0.85;
+	}
 	.item-name {
 		flex: 1;
 		min-width: 0;

@@ -155,6 +155,9 @@
 	.card.dragging {
 		transition: none;
 	}
+	.card:active {
+		opacity: 0.85;
+	}
 	.grid-wrapper {
 		position: relative;
 		min-width: 0;
