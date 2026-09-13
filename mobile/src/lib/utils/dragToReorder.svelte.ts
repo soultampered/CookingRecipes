@@ -31,8 +31,9 @@
 // Rows that also run swipeToDelete.svelte.ts pass `onHorizontalReject`: fired once if a
 // pending press is abandoned by horizontal movement, so the caller can hand that event to
 // swipeToDelete instead of both gestures racing the same touch.
-const HOLD_DELAY = 350;
-const JITTER_TOLERANCE = 10;
+// STO-115: 350ms felt too long to hold before it armed. Cut to 150ms.
+const HOLD_DELAY = 150;
+const JITTER_TOLERANCE = 20;
 // Excludes `a` on purpose — several rows use an anchor as the whole row's tap target
 // (RecipeCard, row-links), so excluding it would leave nothing to grab. No native
 // long-press-link menu to protect anyway; this only ever runs in a Capacitor WebView.
