@@ -407,6 +407,9 @@
 		transition: none;
 		cursor: grabbing;
 	}
+	.item-drag-row:active {
+		opacity: 0.85;
+	}
 	.swipe-wrapper {
 		flex: 1;
 		min-width: 0;

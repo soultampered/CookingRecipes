@@ -482,6 +482,9 @@
 		transition: none;
 		cursor: grabbing;
 	}
+	.instruction-row:active {
+		opacity: 0.85;
+	}
 	.ingredient-row select:first-child {
 		flex: 2;
 		min-width: 0;

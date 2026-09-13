@@ -434,6 +434,9 @@
 		transition: none;
 		cursor: grabbing;
 	}
+	.category-order-row:active {
+		opacity: 0.85;
+	}
 	.category-order-name {
 		font-size: 0.85rem;
 	}

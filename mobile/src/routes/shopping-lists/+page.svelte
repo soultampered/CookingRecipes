@@ -400,6 +400,9 @@
 	.card.dragging {
 		transition: none;
 	}
+	.card:active {
+		opacity: 0.85;
+	}
 	.card-title {
 		font-weight: 600;
 	}

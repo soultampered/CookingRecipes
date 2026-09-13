@@ -104,6 +104,9 @@ export function dragToReorder() {
 		const el = refs.get(id);
 		if (!el) return;
 		if (e.target instanceof Element && e.target.closest(INTERACTIVE_SELECTOR)) return;
+		// PullToRefresh listens for pointerdown on an ancestor and arms itself on any vertical
+		// drag from scrollTop 0 — without this it races a reorder drag on the top row.
+		e.stopPropagation();
 		pendingId = id;
 		startY = e.clientY;
 		startX = e.clientX;
