@@ -31,9 +31,8 @@
 // Rows that also run swipeToDelete.svelte.ts pass `onHorizontalReject`: fired once if a
 // pending press is abandoned by horizontal movement, so the caller can hand that event to
 // swipeToDelete instead of both gestures racing the same touch.
-const HOLD_DELAY = 350;
-// STO-115: 10px was cancelling most real presses before the hold timer fired — a
-// finger held "still" drifts more than that from touchscreen noise alone.
+// STO-115: 350ms felt too long to hold before it armed. Cut to 200ms.
+const HOLD_DELAY = 200;
 const JITTER_TOLERANCE = 20;
 // Excludes `a` on purpose — several rows use an anchor as the whole row's tap target
 // (RecipeCard, row-links), so excluding it would leave nothing to grab. No native
