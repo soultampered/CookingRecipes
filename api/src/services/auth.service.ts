@@ -46,6 +46,10 @@ async function issueTokenPair(
     return { accessToken: signAccessToken(userId), refreshToken: entry.token };
 }
 
+type AuthResult = { accessToken: string; refreshToken: string; user: Omit<User, "password"> };
+// STO-32: with 2FA on, login stops short of tokens and hands back a challenge instead.
+export type LoginResult = AuthResult | { twoFactorRequired: true; challengeId: string };
+
 export interface SessionSummary {
     id: string;
     createdAt?: Date;
@@ -133,7 +137,7 @@ export const authService = {
         identifier: string,
         password: string,
         userAgent?: string
-    ): Promise<{ accessToken: string; refreshToken: string; user: Omit<User, "password"> }> {
+    ): Promise<LoginResult> {
         const user = await userModel.findByUsernameOrEmail(identifier);
         if (!user) throw new Error("INVALID_CREDENTIALS");
 
@@ -159,9 +163,66 @@ export const authService = {
             await userModel.update(userId, { failedLoginAttempts: 0, lockedUntil: null });
         }
 
+        if (user.twoFactorEnabled) {
+            const { code, expiresAt } = generateCode();
+            const challengeId = crypto.randomBytes(24).toString("hex");
+            try {
+                await emailService.sendLoginCode(user.email, code);
+            } catch (err) {
+                console.error("Failed to send login code:", err);
+                throw new Error("CODE_SEND_FAILED");
+            }
+            await userModel.update(userId, {
+                loginChallenge: challengeId,
+                loginCode: code,
+                loginCodeExpiresAt: expiresAt,
+                loginCodeAttempts: 0
+            });
+            return { twoFactorRequired: true, challengeId };
+        }
+
         const { accessToken, refreshToken } = await issueTokenPair(userId, userAgent);
         await securityEventService.record(userId, "login_success");
         return { accessToken, refreshToken, user: stripPassword(user) };
+    },
+
+    async verifyLoginCode(challengeId: string, code: string, userAgent?: string): Promise<AuthResult> {
+        const user = await userModel.findByLoginChallenge(challengeId);
+        if (!user) throw new Error("INVALID_CODE");
+        const userId = user._id!.toString();
+
+        if ((user.loginCodeAttempts ?? 0) >= MAX_CODE_ATTEMPTS) {
+            // Burn the challenge — the user has to re-enter their password for a new code.
+            await userModel.update(userId, { loginChallenge: null, loginCode: null, loginCodeExpiresAt: null });
+            throw new Error("TOO_MANY_ATTEMPTS");
+        }
+        if (!user.loginCodeExpiresAt || user.loginCodeExpiresAt < new Date()) {
+            throw new Error("CODE_EXPIRED");
+        }
+        if (user.loginCode !== code) {
+            await userModel.update(userId, { loginCodeAttempts: (user.loginCodeAttempts ?? 0) + 1 });
+            await securityEventService.record(userId, "login_2fa_failed");
+            throw new Error("INVALID_CODE");
+        }
+
+        const updated = await userModel.update(userId, {
+            loginChallenge: null,
+            loginCode: null,
+            loginCodeExpiresAt: null,
+            loginCodeAttempts: 0
+        });
+        const { accessToken, refreshToken } = await issueTokenPair(userId, userAgent);
+        await securityEventService.record(userId, "login_success", { twoFactor: true });
+        return { accessToken, refreshToken, user: stripPassword(updated) };
+    },
+
+    // Password re-check so a stolen unlocked phone can't quietly turn 2FA off.
+    async setTwoFactor(userId: string, enabled: boolean, password: string): Promise<Omit<User, "password">> {
+        const user = await userModel.findById(userId);
+        if (!(await bcrypt.compare(password, user.password))) throw new Error("INVALID_CREDENTIALS");
+        const updated = await userModel.update(userId, { twoFactorEnabled: enabled });
+        await securityEventService.record(userId, enabled ? "two_factor_enabled" : "two_factor_disabled");
+        return stripPassword(updated);
     },
 
     async getCurrentUser(userId: string): Promise<Omit<User, "password">> {

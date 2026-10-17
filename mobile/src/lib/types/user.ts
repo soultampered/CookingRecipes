@@ -10,6 +10,7 @@ export interface User {
 	createdRecipes?: string[];
 	emailVerified: boolean;
 	mustResetPassword: boolean;
+	twoFactorEnabled?: boolean;
 	preferences?: {
 		dietaryRestrictions?: string[];
 		preferredUnits?: 'metric' | 'imperial';
