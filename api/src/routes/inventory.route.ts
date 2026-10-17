@@ -3,7 +3,8 @@ import { inventoryService } from "../services/inventory.service.js";
 import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
 import { requireVerified } from "../middleware/requireVerified.middleware.js";
 import { validateJson } from "../middleware/validate.middleware.js";
-import { createInventorySchema, updateInventorySchema } from "../schemas/inventory.schema.js";
+import { createInventorySchema, updateInventorySchema, adjustInventorySchema } from "../schemas/inventory.schema.js";
+import { InventoryAdjustError } from "../types/inventory.js";
 
 const inventoryRoutes = new Hono<{ Variables: AuthVariables }>();
 
@@ -35,6 +36,19 @@ inventoryRoutes.get('/', async (c) => {
             return c.json({ error: "Inventory not found" }, 404);
         }
         return c.json({ error: "Failed to fetch inventory" }, 500);
+    }
+});
+
+inventoryRoutes.post('/adjust', validateJson(adjustInventorySchema), async (c) => {
+    try {
+        const items = await inventoryService.applyAdjustments(c.get('userId'), c.req.valid('json').adjustments);
+        return c.json(items, 200);
+    } catch (err) {
+        if (err instanceof InventoryAdjustError) {
+            const status = err.message === 'FORBIDDEN' ? 403 : err.message === 'INGREDIENT_NOT_FOUND' ? 404 : 400;
+            return c.json({ error: 'Could not adjust inventory', code: err.message, itemIds: err.itemIds }, status);
+        }
+        return c.json({ error: 'Failed to adjust inventory' }, 500);
     }
 });
 

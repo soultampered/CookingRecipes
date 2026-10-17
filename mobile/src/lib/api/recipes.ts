@@ -22,9 +22,27 @@ export function deleteRecipe(id: string) {
 	return apiFetch<void>(`/recipes/${id}`, { method: 'DELETE' });
 }
 
-export function prepareRecipe(id: string) {
-	return apiFetch<{ success: true; updatedInventory: Inventory[] }>(`/recipes/${id}/prepare`, {
-		method: 'POST'
+export interface InventoryAdjustment {
+	id: string;
+	amount: number;
+}
+
+// overrides = amount used per item (wins over scale).
+export interface PrepareOptions {
+	scale?: number;
+	overrides?: { inventoryItemId: string; quantity: number }[];
+}
+
+export interface PrepareResult {
+	success: true;
+	adjustments: InventoryAdjustment[];
+	updatedInventory: Inventory[];
+}
+
+export function prepareRecipe(id: string, options: PrepareOptions = {}) {
+	return apiFetch<PrepareResult>(`/recipes/${id}/prepare`, {
+		method: 'POST',
+		body: JSON.stringify(options)
 	});
 }
 
