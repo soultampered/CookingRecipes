@@ -35,6 +35,7 @@ export interface Recipe {
 	difficulty: DifficultyLevel;
 	favorite?: boolean;
 	rating?: number | null;
+	shareToken?: string | null;
 }
 
 export type NewRecipe = Omit<Recipe, '_id' | 'createdAt' | 'updatedAt'>;

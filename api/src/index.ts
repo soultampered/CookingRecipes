@@ -9,6 +9,7 @@ import usersRoute from "./routes/users.route.js";
 import authRoute from "./routes/auth.route.js";
 import nutritionRoute from "./routes/nutrition.route.js";
 import collectionRoute from "./routes/recipeCollection.route.js";
+import publicRoute, { publicPages } from "./routes/public.route.js";
 
 const app = new Hono<{ Variables: SecureHeadersVariables }>();
 
@@ -50,6 +51,9 @@ app.route('/shopping-lists', shoppingListRoute);
 app.route('/users', usersRoute);
 app.route('/nutrition', nutritionRoute);
 app.route('/collections', collectionRoute);
+// STO-84: no auth — /public/recipes/:token (JSON) and /r/:token (HTML page).
+app.route('/public', publicRoute);
+app.route('/', publicPages);
 
 // This page has no scripts and one small server-authored inline <style> block (no user
 // input reflected into it), so the tightest CSP that still lets the style render is
