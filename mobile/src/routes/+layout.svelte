@@ -7,6 +7,7 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { App as CapacitorApp } from '@capacitor/app';
+	import { Capacitor } from '@capacitor/core';
 	import { fade } from 'svelte/transition';
 	import { theme } from '$lib/state/theme.svelte';
 	import { categoryOrder } from '$lib/state/categoryOrder.svelte';
@@ -44,6 +45,11 @@
 		textScale.restore();
 		locale.restore();
 		onboarding.restore();
+
+		// STO-83: deep links + hardware back are native-only; the web build skips them.
+		if (!Capacitor.isNativePlatform()) {
+			return keyboardInset.watch();
+		}
 
 		// STO-74: the home-screen widget is a static deep link (no native data/auth access
 		// of its own — see ShoppingListWidget's design note) into stokpot://widget-quick-add.
@@ -194,6 +200,18 @@
 		}
 		100% {
 			left: 100%;
+		}
+	}
+	/* STO-83: desktop browsers get a left sidebar nav instead of the bottom tab bar. */
+	@media (min-width: 900px) {
+		.app-shell {
+			flex-direction: row;
+		}
+		.app-shell :global(nav) {
+			order: -1;
+		}
+		main {
+			flex: 1;
 		}
 	}
 </style>
