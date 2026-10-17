@@ -27,7 +27,9 @@ export const createRecipeSchema = z.object({
     tags: z.array(z.string().trim().max(64)).max(50).optional(),
     author: z.string().trim().min(1).max(200),
     nutrition: z.array(nutritionFactsSchema),
-    difficulty: z.enum(["easy", "medium", "hard"])
+    difficulty: z.enum(["easy", "medium", "hard"]),
+    favorite: z.boolean().optional(),
+    rating: z.number().int().min(1).max(5).nullable().optional()
 });
 
 export const updateRecipeSchema = createRecipeSchema.partial();
