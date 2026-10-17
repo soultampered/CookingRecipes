@@ -5,10 +5,12 @@
 	import { expirySettings } from '$lib/state/expirySettings.svelte';
 	import { daysUntil, expiringItems } from '$lib/utils/expiry';
 	import { features } from '$lib/state/features.svelte';
+	import { toLocalISODate } from '$lib/utils/dates';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
+	let todayPlanned = $derived(data.mealPlan.filter((e) => e.date === toLocalISODate(new Date())));
 	let expiring = $derived(expiringItems(data.inventory, expirySettings.daysAhead));
 
 	function expiryLabel(iso: string) {
@@ -83,6 +85,18 @@
 			</p>
 		{:else}
 			<p class="preview good">{t('dashboard.allStocked')}</p>
+		{/if}
+	</a>
+
+	<a class="card" href="/meal-plan">
+		<div class="card-header">
+			<span class="card-title">{t('dashboard.mealPlan')}</span>
+			<span class="stat">{data.mealPlan.length}</span>
+		</div>
+		{#if data.mealPlan.length === 0}
+			<p class="empty">{t('dashboard.noMealPlan')}</p>
+		{:else if todayPlanned.length > 0}
+			<p class="preview">{t('dashboard.todayPlanned', { titles: todayPlanned.map((e) => e.recipeTitle).join(' · ') })}</p>
 		{/if}
 	</a>
 
