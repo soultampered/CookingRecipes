@@ -32,7 +32,10 @@ export const createRecipeSchema = z.object({
     rating: z.number().int().min(1).max(5).nullable().optional()
 });
 
-export const updateRecipeSchema = createRecipeSchema.partial();
+// editNote (STO-89) is stored on the revision, never on the recipe.
+export const updateRecipeSchema = createRecipeSchema.partial().extend({
+    editNote: z.string().trim().max(500).optional()
+});
 
 // STO-20/117. Whole body optional — older app builds POST with no body.
 export const prepareRecipeSchema = z.object({

@@ -60,8 +60,8 @@ recipeRoutes.patch('/:id', validateJson(updateRecipeSchema), async (c) => {
     try {
         const existing = await recipeService.getRecipeById(c.req.param('id'));
         if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
-        const body = c.req.valid('json');
-        const updated = await recipeService.updateRecipe(c.req.param('id'), body);
+        const { editNote, ...body } = c.req.valid('json');
+        const updated = await recipeService.updateRecipe(c.req.param('id'), body, editNote);
         return c.json(updated, 200);
     } catch (err) {
         if ((err as Error).message === 'NOT_FOUND') {
@@ -82,6 +82,29 @@ recipeRoutes.delete('/:id', async (c) => {
             return c.json({ error: 'Recipe not found' }, 404);
         }
         return c.json({ error: 'Failed to delete recipe' }, 500);
+    }
+});
+
+// STO-89
+recipeRoutes.get('/:id/revisions', async (c) => {
+    try {
+        const existing = await recipeService.getRecipeById(c.req.param('id'));
+        if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
+        return c.json(await recipeService.listRevisions(c.req.param('id')), 200);
+    } catch {
+        return c.json({ error: 'Recipe not found' }, 404);
+    }
+});
+
+recipeRoutes.post('/:id/revisions/:revisionId/restore', async (c) => {
+    try {
+        const existing = await recipeService.getRecipeById(c.req.param('id'));
+        if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
+        const restored = await recipeService.restoreRevision(c.req.param('id'), c.req.param('revisionId'));
+        return c.json(restored, 200);
+    } catch (err) {
+        if ((err as Error).message === 'NOT_FOUND') return c.json({ error: 'Version not found' }, 404);
+        return c.json({ error: 'Failed to restore version' }, 500);
     }
 });
 
