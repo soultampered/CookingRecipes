@@ -6,6 +6,8 @@
 	import { toast } from '$lib/state/toast.svelte';
 	import { t, tRaw } from '$lib/i18n/index.svelte';
 	import { formatQuantity, roundQuantity } from '$lib/utils/quantity';
+	import { convert } from '$lib/utils/unitConversion';
+	import type { Unit } from '$lib/types/unit';
 	import type { Recipe } from '$lib/types/recipe';
 	import type { Inventory } from '$lib/types/inventory';
 
@@ -26,8 +28,22 @@
 		onPrepared: (result: PrepareResult) => void;
 	} = $props();
 
+	// STO-92: amounts are entered in the *stock* unit (that's what gets deducted), converting
+	// from the recipe's unit when the two are the same kind — fixes STO-117's unit bug.
+	function stockUnitFor(i: number): Unit | undefined {
+		return inventory[recipe.ingredients[i].inventoryItemId]?.unit ?? recipe.ingredients[i].unit;
+	}
+	function convertedFor(i: number): number | null {
+		const ing = recipe.ingredients[i];
+		const stockUnit = inventory[ing.inventoryItemId]?.unit;
+		if (!ing.unit || !stockUnit || ing.unit === stockUnit) return null;
+		return convert(ing.quantity * scale, ing.unit, stockUnit);
+	}
+
 	// Seeded once per open (the sheet is mounted fresh each time).
-	let amounts = $state<number[]>(untrack(() => recipe.ingredients.map((i) => roundQuantity(i.quantity * scale))));
+	let amounts = $state<number[]>(
+		untrack(() => recipe.ingredients.map((ing, i) => roundQuantity(convertedFor(i) ?? ing.quantity * scale)))
+	);
 	let submitting = $state(false);
 
 	// STO-86
@@ -94,7 +110,13 @@
 								amount: `${formatQuantity(stock.quantity)} ${tRaw('unit', stock.unit)}`
 							})}
 							{#if ing.unit && ing.unit !== stock.unit}
-								· {t('prepareSheet.unitDiffers', { unit: tRaw('unit', stock.unit) })}
+								{#if convertedFor(i) !== null}
+									· {t('prepareSheet.converted', {
+										amount: `${formatQuantity(ing.quantity * scale)} ${tRaw('unit', ing.unit)}`
+									})}
+								{:else}
+									· {t('prepareSheet.unitDiffers', { unit: tRaw('unit', stock.unit) })}
+								{/if}
 							{/if}
 						{/if}
 					</span>
@@ -108,7 +130,7 @@
 						bind:value={amounts[i]}
 						aria-label={t('prepareSheet.amountAria', { name: names[ing.inventoryItemId] ?? '' })}
 					/>
-					<span>{ing.unit ? tRaw('unit', ing.unit) : stock ? tRaw('unit', stock.unit) : ''}</span>
+					<span>{stockUnitFor(i) ? tRaw('unit', stockUnitFor(i)!) : ''}</span>
 				</label>
 			</li>
 		{/each}
