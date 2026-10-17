@@ -26,7 +26,10 @@ export function parseSpokenItems(text: string): { name: string; quantity: number
         .map((part) => part.trim().replace(/^(some|of)\s+/, ""))
         .filter(Boolean)
         .map((part) => {
-            const [first, ...rest] = part.split(/\s+/);
+            // "a dozen bagels" / "a couple of limes" → the quantity word is the second one.
+            const words = part.split(/\s+/);
+            if ((words[0] === "a" || words[0] === "an") && WORD_NUMBERS[words[1]] && words.length > 2) words.shift();
+            const [first, ...rest] = words;
             const n = Number(first);
             const word = WORD_NUMBERS[first];
             if (rest.length && (Number.isFinite(n) || word)) {
