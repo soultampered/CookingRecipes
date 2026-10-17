@@ -20,6 +20,33 @@ export const usersService = {
         return stripPassword(updated);
     },
 
+    // STO-94: everything the user owns, in one portable document. No auth internals.
+    async exportUser(id: string) {
+        const user = await userModel.findById(id);
+        const [recipes, inventory, shoppingLists, collections, preparations, recipeRevisions] = await Promise.all([
+            recipeModel.findAll(id),
+            inventoryModel.findAll(id),
+            shoppingListModel.findAllByUserId(id),
+            recipeCollectionModel.findAllByUserId(id),
+            preparationModel.findAllByUserId(id),
+            recipeRevisionModel.findAllByUserId(id),
+        ]);
+        const { failedLoginAttempts, lockedUntil, verificationCodeAttempts, resetCodeAttempts, loginCodeAttempts, ...profile } =
+            stripPassword(user);
+        return {
+            format: "stokpot-export",
+            version: 1,
+            exportedAt: new Date().toISOString(),
+            user: profile,
+            recipes,
+            inventory,
+            shoppingLists,
+            collections,
+            preparations,
+            recipeRevisions,
+        };
+    },
+
     async deleteUser(id: string) {
         // Account deletion must remove all of a user's data, not just their login —
         // recipes/inventory/shopping lists otherwise stay orphaned in the database

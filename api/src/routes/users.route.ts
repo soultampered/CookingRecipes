@@ -58,6 +58,20 @@ usersRoute.patch('/:id', requireVerified, validateJson(patchUserSchema), async (
     }
 });
 
+usersRoute.get('/:id/export', requireVerified, async (c) => {
+    if (c.get('userId') !== c.req.param('id')) {
+        return c.json({ error: 'Forbidden' }, 403);
+    }
+    try {
+        const data = await usersService.exportUser(c.req.param('id'));
+        const date = new Date().toISOString().slice(0, 10);
+        c.header('Content-Disposition', `attachment; filename="stokpot-export-${date}.json"`);
+        return c.json(data, 200);
+    } catch {
+        return c.json({ error: 'Failed to export data' }, 500);
+    }
+});
+
 usersRoute.delete('/:id', async (c) => {
     if (c.get('userId') !== c.req.param('id')) {
         return c.json({ error: 'Forbidden' }, 403);

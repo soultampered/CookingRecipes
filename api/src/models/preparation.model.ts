@@ -16,6 +16,11 @@ export const preparationModel = {
             .toArray();
     },
 
+    findAllByUserId: async (userId: string): Promise<Preparation[]> => {
+        const db = await connectToDatabase();
+        return db.collection<Preparation>("preparation").find({ userId }).sort({ preparedAt: 1 }).toArray();
+    },
+
     deleteAllByUserId: async (userId: string): Promise<number> => {
         const db = await connectToDatabase();
         const result = await db.collection<Preparation>("preparation").deleteMany({ userId });
