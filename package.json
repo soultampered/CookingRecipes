@@ -5,7 +5,8 @@
     "dev": "tsx watch api/src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "test": "vitest"
+    "test": "vitest",
+    "db:check-privileges": "tsx api/src/scripts/checkDbPrivileges.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",
