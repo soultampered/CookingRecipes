@@ -13,6 +13,7 @@
 	import PullToRefresh from '$lib/components/PullToRefresh.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import EditModeToggle from '$lib/components/EditModeToggle.svelte';
+	import { deleteCollection } from '$lib/api/collections';
 	import type { Recipe } from '$lib/types/recipe';
 	import type { PageProps } from './$types';
 
@@ -21,6 +22,22 @@
 	let searchQuery = $state('');
 	let activeTag = $state<string | null>(null);
 	let favoritesOnly = $state(false);
+	let activeCollectionId = $state<string | null>(null);
+	let activeCollection = $derived(data.collections.find((c) => c._id === activeCollectionId) ?? null);
+	let deletingCollection = $state(false);
+
+	async function confirmDeleteCollection() {
+		if (!activeCollection) return;
+		try {
+			await deleteCollection(activeCollection._id);
+			activeCollectionId = null;
+			await invalidate('app:recipes');
+		} catch (err) {
+			toast.push(err instanceof ApiError ? err.message : t('collections.error'));
+		} finally {
+			deletingCollection = false;
+		}
+	}
 
 	let allTags = $derived.by(() => {
 		const tags = new Set<string>();
@@ -36,6 +53,7 @@
 			ordered = ordered.filter((recipe) => recipe.tags?.includes(activeTag!));
 		}
 		if (favoritesOnly) ordered = ordered.filter((recipe) => recipe.favorite);
+		if (activeCollection) ordered = ordered.filter((recipe) => activeCollection!.recipeIds.includes(recipe._id));
 		const query = searchQuery.trim().toLowerCase();
 		if (!query) return ordered;
 		return ordered.filter(
@@ -111,6 +129,27 @@
 		bind:value={searchQuery}
 		aria-label={t('recipes.searchPlaceholder')}
 	/>
+
+	{#if data.collections.length > 0}
+		<div class="tag-chiprow collection-row">
+			<span class="row-label">{t('collections.title')}</span>
+			{#each data.collections as c (c._id)}
+				<button
+					type="button"
+					class="tag-chip-filter"
+					class:active={activeCollectionId === c._id}
+					onclick={() => (activeCollectionId = activeCollectionId === c._id ? null : c._id)}
+				>
+					{c.name} · {c.recipeIds.length}
+				</button>
+			{/each}
+			{#if activeCollection}
+				<button type="button" class="collection-delete" onclick={() => (deletingCollection = true)}>
+					{t('collections.delete')}
+				</button>
+			{/if}
+		</div>
+	{/if}
 
 	{#if allTags.length > 0 || data.recipes.some((r) => r.favorite)}
 		<div class="tag-chiprow">
@@ -203,6 +242,17 @@
 </PullToRefresh>
 
 <ConfirmModal
+	open={deletingCollection}
+	title={t('collections.delete')}
+	message={t('collections.deleteMessage', { name: activeCollection?.name ?? '' })}
+	confirmLabel={t('collections.delete')}
+	confirmingLabel={t('common.deleting')}
+	cancelLabel={t('common.cancel')}
+	onConfirm={confirmDeleteCollection}
+	onCancel={() => (deletingCollection = false)}
+/>
+
+<ConfirmModal
 	open={removingRecipe !== null}
 	title={t('recipeDetail.deleteTitle')}
 	message={t('recipeDetail.deleteMessage', { title: removingRecipe?.title ?? '' })}
@@ -254,6 +304,25 @@
 		gap: 0.4rem;
 		overflow-x: auto;
 		padding-bottom: 0.2rem;
+	}
+	.collection-row {
+		align-items: center;
+	}
+	.row-label {
+		flex: 0 0 auto;
+		font-size: var(--text-xs);
+		font-weight: 600;
+		color: var(--ink-soft);
+	}
+	.collection-delete {
+		flex: 0 0 auto;
+		border: none;
+		background: none;
+		color: var(--bad);
+		font: inherit;
+		font-size: var(--text-xs);
+		text-decoration: underline;
+		cursor: pointer;
 	}
 	.tag-chip-filter {
 		flex: 0 0 auto;
