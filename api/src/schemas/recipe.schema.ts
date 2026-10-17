@@ -32,7 +32,10 @@ export const createRecipeSchema = z.object({
     rating: z.number().int().min(1).max(5).nullable().optional()
 });
 
-export const updateRecipeSchema = createRecipeSchema.partial();
+// editNote lives on the revision, not the recipe.
+export const updateRecipeSchema = createRecipeSchema.partial().extend({
+    editNote: z.string().trim().max(500).optional()
+});
 
 // Body optional: older builds POST without one.
 export const prepareRecipeSchema = z.object({

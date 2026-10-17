@@ -13,12 +13,14 @@
 	let { data }: PageProps = $props();
 	let submitting = $state(false);
 	let dirty = $state(false);
+	// Saved on the history entry, not the recipe.
+	let editNote = $state('');
 	const leaveGuard = unsavedChangesGuard(() => dirty);
 
 	async function handleSubmit(recipe: NewRecipe) {
 		submitting = true;
 		try {
-			await updateRecipe(data.recipe._id, recipe);
+			await updateRecipe(data.recipe._id, { ...recipe, editNote: editNote.trim() || undefined });
 			await invalidate(`app:recipe:${data.recipe._id}`);
 			leaveGuard.allowNext();
 			await goto(`/recipes/${data.recipe._id}`);
@@ -33,6 +35,14 @@
 <div class="page">
 	<a class="back" href={`/recipes/${data.recipe._id}`}>‹ {data.recipe.title}</a>
 	<h1>{t('recipeEdit.title')}</h1>
+	<input
+		class="edit-note"
+		type="text"
+		maxlength="500"
+		placeholder={t('recipeEdit.notePlaceholder')}
+		aria-label={t('recipeEdit.notePlaceholder')}
+		bind:value={editNote}
+	/>
 	<RecipeForm
 		inventoryItems={data.inventoryItems}
 		initial={data.recipe}
@@ -59,6 +69,18 @@
 		max-width: 480px;
 		margin: 0 auto;
 		padding: 1.25rem;
+	}
+	.edit-note {
+		width: 100%;
+		box-sizing: border-box;
+		margin-bottom: 0.75rem;
+		padding: 0.55rem 0.7rem;
+		border: 1px dashed var(--line);
+		border-radius: 8px;
+		background: var(--paper-raised);
+		color: var(--ink);
+		font: inherit;
+		font-size: var(--text-sm);
 	}
 	.back {
 		display: inline-block;
