@@ -37,6 +37,7 @@ export interface Inventory {
     // STO-86: set on leftovers created by Prepare.
     leftoverOfRecipeId?: string;
     photoId?: string | null; // STO-19
+    householdId?: string | null; // STO-88: null/absent = personal pantry
 }
 
 export interface InventoryAdjustment {

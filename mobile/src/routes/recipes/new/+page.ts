@@ -1,5 +1,6 @@
 import { listInventory } from '$lib/api/inventory';
 
 export const load = async () => {
-	return { inventoryItems: await listInventory() };
+	// Ingredients can come from any pantry you belong to (STO-88).
+	return { inventoryItems: await listInventory({ household: 'all' }) };
 };

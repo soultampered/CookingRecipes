@@ -130,3 +130,11 @@ textarea {
 a {
 	color: inherit;
 }
+
+/* STO-88: page title with the pantry switcher under it */
+.title-block {
+	display: flex;
+	flex-direction: column;
+	gap: 0.1rem;
+	min-width: 0;
+}

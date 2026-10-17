@@ -8,6 +8,29 @@ export const shoppingListModel = {
         return db.collection<ShoppingList>("shoppingLists").find({ userId }).toArray();
     },
 
+    // STO-88
+    findByScope: async (userId: string, householdId: string | null): Promise<ShoppingList[]> => {
+        const db = await connectToDatabase();
+        const query = householdId ? { householdId } : { userId, householdId: null };
+        return db.collection<ShoppingList>("shoppingLists").find(query).toArray();
+    },
+
+    moveHousehold: async (fromHouseholdId: string, toUserId: string): Promise<void> => {
+        const db = await connectToDatabase();
+        await db.collection<ShoppingList>("shoppingLists").updateMany({ householdId: fromHouseholdId }, { $set: { householdId: null, userId: toUserId } });
+    },
+
+    deleteByHouseholdId: async (householdId: string): Promise<void> => {
+        const db = await connectToDatabase();
+        await db.collection<ShoppingList>("shoppingLists").deleteMany({ householdId });
+    },
+
+    deletePersonalByUserId: async (userId: string): Promise<number> => {
+        const db = await connectToDatabase();
+        const result = await db.collection<ShoppingList>("shoppingLists").deleteMany({ userId, householdId: null });
+        return result.deletedCount;
+    },
+
     findById: async (id: string): Promise<ShoppingList> => {
         const db = await connectToDatabase();
         const list = await db.collection<ShoppingList>("shoppingLists").findOne({

@@ -21,13 +21,19 @@ export const restockService = {
 
     // Rate = net consumption over the window ÷ days since first use in it. Restocks (manual
     // increases, shopping check-offs) aren't consumption; positive /adjust (undo) offsets it.
-    async predict(userId: string, horizonDays: number): Promise<RestockPrediction[]> {
+    async predict(userId: string, horizonDays: number, householdId: string | null = null): Promise<RestockPrediction[]> {
         const now = Date.now();
-        const events = await inventoryEventModel.findSince(userId, new Date(now - WINDOW_DAYS * DAY_MS));
+        // Household pantries count every member's usage.
+        const events = householdId
+            ? await inventoryEventModel.findSinceForItems(
+                  (await inventoryModel.findByScope(userId, householdId)).map((i) => i._id.toString()),
+                  new Date(now - WINDOW_DAYS * DAY_MS)
+              )
+            : await inventoryEventModel.findSince(userId, new Date(now - WINDOW_DAYS * DAY_MS));
         const byItem = new Map<string, typeof events>();
         for (const e of events) byItem.set(e.itemId, [...(byItem.get(e.itemId) ?? []), e]);
 
-        const items = await inventoryModel.findAll(userId);
+        const items = await inventoryModel.findByScope(userId, householdId);
         const out: RestockPrediction[] = [];
         for (const item of items) {
             const id = item._id.toString();

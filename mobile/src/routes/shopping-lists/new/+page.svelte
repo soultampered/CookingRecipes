@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { createShoppingList } from '$lib/api/shoppingLists';
+	import { activePantry } from '$lib/state/activePantry.svelte';
 	import { ApiError } from '$lib/api/client';
 	import { toast } from '$lib/state/toast.svelte';
 	import { t } from '$lib/i18n/index.svelte';
@@ -12,7 +13,7 @@
 		event.preventDefault();
 		submitting = true;
 		try {
-			const list = await createShoppingList({ name, items: [] });
+			const list = await createShoppingList({ name, items: [], householdId: activePantry.current });
 			await goto(`/shopping-lists/${list._id}`);
 		} catch (err) {
 			toast.push(err instanceof ApiError ? err.message : t('shoppingListNew.error'));

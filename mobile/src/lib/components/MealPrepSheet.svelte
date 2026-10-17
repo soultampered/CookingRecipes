@@ -8,6 +8,7 @@
 	import { t, tRaw } from '$lib/i18n/index.svelte';
 	import { formatQuantity } from '$lib/utils/quantity';
 	import type { Recipe } from '$lib/types/recipe';
+	import { activePantry } from '$lib/state/activePantry.svelte';
 
 	// STO-80 (and reused by STO-87 with `initial`): batch several recipes into one list.
 	let {
@@ -55,7 +56,7 @@
 			preview = [];
 			return;
 		}
-		previewFromRecipes(current)
+		previewFromRecipes(current, activePantry.current)
 			.then((p) => {
 				if (mine === seq) preview = p;
 			})
@@ -69,7 +70,7 @@
 		}
 		creating = true;
 		try {
-			const list = await createFromRecipes(requests, { name: name.trim() || undefined });
+			const list = await createFromRecipes(requests, { name: name.trim() || undefined, householdId: activePantry.current });
 			onClose();
 			await goto(`/shopping-lists/${list._id}`);
 		} catch (err) {

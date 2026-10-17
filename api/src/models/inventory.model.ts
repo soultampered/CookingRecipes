@@ -9,6 +9,38 @@ export const inventoryModel = {
         return db.collection<Inventory>("inventory").find(query).toArray();
     },
 
+    // STO-88: one pantry. householdId null matches personal items (field null or missing).
+    findByScope: async (userId: string, householdId: string | null): Promise<Inventory[]> => {
+        const db = await connectToDatabase();
+        const query = householdId ? { householdId } : { userId, householdId: null };
+        return db.collection<Inventory>("inventory").find(query).toArray();
+    },
+
+    // Personal pantry plus every household the user belongs to.
+    findAccessible: async (userId: string, householdIds: string[]): Promise<Inventory[]> => {
+        const db = await connectToDatabase();
+        return db
+            .collection<Inventory>("inventory")
+            .find({ $or: [{ userId, householdId: null }, { householdId: { $in: householdIds } }] })
+            .toArray();
+    },
+
+    moveHousehold: async (fromHouseholdId: string, toUserId: string): Promise<void> => {
+        const db = await connectToDatabase();
+        await db.collection<Inventory>("inventory").updateMany({ householdId: fromHouseholdId }, { $set: { householdId: null, userId: toUserId } });
+    },
+
+    deleteByHouseholdId: async (householdId: string): Promise<void> => {
+        const db = await connectToDatabase();
+        await db.collection<Inventory>("inventory").deleteMany({ householdId });
+    },
+
+    deletePersonalByUserId: async (userId: string): Promise<number> => {
+        const db = await connectToDatabase();
+        const result = await db.collection<Inventory>("inventory").deleteMany({ userId, householdId: null });
+        return result.deletedCount;
+    },
+
     findById: async (id: string): Promise<Inventory> => {
         const db = await connectToDatabase();
         const item = await db.collection<Inventory>("inventory").findOne({
