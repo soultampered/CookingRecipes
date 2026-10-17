@@ -4,6 +4,7 @@
 	import { t, tRaw } from '$lib/i18n/index.svelte';
 	import QuantityStepper from './QuantityStepper.svelte';
 	import PhotoPicker from './PhotoPicker.svelte';
+	import BarcodeScanButton from './BarcodeScanButton.svelte';
 
 	let {
 		initial,
@@ -75,11 +76,14 @@
 <form onsubmit={handleSubmit} novalidate>
 	<PhotoPicker bind:value={photoId} alt={t('photo.alt', { name })} />
 
-	<label>
-		{t('inventoryForm.name')}
-		<input type="text" bind:value={name} class:invalid={!!errors.name} aria-invalid={!!errors.name} />
-		{#if errors.name}<p class="field-error">{errors.name}</p>{/if}
-	</label>
+	<div class="name-row">
+		<label>
+			{t('inventoryForm.name')}
+			<input type="text" bind:value={name} class:invalid={!!errors.name} aria-invalid={!!errors.name} />
+			{#if errors.name}<p class="field-error">{errors.name}</p>{/if}
+		</label>
+		<BarcodeScanButton onFound={(p) => (name = p.name)} />
+	</div>
 
 	<div class="row">
 		<label>
@@ -178,5 +182,14 @@
 		color: var(--paper-raised);
 		font-weight: 600;
 		cursor: pointer;
+	}
+	.name-row {
+		display: flex;
+		align-items: flex-end;
+		gap: 0.5rem;
+	}
+	.name-row label {
+		flex: 1;
+		min-width: 0;
 	}
 </style>
