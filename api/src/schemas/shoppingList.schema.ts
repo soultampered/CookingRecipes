@@ -17,7 +17,8 @@ const shoppingListItemSchema = z.object({
 // the authenticated session (see shoppingList.route.ts).
 export const createShoppingListSchema = z.object({
     name: z.string().trim().min(1).max(200),
-    items: z.array(shoppingListItemSchema)
+    items: z.array(shoppingListItemSchema),
+    householdId: objectIdString.nullable().optional() // STO-88
 });
 
 // Items sent back on PATCH (reorder, qty/price edits) keep their _id — without it zod
@@ -37,5 +38,6 @@ export const fromRecipesSchema = z.object({
         .min(1)
         .max(50),
     name: z.string().trim().min(1).max(200).optional(),
-    listId: objectIdString.optional()
+    listId: objectIdString.optional(),
+    householdId: objectIdString.nullable().optional()
 });

@@ -9,6 +9,7 @@ import { priceRecordModel } from "../models/priceRecord.model.js";
 import { inventoryEventModel } from "../models/inventoryEvent.model.js";
 import { mealPlanModel } from "../models/mealPlan.model.js";
 import { photoModel } from "../models/photo.model.js";
+import { householdService } from "./household.service.js";
 import type { User } from "../types/user.js"
 
 export const usersService = {
@@ -59,10 +60,12 @@ export const usersService = {
         // Account deletion must remove all of a user's data, not just their login —
         // recipes/inventory/shopping lists otherwise stay orphaned in the database
         // under a userId that no longer resolves to anyone.
+        // Household pantries outlive a member (STO-88): only personal inventory/lists go.
+        await householdService.handleUserDeletion(id);
         await Promise.all([
             recipeModel.deleteAllByUserId(id),
-            inventoryModel.deleteAllByUserId(id),
-            shoppingListModel.deleteAllByUserId(id),
+            inventoryModel.deletePersonalByUserId(id),
+            shoppingListModel.deletePersonalByUserId(id),
             preparationModel.deleteAllByUserId(id),
             recipeRevisionModel.deleteAllByUserId(id),
             recipeCollectionModel.deleteAllByUserId(id),

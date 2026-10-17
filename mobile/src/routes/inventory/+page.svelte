@@ -18,6 +18,7 @@
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import EditModeToggle from '$lib/components/EditModeToggle.svelte';
 	import { photoUrl } from '$lib/api/client';
+	import PantrySwitcher from '$lib/components/PantrySwitcher.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -139,7 +140,10 @@
 <PullToRefresh dependency="app:inventory">
 <div class="page">
 	<div class="header">
-		<h1>{t('inventory.title')}</h1>
+		<div class="title-block">
+			<h1>{t('inventory.title')}</h1>
+			<PantrySwitcher />
+		</div>
 		<div class="header-actions">
 			{#if canReorder && data.items.length > 1}
 				<EditModeToggle {editing} onToggle={toggleEditing} />

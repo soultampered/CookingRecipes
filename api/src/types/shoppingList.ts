@@ -21,6 +21,7 @@ export interface ShoppingList {
     items: ShoppingListItem[];
     budget?: number | null; // STO-81
     store?: string | null; // STO-90: where this trip is
+    householdId?: string | null; // STO-88
 }
 
 export type NewShoppingList = Omit<

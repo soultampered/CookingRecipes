@@ -12,6 +12,8 @@
 	import PullToRefresh from '$lib/components/PullToRefresh.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import EditModeToggle from '$lib/components/EditModeToggle.svelte';
+	import PantrySwitcher from '$lib/components/PantrySwitcher.svelte';
+	import { activePantry } from '$lib/state/activePantry.svelte';
 	import { shoppingListTemplates } from '$lib/state/shoppingListTemplates.svelte';
 	import type { PageProps } from './$types';
 
@@ -25,7 +27,7 @@
 		if (!template) return;
 		creatingFromTemplateId = templateId;
 		try {
-			const list = await createShoppingList({ name: template.name, items: [] });
+			const list = await createShoppingList({ name: template.name, items: [], householdId: activePantry.current });
 			await Promise.all(template.items.map((item) => addItem(list._id!, item)));
 			await invalidate('app:shopping-lists');
 			showTemplatePicker = false;
@@ -96,7 +98,10 @@
 <PullToRefresh dependency="app:shopping-lists">
 <div class="page">
 	<div class="header">
-		<h1>{t('shoppingLists.title')}</h1>
+		<div class="title-block">
+			<h1>{t('shoppingLists.title')}</h1>
+			<PantrySwitcher />
+		</div>
 		<div class="header-actions">
 			{#if data.lists.length > 1}
 				<EditModeToggle {editing} onToggle={toggleEditing} />

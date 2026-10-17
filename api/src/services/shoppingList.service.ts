@@ -18,8 +18,8 @@ async function repairItemIds(list: ShoppingList): Promise<ShoppingList> {
 }
 
 export const shoppingListService = {
-    async getAllShoppingLists(userId: string) {
-        const lists = await shoppingListModel.findAllByUserId(userId);
+    async getAllShoppingLists(userId: string, householdId: string | null = null) {
+        const lists = await shoppingListModel.findByScope(userId, householdId);
         return Promise.all(lists.map(repairItemIds));
     },
 

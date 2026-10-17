@@ -7,8 +7,9 @@ export const shoppingListInventoryService = {
     // Items without a unit (hand-added) default to "pcs"; recipe-generated ones (STO-80)
     // carry the stock unit and convert into an existing item's unit when possible.
     // Category is derived server-side by createInventory itself, so it isn't passed here.
-    async addCheckedItemToInventory(userId: string, item: ShoppingListItem): Promise<Inventory> {
-        const existing = await inventoryService.checkStock(userId, item.name);
+    // STO-88: lands in the same pantry as the list.
+    async addCheckedItemToInventory(userId: string, item: ShoppingListItem, householdId: string | null = null): Promise<Inventory> {
+        const existing = await inventoryService.checkStock(userId, item.name, householdId);
         if (existing) {
             const amount = item.unit ? (convert(item.quantity, item.unit, existing.unit) ?? item.quantity) : item.quantity;
             return inventoryService.adjustQuantity(existing._id.toString(), amount);
@@ -18,7 +19,8 @@ export const shoppingListInventoryService = {
             name: item.name,
             quantity: item.quantity,
             unit: item.unit ?? "pcs",
-            userId
+            userId,
+            householdId
         } as Inventory);
     }
 };

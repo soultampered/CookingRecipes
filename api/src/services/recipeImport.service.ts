@@ -141,7 +141,7 @@ export const recipeImportService = {
     async importFromUrl(userId: string, url: string): Promise<ImportResult> {
         const { recipe: ld, source } = await fetchRecipeJson(url);
 
-        const inventory = await inventoryModel.findAll(userId);
+        const inventory = await inventoryModel.findByScope(userId, null);
         const byName = new Map(inventory.map((i) => [i.name.trim().toLowerCase(), i]));
         const findStock = (name: string) => {
             const key = name.toLowerCase();

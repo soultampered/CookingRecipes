@@ -9,6 +9,7 @@
 	import ActiveSessions from '$lib/components/ActiveSessions.svelte';
 	import TwoFactorSetting from '$lib/components/TwoFactorSetting.svelte';
 	import ExportData from '$lib/components/ExportData.svelte';
+	import HouseholdsManager from '$lib/components/HouseholdsManager.svelte';
 	import { toast } from '$lib/state/toast.svelte';
 	import { ApiError } from '$lib/api/client';
 	import { categoryOrder } from '$lib/state/categoryOrder.svelte';
@@ -191,6 +192,7 @@
 		</div>
 	</div>
 
+	<HouseholdsManager />
 	<TwoFactorSetting />
 	<ActiveSessions />
 	<ExportData />

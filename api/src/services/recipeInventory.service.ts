@@ -1,6 +1,8 @@
 import { inventoryService} from "./inventory.service.js";
 import { recipeService} from "./recipes.service.js";
 import { nutritionService } from "./nutrition.service.js";
+import { accessService } from "./access.service.js";
+import { inventoryModel } from "../models/inventory.model.js";
 import type { MissingIngredient, Recipe, RecipeIngredient } from "../types/recipe.js";
 import type { Inventory, InventoryAdjustment } from "../types/inventory.js";
 
@@ -74,7 +76,8 @@ export const recipeInventoryService = {
 
     async suggestRecipes(userId: string) {
         const recipes = await recipeService.getAllRecipes(userId);
-        const inventory = await inventoryService.getAllInventory(userId);
+        // Ingredients can live in any pantry the user can reach (STO-88).
+        const inventory = await inventoryModel.findAccessible(userId, await accessService.householdIdsFor(userId));
         const inventoryMap = new Map(inventory.map(item => [item._id.toString(), item]));
 
         const makeable = recipes.filter(recipe =>

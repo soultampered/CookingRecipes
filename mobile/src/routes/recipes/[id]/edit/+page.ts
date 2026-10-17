@@ -3,7 +3,7 @@ import { getInventoryItem, listInventory } from '$lib/api/inventory';
 import type { Inventory } from '$lib/types/inventory';
 
 export const load = async ({ params }) => {
-	const [recipe, ownInventory] = await Promise.all([getRecipe(params.id), listInventory()]);
+	const [recipe, ownInventory] = await Promise.all([getRecipe(params.id), listInventory({ household: 'all' })]);
 
 	// Recipes are global and can reference another user's inventory item. The picker only
 	// offers the current user's own items to choose from, but an existing ingredient

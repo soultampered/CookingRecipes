@@ -2,6 +2,7 @@
 	import type { DifficultyLevel, NewRecipe, NutritionFacts, RecipeIngredient } from '$lib/types/recipe';
 	import type { Inventory } from '$lib/types/inventory';
 	import { UNITS } from '$lib/types/unit';
+	import { activePantry } from '$lib/state/activePantry.svelte';
 	import { t, tRaw } from '$lib/i18n/index.svelte';
 	import { dragToReorder } from '$lib/utils/dragToReorder.svelte';
 	import EditModeToggle from '$lib/components/EditModeToggle.svelte';
@@ -332,7 +333,9 @@
 		<div class="ingredient-row">
 			<select bind:value={ingredient.inventoryItemId}>
 				{#each inventoryItems as item}
-					<option value={item._id}>{item.name}</option>
+					<option value={item._id}>
+						{item.name}{item.householdId ? ` · ${activePantry.name(item.householdId) ?? '…'}` : ''}
+					</option>
 				{/each}
 			</select>
 			<input type="number" inputmode="decimal" min="0" step="any" bind:value={ingredient.quantity} />
