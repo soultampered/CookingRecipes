@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { INVENTORY_CATEGORIES } from "../types/inventory.js";
+import { UNITS } from "../types/unit.js";
 
 const objectIdString = z.string().regex(/^[0-9a-fA-F]{24}$/, "must be a valid id");
 
@@ -8,7 +9,8 @@ const shoppingListItemSchema = z.object({
     quantity: z.number().finite(),
     checked: z.boolean().optional(),
     category: z.enum(INVENTORY_CATEGORIES).optional(),
-    price: z.number().finite().nonnegative().max(100000).nullable().optional()
+    price: z.number().finite().nonnegative().max(100000).nullable().optional(),
+    unit: z.enum(UNITS).optional()
 });
 
 // userId/_id are never client-set — createShoppingList always overrides userId from
@@ -28,3 +30,12 @@ export const updateShoppingListSchema = createShoppingListSchema.partial().exten
 });
 
 export const addShoppingListItemSchema = shoppingListItemSchema;
+
+export const fromRecipesSchema = z.object({
+    recipes: z
+        .array(z.object({ recipeId: objectIdString, scale: z.number().finite().positive().max(100).optional() }))
+        .min(1)
+        .max(50),
+    name: z.string().trim().min(1).max(200).optional(),
+    listId: objectIdString.optional()
+});

@@ -46,3 +46,30 @@ export function removeItem(listId: string, itemId: string) {
 export function toggleItemChecked(listId: string, itemId: string) {
 	return apiFetch<ShoppingList>(`/shopping-lists/${listId}/items/${itemId}`, { method: 'PATCH' });
 }
+
+export interface PlannedItem {
+	inventoryItemId: string;
+	name: string;
+	unit: string;
+	needed: number;
+	have: number;
+	toBuy: number;
+	recipes: string[];
+	unitMismatch: boolean;
+}
+
+export type RecipeRequest = { recipeId: string; scale?: number };
+
+export function previewFromRecipes(recipes: RecipeRequest[]) {
+	return apiFetch<PlannedItem[]>('/shopping-lists/from-recipes/preview', {
+		method: 'POST',
+		body: JSON.stringify({ recipes })
+	});
+}
+
+export function createFromRecipes(recipes: RecipeRequest[], options: { name?: string; listId?: string } = {}) {
+	return apiFetch<ShoppingList>('/shopping-lists/from-recipes', {
+		method: 'POST',
+		body: JSON.stringify({ recipes, ...options })
+	});
+}
