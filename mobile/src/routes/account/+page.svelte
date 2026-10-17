@@ -13,9 +13,12 @@
 	import { textScale, type TextScale } from '$lib/state/textScale.svelte';
 	import { t, tRaw, locale } from '$lib/i18n/index.svelte';
 	import { dragToReorder } from '$lib/utils/dragToReorder.svelte';
+	import EditModeToggle from '$lib/components/EditModeToggle.svelte';
 	import type { Locale } from '$lib/i18n/translations';
 
 	const categoryDrag = dragToReorder();
+	// STO-118: consistent with every other reorderable list.
+	let editingCategoryOrder = $state(false);
 	function registerCategoryRef(node: HTMLElement, id: string) {
 		categoryDrag.registerRef(id, node);
 		return {
@@ -168,17 +171,28 @@
 	</div>
 
 	<div class="section category-order-section">
-		<span class="section-label">{t('account.shoppingListOrder')}</span>
+		<div class="section-head">
+			<span class="section-label">{t('account.shoppingListOrder')}</span>
+			<EditModeToggle
+				editing={editingCategoryOrder}
+				onToggle={() => {
+					editingCategoryOrder = !editingCategoryOrder;
+					categoryDrag.cancel();
+				}}
+			/>
+		</div>
 		<p class="section-hint">{t('account.shoppingListOrderHint')}</p>
 		<div class="category-order-list">
 			{#each categoryOrder.current as category (category)}
 				<div
 					class="category-order-row"
+					class:editing={editingCategoryOrder}
 					class:dragging={categoryDrag.isDragging(category)}
 					use:registerCategoryRef={category}
 					style:transform={`translateY(${categoryDrag.offsetFor(category, [...categoryOrder.current])}px)`}
 					style:touch-action={categoryDrag.isDragging(category) ? 'none' : 'auto'}
-					onpointerdown={(e) => categoryDrag.onPointerDown(e, category, [...categoryOrder.current])}
+					onpointerdown={(e) =>
+						editingCategoryOrder && categoryDrag.onPointerDown(e, category, [...categoryOrder.current])}
 					onpointermove={(e) => categoryDrag.onPointerMove(e, category, [...categoryOrder.current])}
 					onpointerup={() =>
 						categoryDrag.onPointerUp(category, (from, to) => categoryOrder.reorder(from, to))}
@@ -406,6 +420,12 @@
 		font-size: 0.78rem;
 		color: var(--ink-soft);
 	}
+	.section-head {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 0.5rem;
+	}
 	.category-order-list {
 		display: flex;
 		flex-direction: column;
@@ -427,6 +447,10 @@
 	}
 	.category-order-row:last-child {
 		border-bottom: none;
+	}
+	.category-order-row.editing {
+		background: var(--accent-soft);
+		cursor: grab;
 	}
 	.category-order-row.dragging {
 		z-index: 10;

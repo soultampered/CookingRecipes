@@ -17,6 +17,7 @@
 		swipe: externalSwipe,
 		swipeId = 'this',
 		dragging = false,
+		editing = false,
 		onCardPointerDown,
 		onCardPointerMove,
 		onCardPointerUp,
@@ -29,6 +30,8 @@
 		// Key into a shared `swipe` instance; irrelevant for the private per-card default.
 		swipeId?: string;
 		dragging?: boolean;
+		// STO-118: reorder mode — card is a drag target only, never navigates.
+		editing?: boolean;
 		onCardPointerDown?: (e: PointerEvent) => void;
 		onCardPointerMove?: (e: PointerEvent) => void;
 		onCardPointerUp?: () => void;
@@ -101,6 +104,7 @@
 		<a
 			class="card"
 			class:dragging={swipe.isDragging(swipeId) || dragging}
+			class:editing
 			href={`/recipes/${recipe._id}`}
 			style:transform={`translateX(${swipe.offsetFor(swipeId)}px)`}
 			style:touch-action={dragging ? 'none' : 'pan-y'}
@@ -108,7 +112,7 @@
 			onpointermove={(e) => (onCardPointerMove ? onCardPointerMove(e) : swipe.onPointerMove(e, swipeId))}
 			onpointerup={() => (onCardPointerUp ? onCardPointerUp() : swipe.onPointerUp(swipeId))}
 			onpointercancel={() => (onCardPointerCancel ? onCardPointerCancel() : swipe.onPointerUp(swipeId))}
-			onclick={(e) => swipe.handleClick(e, swipeId)}
+			onclick={(e) => (editing ? e.preventDefault() : swipe.handleClick(e, swipeId))}
 		>
 			{@render cardBody()}
 		</a>
@@ -151,6 +155,10 @@
 		background: var(--paper-raised);
 		touch-action: pan-y;
 		transition: transform 0.15s ease;
+	}
+	.card.editing {
+		border-style: dashed;
+		cursor: grab;
 	}
 	.card.dragging {
 		transition: none;

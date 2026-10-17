@@ -12,6 +12,7 @@
 	import { recipeViewMode } from '$lib/state/recipeViewMode.svelte';
 	import PullToRefresh from '$lib/components/PullToRefresh.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
+	import EditModeToggle from '$lib/components/EditModeToggle.svelte';
 	import type { Recipe } from '$lib/types/recipe';
 	import type { PageProps } from './$types';
 
@@ -44,6 +45,13 @@
 
 	const drag = dragToReorder();
 	const swipe = swipeToDelete();
+	// STO-118: drag only in Edit mode, swipe/tap only outside it.
+	let editing = $state(false);
+	function toggleEditing() {
+		editing = !editing;
+		drag.cancel();
+		for (const r of data.recipes) swipe.close(r._id);
+	}
 	function registerRecipeRef(node: HTMLElement, id: string) {
 		drag.registerRef(id, node);
 		return {
@@ -86,6 +94,9 @@
 			>
 				{recipeViewMode.current === 'list' ? t('recipes.gridView') : t('recipes.listView')}
 			</button>
+			{#if recipeViewMode.current === 'list' && data.recipes.length > 1}
+				<EditModeToggle {editing} onToggle={toggleEditing} />
+			{/if}
 			<a class="btn-outline" href="/recipes/suggestions">{t('recipes.suggestions')}</a>
 			<a class="btn-outline" href="/recipes/new">{t('recipes.newRecipe')}</a>
 		</div>
@@ -147,31 +158,25 @@
 							{swipe}
 							swipeId={recipe._id}
 							dragging={drag.isDragging(recipe._id)}
+							{editing}
 							onCardPointerDown={(e) =>
-								drag.onPointerDown(
-									e,
-									recipe._id,
-									orderedRecipes.map((r) => r._id),
-									(ev) => swipe.onPointerDown(ev, recipe._id)
-								)}
-							onCardPointerMove={(e) => {
-								drag.onPointerMove(
-									e,
-									recipe._id,
-									orderedRecipes.map((r) => r._id)
-								);
-								swipe.onPointerMove(e, recipe._id);
-							}}
-							onCardPointerUp={() => {
-								drag.onPointerUp(recipe._id, (from, to) =>
-									recipeOrder.reorder(
-										orderedRecipes.map((r) => r._id),
-										from,
-										to
-									)
-								);
-								swipe.onPointerUp(recipe._id);
-							}}
+								editing
+									? drag.onPointerDown(e, recipe._id, orderedRecipes.map((r) => r._id))
+									: swipe.onPointerDown(e, recipe._id)}
+							onCardPointerMove={(e) =>
+								editing
+									? drag.onPointerMove(e, recipe._id, orderedRecipes.map((r) => r._id))
+									: swipe.onPointerMove(e, recipe._id)}
+							onCardPointerUp={() =>
+								editing
+									? drag.onPointerUp(recipe._id, (from, to) =>
+											recipeOrder.reorder(
+												orderedRecipes.map((r) => r._id),
+												from,
+												to
+											)
+										)
+									: swipe.onPointerUp(recipe._id)}
 							onCardPointerCancel={() => {
 								drag.cancel();
 								swipe.onPointerUp(recipe._id);
