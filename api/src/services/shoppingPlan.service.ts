@@ -2,6 +2,7 @@ import { recipeService } from "./recipes.service.js";
 import { inventoryService } from "./inventory.service.js";
 import { shoppingListService } from "./shoppingList.service.js";
 import { convert } from "./unitConversion.js";
+import { accessService } from "./access.service.js";
 import type { Unit } from "../types/unit.js";
 import type { ShoppingList } from "../types/shoppingList.js";
 
@@ -30,8 +31,10 @@ function round(n: number) {
 }
 
 export const shoppingPlanService = {
-    async plan(userId: string, requests: RecipeRequest[]): Promise<PlannedItem[]> {
-        const inventory = await inventoryService.getAllInventory(userId);
+    // Against one pantry's stock (personal by default).
+    async plan(userId: string, requests: RecipeRequest[], householdId: string | null = null): Promise<PlannedItem[]> {
+        await accessService.assertPantry(userId, householdId);
+        const inventory = await inventoryService.getAllInventory(userId, undefined, householdId);
         const stock = new Map(inventory.map((i) => [i._id.toString(), i]));
         const totals = new Map<string, PlannedItem>();
 
@@ -74,15 +77,22 @@ export const shoppingPlanService = {
     },
 
     // Lists only shortfalls; appends to a list (merging by name) or creates one.
-    async createList(userId: string, requests: RecipeRequest[], options: { name?: string; listId?: string }): Promise<ShoppingList> {
-        const planned = (await this.plan(userId, requests)).filter((p) => p.toBuy > 0 || p.unconverted.length);
+    async createList(
+        userId: string,
+        requests: RecipeRequest[],
+        options: { name?: string; listId?: string; householdId?: string | null }
+    ): Promise<ShoppingList> {
         let list: ShoppingList;
+        let householdId = options.householdId ?? null;
         if (options.listId) {
             list = await shoppingListService.getShoppingListById(options.listId);
-            if (list.userId !== userId) throw new Error("FORBIDDEN");
+            if (!(await accessService.canAccess(userId, list))) throw new Error("FORBIDDEN");
+            householdId = list.householdId ?? null;
         } else {
-            list = await shoppingListService.createShoppingList({ name: options.name ?? "Meal prep", userId, items: [] });
+            await accessService.assertPantry(userId, householdId);
+            list = await shoppingListService.createShoppingList({ name: options.name ?? "Meal prep", userId, items: [], householdId });
         }
+        const planned = (await this.plan(userId, requests, householdId)).filter((p) => p.toBuy > 0 || p.unconverted.length);
         for (const p of planned) {
             if (p.toBuy > 0) {
                 list = await shoppingListService.addItem(list._id!.toString(), { name: p.name, quantity: p.toBuy, unit: p.unit });

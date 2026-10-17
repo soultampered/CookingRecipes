@@ -13,6 +13,11 @@ export const inventoryEventModel = {
         return db.collection<InventoryEvent>("inventoryEvent").find({ userId, at: { $gte: since } }).toArray();
     },
 
+    findSinceForItems: async (itemIds: string[], since: Date): Promise<InventoryEvent[]> => {
+        const db = await connectToDatabase();
+        return db.collection<InventoryEvent>("inventoryEvent").find({ itemId: { $in: itemIds }, at: { $gte: since } }).toArray();
+    },
+
     deleteAllByUserId: async (userId: string): Promise<void> => {
         const db = await connectToDatabase();
         await db.collection<InventoryEvent>("inventoryEvent").deleteMany({ userId });

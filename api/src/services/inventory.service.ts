@@ -2,11 +2,13 @@ import { inventoryModel } from "../models/index.js";
 import { InventoryAdjustError, type Inventory, type InventoryAdjustment, type NewInventory } from "../types/inventory.js"
 import { categorizeItemName } from "./foodCategory.service.js";
 import { restockService } from "./restock.service.js";
+import { accessService } from "./access.service.js";
 import type { InventoryEventSource } from "../types/inventoryEvent.js";
 
 export const inventoryService = {
-    async getAllInventory(userId?: string, category?: string) {
-        const items = await inventoryModel.findAll(userId);
+    // One pantry; householdId null = personal.
+    async getAllInventory(userId: string, category?: string, householdId: string | null = null) {
+        const items = await inventoryModel.findByScope(userId, householdId);
 
         if (category) {
             return items.filter( i => i.category === category);
@@ -84,8 +86,8 @@ export const inventoryService = {
         return updated;
     },
 
-    async checkStock(userId: string, itemName: string) {
-        const items = await inventoryModel.findAll(userId);
+    async checkStock(userId: string, itemName: string, householdId: string | null = null) {
+        const items = await inventoryModel.findByScope(userId, householdId);
         return items.find(i => i.name.toLowerCase() === itemName.toLowerCase()) ?? null;
     },
 
@@ -111,7 +113,11 @@ export const inventoryService = {
 
         const missing = ids.filter((id) => !byId.has(id));
         if (missing.length) throw new InventoryAdjustError("INGREDIENT_NOT_FOUND", missing);
-        const foreign = ids.filter((id) => byId.get(id)!.userId !== userId);
+        const householdIds = await accessService.householdIdsFor(userId);
+        const foreign = ids.filter((id) => {
+            const item = byId.get(id)!;
+            return item.householdId ? !householdIds.includes(item.householdId) : item.userId !== userId;
+        });
         if (foreign.length) throw new InventoryAdjustError("FORBIDDEN", foreign);
         const short = ids.filter((id) => (byId.get(id)!.quantity ?? 0) + merged.get(id)! < 0);
         if (short.length) throw new InventoryAdjustError("INSUFFICIENT_STOCK", short);

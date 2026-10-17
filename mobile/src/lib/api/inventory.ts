@@ -1,9 +1,11 @@
 import { apiFetch } from './client';
 import type { Inventory, InventoryCategory, NewInventory } from '$lib/types/inventory';
 
-export function listInventory(filter: { category?: InventoryCategory } = {}) {
+// household: an id, 'all' (every reachable pantry), or absent = personal.
+export function listInventory(filter: { category?: InventoryCategory; household?: string | null } = {}) {
 	const params = new URLSearchParams();
 	if (filter.category) params.set('category', filter.category);
+	if (filter.household) params.set('household', filter.household);
 	const query = params.toString();
 	return apiFetch<Inventory[]>(`/inventory${query ? `?${query}` : ''}`);
 }
@@ -44,6 +46,6 @@ export interface RestockPrediction {
 	runOutOn: string;
 }
 
-export function getRestockPredictions(days = 7) {
-	return apiFetch<RestockPrediction[]>(`/inventory/restock?days=${days}`);
+export function getRestockPredictions(days = 7, household?: string | null) {
+	return apiFetch<RestockPrediction[]>(`/inventory/restock?days=${days}${household ? `&household=${household}` : ''}`);
 }
