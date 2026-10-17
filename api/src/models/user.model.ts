@@ -12,6 +12,9 @@ export function stripPassword(
     | "resetCode"
     | "resetCodeExpiresAt"
     | "refreshTokens"
+    | "loginChallenge"
+    | "loginCode"
+    | "loginCodeExpiresAt"
 > {
     const {
         password,
@@ -20,6 +23,9 @@ export function stripPassword(
         resetCode,
         resetCodeExpiresAt,
         refreshTokens,
+        loginChallenge,
+        loginCode,
+        loginCodeExpiresAt,
         ...rest
     } = user;
     return rest;
@@ -86,6 +92,12 @@ export const userModel = {
             _id: new ObjectId(id)
         });
         return user.deletedCount > 0;
+    },
+
+    findByLoginChallenge: async (challenge: string): Promise<User | null> => {
+        if (typeof challenge !== "string") return null;
+        const db = await connectToDatabase();
+        return db.collection<User>("user").findOne({ loginChallenge: challenge });
     },
 
     findByRefreshToken: async (token: string): Promise<User | null> => {

@@ -11,7 +11,9 @@ import {
     forgotPasswordSchema,
     resetPasswordSchema,
     refreshTokenSchema,
-    listSessionsSchema
+    listSessionsSchema,
+    verifyLoginCodeSchema,
+    setTwoFactorSchema
 } from "../schemas/auth.schema.js";
 
 const authRoute = new Hono<{ Variables: AuthVariables }>();
@@ -51,7 +53,45 @@ authRoute.post("/login", loginLimiter, validateJson(loginSchema), async (c) => {
         if (message === "ACCOUNT_LOCKED") {
             return c.json({ error: "Too many failed attempts, please try again later" }, 423);
         }
+        if (message === "CODE_SEND_FAILED") {
+            return c.json({ error: "Could not send your sign-in code, try again" }, 503);
+        }
         return c.json({ error: "Failed to log in" }, 500);
+    }
+});
+
+// 2FA login, step two. Shares the login limiter.
+authRoute.post("/login/verify", loginLimiter, validateJson(verifyLoginCodeSchema), async (c) => {
+    try {
+        const { challengeId, code } = c.req.valid("json");
+        const result = await authService.verifyLoginCode(challengeId, code, c.req.header("User-Agent"));
+        return c.json(result, 200);
+    } catch (err) {
+        const message = (err as Error).message;
+        if (message === "CODE_EXPIRED") {
+            return c.json({ error: "Code expired, sign in again" }, 400);
+        }
+        if (message === "TOO_MANY_ATTEMPTS") {
+            return c.json({ error: "Too many incorrect attempts, sign in again" }, 429);
+        }
+        if (message === "INVALID_CODE") {
+            return c.json({ error: "Incorrect code" }, 400);
+        }
+        return c.json({ error: "Failed to verify code" }, 500);
+    }
+});
+
+authRoute.post("/2fa", authMiddleware, validateJson(setTwoFactorSchema), async (c) => {
+    try {
+        const { enabled, password } = c.req.valid("json");
+        const user = await authService.setTwoFactor(c.get("userId"), enabled, password);
+        return c.json(user, 200);
+    } catch (err) {
+        if ((err as Error).message === "INVALID_CREDENTIALS") {
+            // 403 not 401: the mobile client treats any 401 as a dead session.
+            return c.json({ error: "Incorrect password" }, 403);
+        }
+        return c.json({ error: "Failed to update two-factor setting" }, 500);
     }
 });
 

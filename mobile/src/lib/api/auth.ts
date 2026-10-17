@@ -11,8 +11,28 @@ export function register(data: { username: string; email: string; password: stri
 	return apiFetch<AuthResponse>('/auth/register', { method: 'POST', body: JSON.stringify(data) });
 }
 
+// 2FA accounts get a challenge instead of tokens.
+export interface TwoFactorChallenge {
+	twoFactorRequired: true;
+	challengeId: string;
+}
+
 export function login(data: { identifier: string; password: string }) {
-	return apiFetch<AuthResponse>('/auth/login', { method: 'POST', body: JSON.stringify(data) });
+	return apiFetch<AuthResponse | TwoFactorChallenge>('/auth/login', {
+		method: 'POST',
+		body: JSON.stringify(data)
+	});
+}
+
+export function verifyLoginCode(challengeId: string, code: string) {
+	return apiFetch<AuthResponse>('/auth/login/verify', {
+		method: 'POST',
+		body: JSON.stringify({ challengeId, code })
+	});
+}
+
+export function setTwoFactor(enabled: boolean, password: string) {
+	return apiFetch<User>('/auth/2fa', { method: 'POST', body: JSON.stringify({ enabled, password }) });
 }
 
 export function getCurrentUser() {
