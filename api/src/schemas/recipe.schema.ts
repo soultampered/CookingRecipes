@@ -40,5 +40,12 @@ export const prepareRecipeSchema = z.object({
     overrides: z
         .array(z.object({ inventoryItemId: objectIdString, quantity: z.number().finite().nonnegative() }))
         .max(200)
+        .optional(),
+    // STO-86: turn part of the batch into a tracked inventory item.
+    leftovers: z
+        .object({
+            servings: z.number().finite().positive().max(1000),
+            expiresInDays: z.number().int().min(0).max(60)
+        })
         .optional()
 });

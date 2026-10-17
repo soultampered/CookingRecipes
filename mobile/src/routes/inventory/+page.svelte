@@ -274,6 +274,9 @@
 									{t('inventory.lowBadge')}
 								</button>
 							{/if}
+							{#if item.leftoverOfRecipeId}
+								<a class="leftover-badge" href={`/recipes/${item.leftoverOfRecipeId}`}>{t('inventory.leftoverBadge')}</a>
+							{/if}
 							{#if expiryStatus(item, expirySettings.daysAhead) === 'expired'}
 								<span class="expiring-badge">{t('inventory.expiredBadge')}</span>
 							{:else if expiryStatus(item, expirySettings.daysAhead) === 'soon'}
@@ -504,6 +507,17 @@
 		font-weight: 600;
 		padding: 0.25rem 0.55rem;
 		border-radius: 999px;
+	}
+	.leftover-badge {
+		flex: 0 0 auto;
+		border: 1px solid var(--accent);
+		background: var(--accent-soft);
+		color: var(--accent);
+		font-size: 0.75rem;
+		font-weight: 600;
+		padding: 0.25rem 0.55rem;
+		border-radius: 999px;
+		text-decoration: none;
 	}
 	.expiring-badge.soon {
 		border-color: var(--warn);

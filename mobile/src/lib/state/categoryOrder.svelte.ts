@@ -3,13 +3,18 @@ import { INVENTORY_CATEGORIES, type InventoryCategory } from '$lib/types/invento
 
 const CATEGORY_ORDER_KEY = 'stokpot.categoryOrder';
 
-function isValidOrder(value: unknown): value is InventoryCategory[] {
-	if (!Array.isArray(value)) return false;
-	const asSet = new Set(value);
-	return (
-		asSet.size === INVENTORY_CATEGORIES.length &&
-		INVENTORY_CATEGORIES.every((c) => asSet.has(c))
-	);
+// Keeps a saved order across category additions/removals: unknown entries drop, new
+// categories append before Miscellaneous rather than resetting the user's order (STO-86).
+function mergeOrder(value: unknown): InventoryCategory[] | null {
+	if (!Array.isArray(value)) return null;
+	const known = new Set<string>(INVENTORY_CATEGORIES);
+	const kept = [...new Set(value)].filter((c): c is InventoryCategory => known.has(c));
+	if (kept.length === 0) return null;
+	const missing = INVENTORY_CATEGORIES.filter((c) => !kept.includes(c));
+	const miscAt = kept.indexOf('Miscellaneous');
+	if (miscAt >= 0) kept.splice(miscAt, 0, ...missing.filter((c) => c !== 'Miscellaneous'));
+	else kept.push(...missing);
+	return kept;
 }
 
 class CategoryOrderState {
@@ -19,10 +24,8 @@ class CategoryOrderState {
 		const { value } = await Preferences.get({ key: CATEGORY_ORDER_KEY });
 		if (!value) return;
 		try {
-			const parsed = JSON.parse(value);
-			// Guards against a stale saved order from before a category was added/removed —
-			// falls back to the default rather than silently dropping/misplacing a category.
-			if (isValidOrder(parsed)) this.current = parsed;
+			const merged = mergeOrder(JSON.parse(value));
+			if (merged) this.current = merged;
 		} catch {
 			// Corrupt value — ignore and keep the default order.
 		}
