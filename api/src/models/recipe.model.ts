@@ -74,6 +74,12 @@ export const recipeModel = {
         return result.deletedCount > 0;
     },
 
+    findByShareToken: async (token: string): Promise<Recipe | null> => {
+        if (typeof token !== 'string' || !token) return null;
+        const db = await connectToDatabase();
+        return db.collection<Recipe>('recipes').findOne({ shareToken: token });
+    },
+
     deleteAllByUserId: async (userId: string): Promise<number> => {
         const db = await connectToDatabase();
         const result = await db.collection<Recipe>('recipes').deleteMany({ userId });

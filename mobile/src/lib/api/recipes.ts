@@ -75,3 +75,11 @@ export function listRevisions(id: string) {
 export function restoreRevision(id: string, revisionId: string) {
 	return apiFetch<Recipe>(`/recipes/${id}/revisions/${revisionId}/restore`, { method: 'POST' });
 }
+
+export function enableShare(id: string) {
+	return apiFetch<{ token: string; url: string }>(`/recipes/${id}/share`, { method: 'POST' });
+}
+
+export function disableShare(id: string) {
+	return apiFetch<void>(`/recipes/${id}/share`, { method: 'DELETE' });
+}

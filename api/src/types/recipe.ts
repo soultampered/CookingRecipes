@@ -40,6 +40,8 @@ export interface Recipe {
     // Suggestions ordering. rating null = cleared.
     favorite?: boolean;
     rating?: number | null;
+    // Public link token; absent = private.
+    shareToken?: string | null;
 }
 
 export interface MissingIngredient {
