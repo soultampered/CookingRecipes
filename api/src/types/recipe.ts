@@ -43,6 +43,7 @@ export interface Recipe {
     // STO-84: unguessable public link token; absent = private.
     shareToken?: string | null;
     photoId?: string | null; // STO-19
+    sourceUrl?: string; // STO-17: where an imported recipe came from
 }
 
 export interface MissingIngredient {

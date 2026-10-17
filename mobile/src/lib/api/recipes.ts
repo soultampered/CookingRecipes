@@ -83,3 +83,11 @@ export function enableShare(id: string) {
 export function disableShare(id: string) {
 	return apiFetch<void>(`/recipes/${id}/share`, { method: 'DELETE' });
 }
+
+// STO-17
+export function importRecipe(url: string) {
+	return apiFetch<{ recipe: Recipe; createdInventoryNames: string[]; sourceUrl: string }>('/recipes/import', {
+		method: 'POST',
+		body: JSON.stringify({ url })
+	});
+}
