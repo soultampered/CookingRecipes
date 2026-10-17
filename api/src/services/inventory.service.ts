@@ -1,6 +1,8 @@
 import { inventoryModel } from "../models/index.js";
 import { InventoryAdjustError, type Inventory, type InventoryAdjustment, type NewInventory } from "../types/inventory.js"
 import { categorizeItemName } from "./foodCategory.service.js";
+import { restockService } from "./restock.service.js";
+import type { InventoryEventSource } from "../types/inventoryEvent.js";
 
 export const inventoryService = {
     async getAllInventory(userId?: string, category?: string) {
@@ -36,13 +38,16 @@ export const inventoryService = {
         // the existing (already-derived) category alone.
         // Leftovers keep their category through a rename.
         let patch = data;
+        const existing = await inventoryModel.findById(id);
         if (data.name) {
-            const existing = await inventoryModel.findById(id);
             const category = existing.category === "Leftovers" ? "Leftovers" : await categorizeItemName(data.name);
             patch = { ...data, category };
         }
         const updated = await inventoryModel.update(id, patch);
         if (!updated) throw new Error("NOT_FOUND");
+        if (data.quantity != null && data.quantity !== existing.quantity) {
+            await restockService.log(existing.userId, [{ itemId: id, delta: data.quantity - existing.quantity }], "manual");
+        }
         return updated;
     },
 
@@ -73,7 +78,10 @@ export const inventoryService = {
         const newQuantity = (item.quantity ?? 0) + amount;
         if (newQuantity < 0) throw new Error("INSUFFICIENT_STOCK");
 
-        return await inventoryModel.update(id, { quantity: newQuantity });
+        const updated = await inventoryModel.update(id, { quantity: newQuantity });
+        // Only caller is the shopping-list check-off sync.
+        await restockService.log(item.userId, [{ itemId: id, delta: amount }], "shopping");
+        return updated;
     },
 
     async checkStock(userId: string, itemName: string) {
@@ -88,7 +96,11 @@ export const inventoryService = {
     },
 
     // All-or-nothing: pre-check ownership + stock, conditional $inc each, roll back on a lost race.
-    async applyAdjustments(userId: string, adjustments: InventoryAdjustment[]): Promise<Inventory[]> {
+    async applyAdjustments(
+        userId: string,
+        adjustments: InventoryAdjustment[],
+        source: InventoryEventSource = "adjust"
+    ): Promise<Inventory[]> {
         const merged = new Map<string, number>();
         for (const { id, amount } of adjustments) {
             merged.set(id, Math.round(((merged.get(id) ?? 0) + amount) * 1000) / 1000);
@@ -116,6 +128,7 @@ export const inventoryService = {
             }
             applied.push([id, amount]);
         }
+        await restockService.log(userId, applied.map(([itemId, delta]) => ({ itemId, delta })), source);
         return inventoryModel.findByIds(ids);
     },
 }

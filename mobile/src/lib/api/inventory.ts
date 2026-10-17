@@ -33,3 +33,17 @@ export function adjustInventory(adjustments: { id: string; amount: number }[], a
 		body: JSON.stringify({ adjustments, adjustmentId })
 	});
 }
+
+export interface RestockPrediction {
+	itemId: string;
+	name: string;
+	quantity: number;
+	unit: string;
+	dailyUse: number;
+	daysLeft: number;
+	runOutOn: string;
+}
+
+export function getRestockPredictions(days = 7) {
+	return apiFetch<RestockPrediction[]>(`/inventory/restock?days=${days}`);
+}
