@@ -35,6 +35,7 @@ export interface Inventory {
 	notes?: string;
 	lowStockThreshold?: number;
 	leftoverOfRecipeId?: string;
+	photoId?: string | null;
 }
 
 export type NewInventory = Omit<Inventory, '_id' | 'createdAt' | 'updatedAt' | 'userId'>;

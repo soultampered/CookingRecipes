@@ -17,6 +17,7 @@ export interface PublicRecipe {
     ingredients: { name: string; quantity: number; unit?: string }[];
     instructions: string[];
     nutritionPerServing?: Recipe["nutrition"][number];
+    photoUrl?: string; // STO-19, relative to the API origin
 }
 
 export const recipeShareService = {
@@ -53,7 +54,8 @@ export const recipeShareService = {
                 unit: i.unit ?? names.get(i.inventoryItemId)?.unit
             })),
             instructions: recipe.instructions,
-            nutritionPerServing: recipe.nutrition?.[0]
+            nutritionPerServing: recipe.nutrition?.[0],
+            photoUrl: recipe.photoId ? `/photos/${recipe.photoId}` : undefined
         };
     }
 };

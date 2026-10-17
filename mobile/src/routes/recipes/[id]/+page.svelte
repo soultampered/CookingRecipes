@@ -5,6 +5,7 @@
 	import PrepareSheet from '$lib/components/PrepareSheet.svelte';
 	import RecipeRating from '$lib/components/RecipeRating.svelte';
 	import { printOrShareRecipe } from '$lib/utils/printRecipe';
+	import { photoUrl } from '$lib/api/client';
 	import CollectionPicker from '$lib/components/CollectionPicker.svelte';
 	import ShareLinkSheet from '$lib/components/ShareLinkSheet.svelte';
 	import PlanRecipeSheet from '$lib/components/PlanRecipeSheet.svelte';
@@ -243,6 +244,9 @@
 			</div>
 		{/if}
 	</div>
+	{#if data.recipe.photoId}
+		<img class="hero" src={photoUrl(data.recipe.photoId)} alt={t('photo.alt', { name: data.recipe.title })} />
+	{/if}
 	<div class="header">
 		<div>
 			<h1>{data.recipe.title}</h1>
@@ -646,6 +650,12 @@
 		background: var(--ink);
 		border-color: var(--ink);
 		color: var(--paper-raised);
+	}
+	.hero {
+		width: 100%;
+		max-height: 260px;
+		object-fit: cover;
+		border-radius: 12px;
 	}
 	.per-serving {
 		margin: 0;

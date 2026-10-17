@@ -42,6 +42,7 @@ export interface Recipe {
     rating?: number | null;
     // STO-84: unguessable public link token; absent = private.
     shareToken?: string | null;
+    photoId?: string | null; // STO-19
 }
 
 export interface MissingIngredient {
