@@ -1,5 +1,6 @@
 // Mirrors api/src/types/shoppingList.ts (ObjectId/Date fields become string over the wire)
 import type { InventoryCategory } from './inventory';
+import type { Unit } from './unit';
 
 export interface ShoppingListItem {
 	_id?: string;
@@ -8,6 +9,7 @@ export interface ShoppingListItem {
 	checked?: boolean;
 	category?: InventoryCategory;
 	price?: number | null;
+	unit?: Unit;
 }
 
 export interface ShoppingList {

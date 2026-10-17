@@ -679,7 +679,7 @@
 										onclick={() => startEditQuantity(item)}
 										aria-label={t('shoppingList.editQuantityAriaLabel', { name: item.name })}
 									>
-										{item.quantity}
+										{item.quantity}{item.unit ? ` ${tRaw('unit', item.unit)}` : ''}
 									</button>
 								{/if}
 								{#if editingPriceId === item._id && !selectMode}
