@@ -26,6 +26,7 @@
 	import type { ShoppingListItem } from '$lib/types/shoppingList';
 	import { money } from '$lib/utils/money';
 	import { priceKey } from '$lib/api/prices';
+	import BarcodeScanButton from '$lib/components/BarcodeScanButton.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -770,6 +771,7 @@
 		bind:this={itemNameInput}
 		required
 	/>
+	<BarcodeScanButton compact onFound={(p) => (itemName = p.name)} />
 	<QuantityStepper
 		bind:value={itemQuantity}
 		min={1}
