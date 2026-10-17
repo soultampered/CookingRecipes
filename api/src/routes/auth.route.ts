@@ -10,7 +10,8 @@ import {
     verifyEmailSchema,
     forgotPasswordSchema,
     resetPasswordSchema,
-    refreshTokenSchema
+    refreshTokenSchema,
+    listSessionsSchema
 } from "../schemas/auth.schema.js";
 
 const authRoute = new Hono<{ Variables: AuthVariables }>();
@@ -23,7 +24,7 @@ const resendCodeLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, prefix:
 authRoute.post("/register", registerLimiter, validateJson(registerSchema), async (c) => {
     try {
         const body = c.req.valid("json");
-        const result = await authService.register(body);
+        const result = await authService.register(body, c.req.header("User-Agent"));
         return c.json(result, 201);
     } catch (err) {
         const message = (err as Error).message;
@@ -40,7 +41,7 @@ authRoute.post("/register", registerLimiter, validateJson(registerSchema), async
 authRoute.post("/login", loginLimiter, validateJson(loginSchema), async (c) => {
     try {
         const body = c.req.valid("json");
-        const result = await authService.login(body.identifier, body.password);
+        const result = await authService.login(body.identifier, body.password, c.req.header("User-Agent"));
         return c.json(result, 200);
     } catch (err) {
         const message = (err as Error).message;
@@ -132,6 +133,37 @@ authRoute.post("/refresh", validateJson(refreshTokenSchema), async (c) => {
 authRoute.get("/security-events", authMiddleware, async (c) => {
     const events = await authService.listSecurityEvents(c.get("userId"));
     return c.json(events, 200);
+});
+
+// STO-33. POST (not GET) so the current refresh token travels in the body, not the URL.
+authRoute.post("/sessions", authMiddleware, validateJson(listSessionsSchema), async (c) => {
+    const { refreshToken } = c.req.valid("json");
+    const sessions = await authService.listSessions(c.get("userId"), refreshToken);
+    return c.json(sessions, 200);
+});
+
+authRoute.post("/sessions/revoke-others", authMiddleware, validateJson(refreshTokenSchema), async (c) => {
+    try {
+        await authService.revokeOtherSessions(c.get("userId"), c.req.valid("json").refreshToken);
+        return c.json({ message: "Other sessions signed out" }, 200);
+    } catch (err) {
+        if ((err as Error).message === "NOT_FOUND") {
+            return c.json({ error: "Current session not found" }, 404);
+        }
+        return c.json({ error: "Failed to sign out other sessions" }, 500);
+    }
+});
+
+authRoute.delete("/sessions/:id", authMiddleware, async (c) => {
+    try {
+        await authService.revokeSession(c.get("userId"), c.req.param("id"));
+        return c.body(null, 204);
+    } catch (err) {
+        if ((err as Error).message === "NOT_FOUND") {
+            return c.json({ error: "Session not found" }, 404);
+        }
+        return c.json({ error: "Failed to sign out session" }, 500);
+    }
 });
 
 authRoute.post("/logout", authMiddleware, validateJson(refreshTokenSchema), async (c) => {

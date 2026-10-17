@@ -47,3 +47,30 @@ export function logout(refreshToken: string) {
 		body: JSON.stringify({ refreshToken })
 	});
 }
+
+// STO-33
+export interface SessionSummary {
+	id: string;
+	createdAt?: string;
+	lastUsedAt?: string;
+	userAgent?: string;
+	current: boolean;
+}
+
+export function listSessions(refreshToken: string | null) {
+	return apiFetch<SessionSummary[]>('/auth/sessions', {
+		method: 'POST',
+		body: JSON.stringify(refreshToken ? { refreshToken } : {})
+	});
+}
+
+export function revokeSession(id: string) {
+	return apiFetch<void>(`/auth/sessions/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+export function revokeOtherSessions(refreshToken: string) {
+	return apiFetch<{ message: string }>('/auth/sessions/revoke-others', {
+		method: 'POST',
+		body: JSON.stringify({ refreshToken })
+	});
+}
