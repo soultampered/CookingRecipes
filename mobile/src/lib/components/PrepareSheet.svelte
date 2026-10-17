@@ -52,6 +52,8 @@
 		submitting = true;
 		try {
 			const result = await prepareRecipe(recipe._id, {
+				// scale still sets servings for the nutrition log.
+				scale,
 				overrides: recipe.ingredients.map((ing, i) => ({
 					inventoryItemId: ing.inventoryItemId,
 					index: i,

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { DifficultyLevel, NewRecipe, RecipeIngredient } from '$lib/types/recipe';
+	import type { DifficultyLevel, NewRecipe, NutritionFacts, RecipeIngredient } from '$lib/types/recipe';
 	import type { Inventory } from '$lib/types/inventory';
 	import { UNITS } from '$lib/types/unit';
 	import { t, tRaw } from '$lib/i18n/index.svelte';
@@ -31,6 +31,13 @@
 	const initialCookTime = initial?.cookTimeMinutes;
 	const initialTags = initial?.tags?.length ? [...initial.tags] : [];
 	const initialInstructions = initial?.instructions?.length ? [...initial.instructions] : [''];
+	// nutrition[0] = per serving; extras kept.
+	const initialNutrition = {
+		calories: initial?.nutrition?.[0]?.calories,
+		protein: initial?.nutrition?.[0]?.protein,
+		carbs: initial?.nutrition?.[0]?.carbs,
+		fat: initial?.nutrition?.[0]?.fat
+	};
 	// Stable per-row ids for keyed reordering (drag AND the existing up/down buttons both need
 	// this — a plain string[] keyed by index would make Svelte reuse/mismatch DOM nodes across
 	// a reorder instead of animating them, and the drag composable needs a stable id to attach
@@ -54,7 +61,8 @@
 		cookTimeMinutes: initialCookTime,
 		instructions: initialInstructions,
 		ingredients: initialIngredients,
-		tags: initialTags
+		tags: initialTags,
+		nutrition: initialNutrition
 	});
 
 	let title = $state(initialTitle);
@@ -68,6 +76,18 @@
 	let tagDraft = $state('');
 	let instructionRows = $state(initialInstructions.map((text) => ({ id: makeInstructionId(), text })));
 	let ingredients = $state<RecipeIngredient[]>(initialIngredients);
+	let nutrition = $state({ ...initialNutrition });
+
+	function nutritionPayload(): NutritionFacts[] {
+		const perServing: NutritionFacts = { ...(initial?.nutrition?.[0] ?? {}) };
+		for (const key of ['calories', 'protein', 'carbs', 'fat'] as const) {
+			const value = nutrition[key];
+			if (typeof value === 'number' && Number.isFinite(value) && value >= 0) perServing[key] = value;
+			else delete perServing[key];
+		}
+		const rest = initial?.nutrition?.slice(1) ?? [];
+		return Object.keys(perServing).length || rest.length ? [perServing, ...rest] : [];
+	}
 
 	// Every other field/function below keeps referring to `instructions` as a plain string[],
 	// same as before — only the mutation functions (add/remove/move/reorder) and the template's
@@ -86,7 +106,8 @@
 				cookTimeMinutes,
 				instructions,
 				ingredients,
-				tags
+				tags,
+				nutrition
 			}) !== initialSnapshot;
 	});
 
@@ -191,7 +212,7 @@
 			ingredients,
 			instructions: instructions.filter((line) => line.trim().length > 0),
 			tags: tags.length ? tags : undefined,
-			nutrition: []
+			nutrition: nutritionPayload()
 		});
 	}
 </script>
@@ -284,6 +305,16 @@
 			{t('recipeForm.cookMinutes')}
 			<input type="number" inputmode="numeric" min="0" bind:value={cookTimeMinutes} />
 		</label>
+	</div>
+
+	<div class="field-label">{t('recipeForm.nutritionPerServing')}</div>
+	<div class="row nutrition-row">
+		{#each ['calories', 'protein', 'carbs', 'fat'] as const as key (key)}
+			<label>
+				{t(`nutrition.${key}`)}
+				<input type="number" inputmode="decimal" min="0" step="any" bind:value={nutrition[key]} />
+			</label>
+		{/each}
 	</div>
 
 	<div class="field-label">{t('recipeForm.ingredients')}</div>
@@ -405,6 +436,12 @@
 	.row {
 		display: flex;
 		gap: 0.6rem;
+	}
+	.nutrition-row {
+		flex-wrap: wrap;
+	}
+	.nutrition-row label {
+		flex: 1 1 40%;
 	}
 	.row label {
 		flex: 1;
