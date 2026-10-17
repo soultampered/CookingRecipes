@@ -69,11 +69,17 @@ export const recipeInventoryService = {
         const inventory = await inventoryService.getAllInventory(userId);
         const inventoryMap = new Map(inventory.map(item => [item._id.toString(), item]));
 
-        return recipes.filter(recipe =>
+        const makeable = recipes.filter(recipe =>
             recipe.ingredients.every(ingredient => {
                 const stock = inventoryMap.get(ingredient.inventoryItemId.toString());
                 return stock && stock.quantity >= ingredient.quantity;
             })
+        );
+        // Favorites first, then rating; unrated = 3, so disliked recipes sink below it.
+        return makeable.sort((a, b) =>
+            Number(b.favorite ?? false) - Number(a.favorite ?? false) ||
+            (b.rating ?? 3) - (a.rating ?? 3) ||
+            a.title.localeCompare(b.title)
         );
     },
 };

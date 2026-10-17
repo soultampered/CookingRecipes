@@ -33,6 +33,8 @@ export interface Recipe {
 	author: string;
 	nutrition: NutritionFacts[];
 	difficulty: DifficultyLevel;
+	favorite?: boolean;
+	rating?: number | null;
 }
 
 export type NewRecipe = Omit<Recipe, '_id' | 'createdAt' | 'updatedAt'>;
