@@ -7,6 +7,7 @@ export interface ShoppingListItem {
     quantity: number;
     checked?: boolean; // for UI tracking (e.g. "purchased" or "acquired")
     category?: InventoryCategory; // shares inventory's category vocabulary
+    price?: number | null; // STO-81: per unit of quantity
 }
 
 export interface ShoppingList {
@@ -16,6 +17,8 @@ export interface ShoppingList {
     createdAt?: Date;
     updatedAt?: Date;
     items: ShoppingListItem[];
+    budget?: number | null; // STO-81
+    store?: string | null; // STO-90: where this trip is
 }
 
 export type NewShoppingList = Omit<

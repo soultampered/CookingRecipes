@@ -3,15 +3,28 @@ import { shoppingListModel } from "../models/index.js";
 import type { ShoppingList, ShoppingListItem } from "../types/shoppingList.js";
 import { categorizeItemName } from "./foodCategory.service.js";
 
+type IncomingItem = Omit<ShoppingListItem, "_id"> & { _id?: ObjectId | string };
+
+function withIds(items: IncomingItem[]): ShoppingListItem[] {
+    return items.map((i) => ({ ...i, _id: i._id ? new ObjectId(i._id.toString()) : new ObjectId() }));
+}
+
+// Lists saved while the PATCH bug stripped ids get them back on first read.
+async function repairItemIds(list: ShoppingList): Promise<ShoppingList> {
+    if (list.items.every((i) => i._id)) return list;
+    return shoppingListModel.update(list._id!.toString(), { items: withIds(list.items) });
+}
+
 export const shoppingListService = {
     async getAllShoppingLists(userId: string) {
-        return shoppingListModel.findAllByUserId(userId);
+        const lists = await shoppingListModel.findAllByUserId(userId);
+        return Promise.all(lists.map(repairItemIds));
     },
 
     async getShoppingListById(id: string) {
         const list = await shoppingListModel.findById(id);
         if (!list) throw new Error("NOT_FOUND");
-        return list;
+        return repairItemIds(list);
     },
 
     async createShoppingList(data: ShoppingList) {
@@ -21,8 +34,10 @@ export const shoppingListService = {
         return shoppingListModel.create(data);
     },
 
-    async updateShoppingList(id: string, data: Partial<ShoppingList>) {
-        const updated = await shoppingListModel.update(id, data);
+    async updateShoppingList(id: string, data: Omit<Partial<ShoppingList>, "items"> & { items?: IncomingItem[] }) {
+        const patch: Partial<ShoppingList> = { ...data, items: data.items ? withIds(data.items) : undefined };
+        if (!data.items) delete patch.items;
+        const updated = await shoppingListModel.update(id, patch);
         if (!updated) throw new Error("NOT_FOUND");
         return updated;
     },

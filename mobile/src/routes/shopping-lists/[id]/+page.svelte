@@ -24,6 +24,7 @@
 	import EditModeToggle from '$lib/components/EditModeToggle.svelte';
 	import { shoppingListTemplates } from '$lib/state/shoppingListTemplates.svelte';
 	import type { ShoppingListItem } from '$lib/types/shoppingList';
+	import { money } from '$lib/utils/money';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -68,6 +69,46 @@
 			toast.push(err instanceof ApiError ? err.message : t('shoppingList.errorUpdateItem'));
 		} finally {
 			savingQuantity = false;
+		}
+	}
+
+	// STO-81: per-unit price on items + an optional trip budget.
+	let editingPriceId = $state<string | null>(null);
+	let priceDraft = $state<number | null>(null);
+	let editingBudget = $state(false);
+	let budgetDraft = $state<number | null>(null);
+
+	let lineTotal = (i: ShoppingListItem) => (i.price ?? 0) * i.quantity;
+	let estTotal = $derived(data.list.items.reduce((sum, i) => sum + lineTotal(i), 0));
+	let cartTotal = $derived(data.list.items.filter((i) => i.checked).reduce((sum, i) => sum + lineTotal(i), 0));
+	let unpricedCount = $derived(data.list.items.filter((i) => i.price == null).length);
+	let hasPrices = $derived(data.list.items.some((i) => i.price != null));
+
+	function startEditPrice(item: ShoppingListItem) {
+		editingPriceId = item._id!;
+		priceDraft = item.price ?? null;
+	}
+
+	async function commitPrice(itemId: string) {
+		const price = priceDraft == null || Number.isNaN(Number(priceDraft)) ? null : Math.max(0, Number(priceDraft));
+		try {
+			const items = data.list.items.map((i) => (i._id === itemId ? { ...i, price } : i));
+			await updateShoppingList(data.list._id!, { items });
+			await invalidate(`app:shopping-list:${data.list._id}`);
+			editingPriceId = null;
+		} catch (err) {
+			toast.push(err instanceof ApiError ? err.message : t('shoppingList.errorUpdateItem'));
+		}
+	}
+
+	async function commitBudget() {
+		const budget = budgetDraft == null || Number.isNaN(Number(budgetDraft)) ? null : Math.max(0, Number(budgetDraft));
+		try {
+			await updateShoppingList(data.list._id!, { budget });
+			await invalidate(`app:shopping-list:${data.list._id}`);
+			editingBudget = false;
+		} catch (err) {
+			toast.push(err instanceof ApiError ? err.message : t('shoppingList.errorUpdateItem'));
 		}
 	}
 
@@ -384,6 +425,57 @@
 		</button>
 	{/if}
 
+	{#if data.list.items.length > 0}
+		<div class="cost-bar">
+			<div class="cost-totals">
+				{#if hasPrices}
+					<span>{t('cost.total', { amount: money(estTotal) })}</span>
+					<span class="muted">{t('cost.inCart', { amount: money(cartTotal) })}</span>
+					{#if unpricedCount > 0}<span class="muted">{t('cost.unpriced', { count: unpricedCount })}</span>{/if}
+				{/if}
+			</div>
+			{#if editingBudget}
+				<form
+					class="budget-edit"
+					onsubmit={(e) => {
+						e.preventDefault();
+						commitBudget();
+					}}
+				>
+					<input type="number" inputmode="decimal" min="0" step="0.01" bind:value={budgetDraft} aria-label={t('cost.budgetAria')} use:focusOnMount />
+					<button type="submit">✓</button>
+				</form>
+			{:else if data.list.budget != null}
+				<button
+					type="button"
+					class="budget"
+					class:over={estTotal > data.list.budget}
+					onclick={() => {
+						budgetDraft = data.list.budget ?? null;
+						editingBudget = true;
+					}}
+				>
+					{t('cost.budget')}
+					{money(data.list.budget)} ·
+					{estTotal > data.list.budget
+						? t('cost.over', { amount: money(estTotal - data.list.budget) })
+						: t('cost.left', { amount: money(data.list.budget - estTotal) })}
+				</button>
+			{:else}
+				<button
+					type="button"
+					class="budget muted"
+					onclick={() => {
+						budgetDraft = null;
+						editingBudget = true;
+					}}
+				>
+					{t('cost.setBudget')}
+				</button>
+			{/if}
+		</div>
+	{/if}
+
 	{#if data.list.items.length === 0}
 		<EmptyState
 			message={t('shoppingList.empty')}
@@ -528,6 +620,37 @@
 										{item.quantity}
 									</button>
 								{/if}
+								{#if editingPriceId === item._id && !selectMode}
+									<form
+										class="price-edit"
+										onsubmit={(e) => {
+											e.preventDefault();
+											commitPrice(item._id!);
+										}}
+									>
+										<input
+											type="number"
+											inputmode="decimal"
+											min="0"
+											step="0.01"
+											bind:value={priceDraft}
+											aria-label={t('cost.priceAria', { name: item.name })}
+											use:focusOnMount
+										/>
+										<button type="submit" class="qty-done" aria-label={t('cost.confirmPrice')}>✓</button>
+									</form>
+								{:else}
+									<button
+										type="button"
+										class="item-price"
+										class:empty={item.price == null}
+										disabled={selectMode || reorderMode}
+										onclick={() => startEditPrice(item)}
+										aria-label={t('cost.priceAria', { name: item.name })}
+									>
+										{item.price != null ? money(lineTotal(item)) : t('cost.addPrice')}
+									</button>
+								{/if}
 								<button
 									type="button"
 									class="remove"
@@ -572,7 +695,7 @@
 	the rename / inline-quantity editors hold the keyboard, since those aren't "adding". -->
 <form
 	class="add-item-form"
-	class:hidden={editingName || editingQuantityId !== null}
+	class:hidden={editingName || editingQuantityId !== null || editingPriceId !== null || editingBudget}
 	style:bottom={keyboardInset.current > 0
 		? `calc(env(safe-area-inset-bottom) + ${keyboardInset.current}px)`
 		: 'calc(env(safe-area-inset-bottom) + 4.75rem)'}
@@ -882,6 +1005,81 @@
 		color: var(--ink-soft);
 		font-variant-numeric: tabular-nums;
 		cursor: pointer;
+	}
+	.item-price {
+		border: none;
+		background: none;
+		padding: 0.2rem 0.3rem;
+		border-radius: 6px;
+		font: inherit;
+		font-size: 0.8rem;
+		color: var(--ink);
+		font-variant-numeric: tabular-nums;
+		cursor: pointer;
+	}
+	.item-price.empty {
+		color: var(--ink-soft);
+		opacity: 0.6;
+	}
+	.price-edit {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+	}
+	.price-edit input,
+	.budget-edit input {
+		width: 4.5rem;
+		padding: 0.25rem 0.35rem;
+		border: 1px solid var(--line);
+		border-radius: 6px;
+		background: var(--paper-raised);
+		color: var(--ink);
+		font: inherit;
+		font-size: 0.85rem;
+	}
+	.cost-bar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+		font-size: var(--text-sm);
+	}
+	.cost-totals {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem 0.6rem;
+		font-variant-numeric: tabular-nums;
+	}
+	.cost-bar .muted {
+		color: var(--ink-soft);
+		font-size: var(--text-xs);
+	}
+	.budget {
+		border: 1px solid var(--line);
+		border-radius: 999px;
+		background: var(--paper-raised);
+		color: var(--good);
+		font: inherit;
+		font-size: var(--text-xs);
+		padding: 0.25rem 0.6rem;
+		cursor: pointer;
+	}
+	.budget.over {
+		color: var(--bad);
+		border-color: var(--bad);
+	}
+	.budget-edit {
+		display: flex;
+		gap: 0.25rem;
+	}
+	.budget-edit button {
+		border: none;
+		border-radius: 6px;
+		background: var(--accent);
+		color: var(--paper-raised);
+		cursor: pointer;
+		padding: 0 0.5rem;
 	}
 	.item-qty:disabled {
 		cursor: default;

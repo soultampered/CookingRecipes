@@ -7,6 +7,7 @@ export interface ShoppingListItem {
 	quantity: number;
 	checked?: boolean;
 	category?: InventoryCategory;
+	price?: number | null;
 }
 
 export interface ShoppingList {
@@ -16,6 +17,8 @@ export interface ShoppingList {
 	createdAt?: string;
 	updatedAt?: string;
 	items: ShoppingListItem[];
+	budget?: number | null;
+	store?: string | null;
 }
 
 export type NewShoppingList = Omit<ShoppingList, '_id' | 'createdAt' | 'updatedAt' | 'userId'>;
