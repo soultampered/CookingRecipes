@@ -20,6 +20,7 @@
 
 	let searchQuery = $state('');
 	let activeTag = $state<string | null>(null);
+	let favoritesOnly = $state(false);
 
 	let allTags = $derived.by(() => {
 		const tags = new Set<string>();
@@ -34,6 +35,7 @@
 		if (activeTag) {
 			ordered = ordered.filter((recipe) => recipe.tags?.includes(activeTag!));
 		}
+		if (favoritesOnly) ordered = ordered.filter((recipe) => recipe.favorite);
 		const query = searchQuery.trim().toLowerCase();
 		if (!query) return ordered;
 		return ordered.filter(
@@ -110,8 +112,18 @@
 		aria-label={t('recipes.searchPlaceholder')}
 	/>
 
-	{#if allTags.length > 0}
+	{#if allTags.length > 0 || data.recipes.some((r) => r.favorite)}
 		<div class="tag-chiprow">
+			{#if data.recipes.some((r) => r.favorite)}
+				<button
+					type="button"
+					class="tag-chip-filter"
+					class:active={favoritesOnly}
+					onclick={() => (favoritesOnly = !favoritesOnly)}
+				>
+					{t('recipes.favorites')}
+				</button>
+			{/if}
 			{#each allTags as tag}
 				<button
 					type="button"

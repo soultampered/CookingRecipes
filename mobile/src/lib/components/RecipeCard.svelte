@@ -56,11 +56,15 @@
 {#snippet cardBody()}
 	<div class="thumb" style="background: {thumbColor(recipe._id)};"></div>
 	<div class="body">
-		<div class="title">{recipe.title}</div>
+		<div class="title">
+			{#if recipe.favorite}<span class="fav" aria-label={t('rating.favorite')}>♥</span>{/if}
+			{recipe.title}
+		</div>
 		<div class="meta">
 			<span class="pill pill-{recipe.difficulty}">{tRaw('difficulty', recipe.difficulty)}</span>
 			{#if recipe.totalTimeMinutes}<span>{t('recipes.minutes', { count: recipe.totalTimeMinutes })}</span>{/if}
 			{#if recipe.servings}<span>{t('recipes.servesCount', { count: recipe.servings })}</span>{/if}
+			{#if recipe.rating}<span class="stars">{'★'.repeat(recipe.rating)}</span>{/if}
 		</div>
 		{#if recipe.tags?.length}
 			<div class="tags">
@@ -155,6 +159,13 @@
 		background: var(--paper-raised);
 		touch-action: pan-y;
 		transition: transform 0.15s ease;
+	}
+	.fav {
+		color: var(--bad);
+	}
+	.stars {
+		color: var(--warn);
+		letter-spacing: -1px;
 	}
 	.card.editing {
 		border-style: dashed;
