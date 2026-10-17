@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto, invalidate } from '$app/navigation';
 	import { deleteRecipe, type PrepareResult } from '$lib/api/recipes';
-	import { adjustInventory } from '$lib/api/inventory';
+	import { adjustInventory, deleteInventoryItem } from '$lib/api/inventory';
 	import PrepareSheet from '$lib/components/PrepareSheet.svelte';
 	import RecipeRating from '$lib/components/RecipeRating.svelte';
 	import { formatQuantity } from '$lib/utils/quantity';
@@ -91,11 +91,13 @@
 		showPrepareSheet = false;
 		await invalidate(`app:recipe:${data.recipe._id}`);
 		const undo = result.adjustments.map((a) => ({ id: a.id, amount: -a.amount }));
-		toast.push(t('recipeDetail.prepared'), 'info', {
+		const leftoverId = result.leftover?._id;
+		toast.push(t(leftoverId ? 'recipeDetail.preparedWithLeftover' : 'recipeDetail.prepared'), 'info', {
 			label: t('recipeDetail.undo'),
 			run: async () => {
 				try {
-					await adjustInventory(undo);
+					if (undo.length) await adjustInventory(undo);
+					if (leftoverId) await deleteInventoryItem(leftoverId);
 					toast.push(t('recipeDetail.undone'), 'info');
 					await invalidate(`app:recipe:${data.recipe._id}`);
 				} catch (err) {

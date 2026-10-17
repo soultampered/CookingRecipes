@@ -31,12 +31,15 @@ export interface InventoryAdjustment {
 export interface PrepareOptions {
 	scale?: number;
 	overrides?: { inventoryItemId: string; quantity: number }[];
+	// STO-86
+	leftovers?: { servings: number; expiresInDays: number };
 }
 
 export interface PrepareResult {
 	success: true;
 	adjustments: InventoryAdjustment[];
 	updatedInventory: Inventory[];
+	leftover?: Inventory;
 }
 
 export function prepareRecipe(id: string, options: PrepareOptions = {}) {

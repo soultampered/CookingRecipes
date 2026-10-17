@@ -17,6 +17,7 @@ export const INVENTORY_CATEGORIES = [
     'Condiments',
     'Oils & Fats',
     'Beverages',
+    'Leftovers',
     'Miscellaneous',
 ] as const;
 export type InventoryCategory = typeof INVENTORY_CATEGORIES[number];
@@ -33,6 +34,8 @@ export interface Inventory {
     userId: string;
     notes?: string;
     lowStockThreshold?: number;
+    // STO-86: set on leftovers created by Prepare.
+    leftoverOfRecipeId?: string;
 }
 
 export interface InventoryAdjustment {
