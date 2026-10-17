@@ -11,6 +11,7 @@ import nutritionRoute from "./routes/nutrition.route.js";
 import collectionRoute from "./routes/recipeCollection.route.js";
 import publicRoute, { publicPages } from "./routes/public.route.js";
 import pricesRoute from "./routes/prices.route.js";
+import mealPlanRoute from "./routes/mealPlan.route.js";
 
 const app = new Hono<{ Variables: SecureHeadersVariables }>();
 
@@ -53,6 +54,7 @@ app.route('/users', usersRoute);
 app.route('/nutrition', nutritionRoute);
 app.route('/collections', collectionRoute);
 app.route('/prices', pricesRoute);
+app.route('/meal-plan', mealPlanRoute);
 // STO-84: no auth — /public/recipes/:token (JSON) and /r/:token (HTML page).
 app.route('/public', publicRoute);
 app.route('/', publicPages);

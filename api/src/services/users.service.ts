@@ -7,6 +7,7 @@ import { recipeRevisionModel } from "../models/recipeRevision.model.js";
 import { recipeCollectionModel } from "../models/recipeCollection.model.js";
 import { priceRecordModel } from "../models/priceRecord.model.js";
 import { inventoryEventModel } from "../models/inventoryEvent.model.js";
+import { mealPlanModel } from "../models/mealPlan.model.js";
 import type { User } from "../types/user.js"
 
 export const usersService = {
@@ -25,7 +26,7 @@ export const usersService = {
     // STO-94: everything the user owns, in one portable document. No auth internals.
     async exportUser(id: string) {
         const user = await userModel.findById(id);
-        const [recipes, inventory, shoppingLists, collections, preparations, recipeRevisions, priceHistory] = await Promise.all([
+        const [recipes, inventory, shoppingLists, collections, preparations, recipeRevisions, priceHistory, mealPlan] = await Promise.all([
             recipeModel.findAll(id),
             inventoryModel.findAll(id),
             shoppingListModel.findAllByUserId(id),
@@ -33,6 +34,7 @@ export const usersService = {
             preparationModel.findAllByUserId(id),
             recipeRevisionModel.findAllByUserId(id),
             priceRecordModel.findAllByUserId(id),
+            mealPlanModel.findAllByUserId(id),
         ]);
         const { failedLoginAttempts, lockedUntil, verificationCodeAttempts, resetCodeAttempts, loginCodeAttempts, ...profile } =
             stripPassword(user);
@@ -48,6 +50,7 @@ export const usersService = {
             preparations,
             recipeRevisions,
             priceHistory,
+            mealPlan,
         };
     },
 
@@ -64,6 +67,7 @@ export const usersService = {
             recipeCollectionModel.deleteAllByUserId(id),
             priceRecordModel.deleteAllByUserId(id),
             inventoryEventModel.deleteAllByUserId(id),
+            mealPlanModel.deleteAllByUserId(id),
         ]);
         const deleted = await userModel.delete(id);
         if (!deleted) throw new Error("Could not delete user")
