@@ -7,6 +7,7 @@
 	import { palette } from '$lib/state/palette.svelte';
 	import PalettePicker from '$lib/components/PalettePicker.svelte';
 	import ActiveSessions from '$lib/components/ActiveSessions.svelte';
+	import TwoFactorSetting from '$lib/components/TwoFactorSetting.svelte';
 	import { toast } from '$lib/state/toast.svelte';
 	import { ApiError } from '$lib/api/client';
 	import { categoryOrder } from '$lib/state/categoryOrder.svelte';
@@ -189,6 +190,7 @@
 		</div>
 	</div>
 
+	<TwoFactorSetting />
 	<ActiveSessions />
 
 	<button type="button" class="outline" onclick={handleLogout}>{t('account.logOut')}</button>

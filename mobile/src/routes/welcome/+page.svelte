@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { login, register } from '$lib/api/auth';
+	import { login, register, verifyLoginCode } from '$lib/api/auth';
 	import { session } from '$lib/state/session.svelte';
 	import { toast } from '$lib/state/toast.svelte';
 	import { ApiError } from '$lib/api/client';
@@ -19,6 +19,9 @@
 	let identifier = $state('');
 	let loginPassword = $state('');
 	let loggingIn = $state(false);
+	// STO-32: set when the account has 2FA — swaps the form for the code step.
+	let challengeId = $state<string | null>(null);
+	let loginCode = $state('');
 
 	let username = $state('');
 	let email = $state('');
@@ -30,6 +33,26 @@
 		loggingIn = true;
 		try {
 			const result = await login({ identifier, password: loginPassword });
+			if ('twoFactorRequired' in result) {
+				challengeId = result.challengeId;
+				loginCode = '';
+				return;
+			}
+			await session.signIn(result);
+			await postAuthRedirect(result.user);
+		} catch (err) {
+			toast.push(err instanceof ApiError ? err.message : t('welcome.errorLogin'));
+		} finally {
+			loggingIn = false;
+		}
+	}
+
+	async function handleVerifyCode(event: SubmitEvent) {
+		event.preventDefault();
+		if (!challengeId) return;
+		loggingIn = true;
+		try {
+			const result = await verifyLoginCode(challengeId, loginCode.trim());
 			await session.signIn(result);
 			await postAuthRedirect(result.user);
 		} catch (err) {
@@ -66,7 +89,30 @@
 		</button>
 	</div>
 
-	{#if mode === 'login'}
+	{#if mode === 'login' && challengeId}
+		<form onsubmit={handleVerifyCode}>
+			<p class="code-title">{t('welcome.codeTitle')}</p>
+			<small>{t('welcome.codeHint')}</small>
+			<label>
+				{t('welcome.code')}
+				<input
+					type="text"
+					inputmode="numeric"
+					autocomplete="one-time-code"
+					pattern="[0-9]{6}"
+					maxlength="6"
+					bind:value={loginCode}
+					required
+				/>
+			</label>
+			<button type="submit" disabled={loggingIn}>
+				{loggingIn ? t('welcome.verifying') : t('welcome.verify')}
+			</button>
+		</form>
+		<button type="button" class="link link-btn" onclick={() => (challengeId = null)}>
+			{t('welcome.backToLogin')}
+		</button>
+	{:else if mode === 'login'}
 		<form onsubmit={handleLogin}>
 			<label>
 				{t('welcome.identifier')}
@@ -179,6 +225,16 @@
 		color: var(--accent);
 		font-size: 0.85rem;
 		text-decoration: underline;
+	}
+	.link-btn {
+		border: none;
+		background: none;
+		font-family: inherit;
+		cursor: pointer;
+	}
+	.code-title {
+		margin: 0;
+		font-weight: 600;
 	}
 	.legal {
 		text-align: center;

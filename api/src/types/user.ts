@@ -30,6 +30,12 @@ export interface User {
     resetCodeExpiresAt?: Date | null;
     resetCodeAttempts?: number;
     mustResetPassword: boolean;
+    // STO-32: opt-in email OTP at login. loginChallenge ties the code to one login attempt.
+    twoFactorEnabled?: boolean;
+    loginChallenge?: string | null;
+    loginCode?: string | null;
+    loginCodeExpiresAt?: Date | null;
+    loginCodeAttempts?: number;
     failedLoginAttempts?: number;
     lockedUntil?: Date | null;
     refreshTokens?: RefreshTokenEntry[];
