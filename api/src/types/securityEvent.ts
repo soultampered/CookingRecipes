@@ -7,7 +7,8 @@ export type SecurityEventType =
     | "email_verified"
     | "password_reset_requested"
     | "password_reset_completed"
-    | "token_reuse_detected";
+    | "token_reuse_detected"
+    | "session_revoked";
 
 export interface SecurityEvent {
     _id?: ObjectId;

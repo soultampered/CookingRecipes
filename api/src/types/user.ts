@@ -1,5 +1,16 @@
 import type { ObjectId } from "mongodb";
 
+// createdAt/userAgent carry over on rotation, so they describe the session.
+export interface RefreshTokenEntry {
+    token: string;
+    familyId: string;
+    expiresAt: Date;
+    used: boolean;
+    createdAt?: Date;
+    lastUsedAt?: Date;
+    userAgent?: string;
+}
+
 export interface User {
     _id?: ObjectId;
     username: string;
@@ -20,7 +31,7 @@ export interface User {
     mustResetPassword: boolean;
     failedLoginAttempts?: number;
     lockedUntil?: Date | null;
-    refreshTokens?: { token: string; familyId: string; expiresAt: Date; used: boolean }[];
+    refreshTokens?: RefreshTokenEntry[];
     preferences?: {
         dietaryRestrictions?: string[];
         preferredUnits?: "metric" | "imperial";
