@@ -45,6 +45,8 @@
 		submitting = true;
 		try {
 			const result = await prepareRecipe(recipe._id, {
+				// scale still matters for the nutrition log (servings made), not the amounts.
+				scale,
 				overrides: recipe.ingredients.map((ing, i) => ({
 					inventoryItemId: ing.inventoryItemId,
 					quantity: Math.max(0, Number(amounts[i]) || 0)

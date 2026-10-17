@@ -1,5 +1,6 @@
 import { inventoryService} from "./inventory.service.js";
 import { recipeService} from "./recipes.service.js";
+import { nutritionService } from "./nutrition.service.js";
 import type { MissingIngredient, RecipeIngredient } from "../types/recipe.js";
 import type { Inventory, InventoryAdjustment } from "../types/inventory.js";
 
@@ -19,9 +20,12 @@ export const recipeInventoryService = {
     async deductIngredients(recipeId: string, userId: string, options: PrepareOptions = {}): Promise<PrepareResult> {
         const recipe = await recipeService.getRecipeById(recipeId);
 
-        if (!recipe.ingredients?.length) return { adjustments: [], updatedInventory: [] };
-
         const scale = options.scale ?? 1;
+        if (!recipe.ingredients?.length) {
+            await nutritionService.logPreparation(userId, recipe, scale);
+            return { adjustments: [], updatedInventory: [] };
+        }
+
         const overrides = new Map((options.overrides ?? []).map((o) => [o.inventoryItemId, o.quantity]));
         const adjustments: InventoryAdjustment[] = recipe.ingredients.map(item => {
             const id = item.inventoryItemId.toString();
@@ -30,6 +34,7 @@ export const recipeInventoryService = {
         });
 
         const updatedInventory = await inventoryService.applyAdjustments(userId, adjustments);
+        await nutritionService.logPreparation(userId, recipe, scale);
         return { adjustments, updatedInventory };
     },
 
