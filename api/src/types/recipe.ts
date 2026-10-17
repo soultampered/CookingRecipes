@@ -40,6 +40,8 @@ export interface Recipe {
     // STO-24: feed Suggestions ordering. rating null = cleared.
     favorite?: boolean;
     rating?: number | null;
+    // STO-84: unguessable public link token; absent = private.
+    shareToken?: string | null;
 }
 
 export interface MissingIngredient {

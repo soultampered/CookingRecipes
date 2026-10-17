@@ -6,6 +6,7 @@ import { requireVerified } from "../middleware/requireVerified.middleware.js";
 import { validateJson } from "../middleware/validate.middleware.js";
 import { createRecipeSchema, updateRecipeSchema, prepareRecipeSchema } from "../schemas/recipe.schema.js";
 import { InventoryAdjustError } from "../types/inventory.js";
+import { recipeShareService } from "../services/recipeShare.service.js";
 
 const recipeRoutes = new Hono<{ Variables: AuthVariables }>();
 
@@ -82,6 +83,30 @@ recipeRoutes.delete('/:id', async (c) => {
             return c.json({ error: 'Recipe not found' }, 404);
         }
         return c.json({ error: 'Failed to delete recipe' }, 500);
+    }
+});
+
+// STO-84. PUBLIC_BASE_URL lets the link point at a custom domain later.
+recipeRoutes.post('/:id/share', async (c) => {
+    try {
+        const recipe = await recipeService.getRecipeById(c.req.param('id'));
+        if (recipe.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
+        const token = await recipeShareService.enable(recipe);
+        const base = process.env.PUBLIC_BASE_URL ?? new URL(c.req.url).origin;
+        return c.json({ token, url: `${base}/r/${token}` }, 200);
+    } catch {
+        return c.json({ error: 'Recipe not found' }, 404);
+    }
+});
+
+recipeRoutes.delete('/:id/share', async (c) => {
+    try {
+        const recipe = await recipeService.getRecipeById(c.req.param('id'));
+        if (recipe.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
+        await recipeShareService.disable(recipe);
+        return c.body(null, 204);
+    } catch {
+        return c.json({ error: 'Recipe not found' }, 404);
     }
 });
 

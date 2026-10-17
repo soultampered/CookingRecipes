@@ -6,6 +6,7 @@
 	import RecipeRating from '$lib/components/RecipeRating.svelte';
 	import { printOrShareRecipe } from '$lib/utils/printRecipe';
 	import CollectionPicker from '$lib/components/CollectionPicker.svelte';
+	import ShareLinkSheet from '$lib/components/ShareLinkSheet.svelte';
 	import { formatQuantity } from '$lib/utils/quantity';
 	import { convert, toSystem, type UnitSystem } from '$lib/utils/unitConversion';
 	import { unitSystem } from '$lib/state/unitSystem.svelte';
@@ -106,6 +107,7 @@
 
 	let showPrepareSheet = $state(false);
 	let showCollections = $state(false);
+	let showShare = $state(false);
 
 	async function handlePrint() {
 		try {
@@ -253,6 +255,9 @@
 			<button type="button" class="btn-outline" onclick={handlePrint}>{t('recipeDetail.print')}</button>
 			<a href={`/recipes/${data.recipe._id}/history`} class="btn-outline">{t('recipeDetail.history')}</a>
 			<button type="button" class="btn-outline" onclick={() => (showCollections = true)}>{t('collections.add')}</button>
+			<button type="button" class="btn-outline" class:shared={!!data.recipe.shareToken} onclick={() => (showShare = true)}>
+				{t('share.button')}
+			</button>
 			<a href={`/recipes/${data.recipe._id}/edit`} class="btn-outline">{t('recipeDetail.edit')}</a>
 		</div>
 	</div>
@@ -387,6 +392,17 @@
 		</button>
 	</div>
 </div>
+
+{#if showShare}
+	<ShareLinkSheet
+		recipeId={data.recipe._id}
+		title={data.recipe.title}
+		onClose={() => {
+			showShare = false;
+			invalidate(`app:recipe:${data.recipe._id}`);
+		}}
+	/>
+{/if}
 
 {#if showCollections}
 	<CollectionPicker
@@ -593,6 +609,10 @@
 	.ingredient-row.gathered .ingredient-text {
 		color: var(--ink-soft);
 		text-decoration: line-through;
+	}
+	.btn-outline.shared {
+		border-color: var(--accent);
+		color: var(--accent);
 	}
 	.header-actions {
 		display: flex;
