@@ -40,7 +40,7 @@ export const shoppingPlanService = {
 
         for (const { recipeId, scale = 1 } of requests) {
             const recipe = await recipeService.getRecipeById(recipeId).catch(() => null);
-            if (!recipe || recipe.userId !== userId) throw new Error("UNKNOWN_RECIPE");
+            if (!recipe || !(await accessService.canAccess(userId, recipe))) throw new Error("UNKNOWN_RECIPE");
             for (const ing of recipe.ingredients) {
                 const item = stock.get(ing.inventoryItemId);
                 if (!item) continue; // ingredient's inventory item was deleted

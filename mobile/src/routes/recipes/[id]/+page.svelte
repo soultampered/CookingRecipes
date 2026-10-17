@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { goto, invalidate } from '$app/navigation';
-	import { deleteRecipe, type PrepareResult } from '$lib/api/recipes';
+	import { deleteRecipe, updateRecipe, type PrepareResult } from '$lib/api/recipes';
+	import { onMount } from 'svelte';
+	import { session } from '$lib/state/session.svelte';
+	import { activePantry } from '$lib/state/activePantry.svelte';
 	import { adjustInventory, deleteInventoryItem } from '$lib/api/inventory';
 	import { deletePreparation } from '$lib/api/nutrition';
 	import PrepareSheet from '$lib/components/PrepareSheet.svelte';
@@ -110,6 +113,22 @@
 	);
 
 	let showPrepareSheet = $state(false);
+
+	// Members can view/prepare/plan; only the owner edits.
+	let isOwner = $derived(!data.recipe.userId || data.recipe.userId === session.user?._id);
+	let sharedBy = $derived(data.allRecipes.find((r) => r._id === data.recipe._id)?.sharedBy);
+	onMount(() => {
+		activePantry.refresh();
+	});
+
+	async function setHousehold(value: string) {
+		try {
+			await updateRecipe(data.recipe._id, { householdId: value || null });
+			await invalidate(`app:recipe:${data.recipe._id}`);
+		} catch (err) {
+			toast.push(err instanceof ApiError ? err.message : t('households.error'));
+		}
+	}
 	let showCollections = $state(false);
 	let showShare = $state(false);
 	let showPlan = $state(false);
@@ -282,21 +301,41 @@
 				{#if data.recipe.totalTimeMinutes}<span>{t('recipes.minutes', { count: data.recipe.totalTimeMinutes })}</span>{/if}
 				{#if data.recipe.servings}<span>{t('recipes.servesCount', { count: data.recipe.servings })}</span>{/if}
 			</div>
-			{#if features.has('ratings')}<RecipeRating recipe={data.recipe} />{/if}
+			{#if isOwner}
+				{#if features.has('ratings')}<RecipeRating recipe={data.recipe} />{/if}
+			{:else}
+				<span class="shared-by">👪 {t('recipeDetail.sharedBy', { name: sharedBy ?? '…' })}</span>
+			{/if}
 		</div>
 		<div class="header-actions">
 			{#if features.has('print')}<button type="button" class="btn-outline" onclick={handlePrint}>{t('recipeDetail.print')}</button>{/if}
+			{#if isOwner}
 			{#if features.has('versionHistory')}<a href={`/recipes/${data.recipe._id}/history`} class="btn-outline">{t('recipeDetail.history')}</a>{/if}
+			{/if}
 			{#if features.has('mealPlan')}<button type="button" class="btn-outline" onclick={() => (showPlan = true)}>{t('mealPlan.plan')}</button>{/if}
 			{#if features.has('collections')}<button type="button" class="btn-outline" onclick={() => (showCollections = true)}>{t('collections.add')}</button>{/if}
-			{#if features.has('shareLinks')}
-				<button type="button" class="btn-outline" class:shared={!!data.recipe.shareToken} onclick={() => (showShare = true)}>
-					{t('share.button')}
-				</button>
+			{#if isOwner}
+				{#if features.has('shareLinks')}
+					<button type="button" class="btn-outline" class:shared={!!data.recipe.shareToken} onclick={() => (showShare = true)}>
+						{t('share.button')}
+					</button>
+				{/if}
+				<a href={`/recipes/${data.recipe._id}/edit`} class="btn-outline">{t('recipeDetail.edit')}</a>
 			{/if}
-			<a href={`/recipes/${data.recipe._id}/edit`} class="btn-outline">{t('recipeDetail.edit')}</a>
 		</div>
 	</div>
+
+	{#if isOwner && activePantry.households.length > 0}
+		<label class="share-household">
+			👪 {t('recipeDetail.sharedWith')}
+			<select value={data.recipe.householdId ?? ''} onchange={(e) => setHousehold((e.target as HTMLSelectElement).value)}>
+				<option value="">{t('recipeDetail.sharedWithNobody')}</option>
+				{#each activePantry.households as h (h._id)}
+					<option value={h._id}>{h.name}</option>
+				{/each}
+			</select>
+		</label>
+	{/if}
 
 	{#if data.recipe.description}
 		<p class="description">{data.recipe.description}</p>
@@ -429,11 +468,13 @@
 		</div>
 	{/if}
 
-	<div class="danger-zone">
-		<button type="button" class="danger-link" onclick={() => (confirmingDelete = true)}>
-			{t('recipeDetail.deleteRecipe')}
-		</button>
-	</div>
+	{#if isOwner}
+		<div class="danger-zone">
+			<button type="button" class="danger-link" onclick={() => (confirmingDelete = true)}>
+				{t('recipeDetail.deleteRecipe')}
+			</button>
+		</div>
+	{/if}
 </div>
 
 {#if showPlan}
@@ -661,6 +702,24 @@
 	.btn-outline.shared {
 		border-color: var(--accent);
 		color: var(--accent);
+	}
+	.shared-by {
+		font-size: var(--text-sm);
+		color: var(--accent);
+	}
+	.share-household {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: var(--text-sm);
+	}
+	.share-household select {
+		border: 1px solid var(--line);
+		border-radius: 8px;
+		background: var(--paper-raised);
+		color: var(--ink);
+		font: inherit;
+		padding: 0.25rem 0.4rem;
 	}
 	.header-actions {
 		display: flex;

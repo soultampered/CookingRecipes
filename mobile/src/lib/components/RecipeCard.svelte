@@ -70,6 +70,7 @@
 			{#if recipe.totalTimeMinutes}<span>{t('recipes.minutes', { count: recipe.totalTimeMinutes })}</span>{/if}
 			{#if recipe.servings}<span>{t('recipes.servesCount', { count: recipe.servings })}</span>{/if}
 			{#if recipe.rating}<span class="stars">{'★'.repeat(recipe.rating)}</span>{/if}
+			{#if recipe.sharedBy}<span class="from">👪 {t('recipes.from', { name: recipe.sharedBy })}</span>{/if}
 		</div>
 		{#if recipe.tags?.length}
 			<div class="tags">

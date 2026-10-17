@@ -8,6 +8,12 @@ export const recipeModel = {
         return db.collection<Recipe>('recipes').find({ userId }).toArray();
     },
 
+    // Yours plus household-shared.
+    findAccessible: async (userId: string, householdIds: string[]): Promise<Recipe[]> => {
+        const db = await connectToDatabase();
+        return db.collection<Recipe>('recipes').find({ $or: [{ userId }, { householdId: { $in: householdIds } }] }).toArray();
+    },
+
     findById: async (id: string): Promise<Recipe> => {
         const db = await connectToDatabase();
         const recipe = await db.collection<Recipe>('recipes').findOne({
@@ -45,6 +51,14 @@ export const recipeModel = {
         );
         if (!result) throw new Error(`Recipe with id "${id}" not found`);
         return result;
+    },
+
+    countAccessible: async (ids: string[], userId: string, householdIds: string[]): Promise<number> => {
+        const db = await connectToDatabase();
+        return db.collection<Recipe>('recipes').countDocuments({
+            _id: { $in: ids.map((id) => new ObjectId(id)) },
+            $or: [{ userId }, { householdId: { $in: householdIds } }]
+        });
     },
 
     countOwned: async (ids: string[], userId: string): Promise<number> => {

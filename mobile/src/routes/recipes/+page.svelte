@@ -197,7 +197,7 @@
 	{:else if recipeViewMode.current === 'grid'}
 		<div class="grid">
 			{#each orderedRecipes as recipe (recipe._id)}
-				<RecipeCard {recipe} layout="grid" onDelete={(r) => (removingRecipe = r)} />
+				<RecipeCard {recipe} layout="grid" onDelete={recipe.sharedBy ? undefined : (r) => (removingRecipe = r)} />
 			{/each}
 		</div>
 	{:else}
@@ -215,7 +215,7 @@
 					<div class="card-flex">
 						<RecipeCard
 							{recipe}
-							onDelete={(r) => (removingRecipe = r)}
+							onDelete={recipe.sharedBy ? undefined : (r) => (removingRecipe = r)}
 							{swipe}
 							swipeId={recipe._id}
 							dragging={drag.isDragging(recipe._id)}

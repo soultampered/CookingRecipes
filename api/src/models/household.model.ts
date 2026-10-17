@@ -31,6 +31,22 @@ export const householdModel = {
             .findOneAndUpdate({ _id: new ObjectId(id) }, { $set: { ...data, updatedAt: new Date() } }, { returnDocument: "after" });
     },
 
+    findByInviteCode: async (code: string): Promise<Household | null> => {
+        if (typeof code !== "string" || !code) return null;
+        const db = await connectToDatabase();
+        return db.collection<Household>(NAME).findOne({ inviteCode: code });
+    },
+
+    addMember: async (id: string, userId: string): Promise<void> => {
+        const db = await connectToDatabase();
+        await db.collection<Household>(NAME).updateOne({ _id: new ObjectId(id) }, { $addToSet: { memberIds: userId }, $set: { updatedAt: new Date() } });
+    },
+
+    removeMember: async (id: string, userId: string): Promise<void> => {
+        const db = await connectToDatabase();
+        await db.collection<Household>(NAME).updateOne({ _id: new ObjectId(id) }, { $pull: { memberIds: userId }, $set: { updatedAt: new Date() } });
+    },
+
     delete: async (id: string): Promise<void> => {
         const db = await connectToDatabase();
         await db.collection<Household>(NAME).deleteOne({ _id: new ObjectId(id) });

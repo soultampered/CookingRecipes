@@ -18,6 +18,8 @@ export const load = async ({ params, depends }) => {
 		if (result.status === 'fulfilled') {
 			inventoryNames[uniqueIds[index]] = result.value.name;
 			inventory[uniqueIds[index]] = result.value;
+		} else if (recipe.ingredientNames?.[uniqueIds[index]]) {
+			inventoryNames[uniqueIds[index]] = recipe.ingredientNames[uniqueIds[index]];
 		}
 	});
 
