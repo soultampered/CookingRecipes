@@ -3,11 +3,18 @@ import type { Inventory, NewInventory } from "../types/inventory.js"
 import { categorizeItemName } from "./foodCategory.service.js";
 
 export const inventoryService = {
-    async getAllInventory(userId?: string, category?: string) {
-        const items = await inventoryModel.findAll(userId);
+    async getAllInventory(userId?: string, category?: string, expiringWithinDays?: number) {
+        let items = await inventoryModel.findAll(userId);
 
         if (category) {
-            return items.filter( i => i.category === category);
+            items = items.filter( i => i.category === category);
+        }
+        // STO-21: includes already-expired items; soonest first. Undated items excluded.
+        if (expiringWithinDays != null) {
+            const cutoff = Date.now() + expiringWithinDays * 24 * 60 * 60 * 1000;
+            items = items
+                .filter((i) => i.expirationDte && new Date(i.expirationDte).getTime() <= cutoff)
+                .sort((a, b) => new Date(a.expirationDte!).getTime() - new Date(b.expirationDte!).getTime());
         }
         return items;
     },

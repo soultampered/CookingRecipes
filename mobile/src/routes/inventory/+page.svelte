@@ -7,6 +7,7 @@
 	import { ApiError } from '$lib/api/client';
 	import { toast } from '$lib/state/toast.svelte';
 	import { expirySettings } from '$lib/state/expirySettings.svelte';
+	import { expiryStatus } from '$lib/utils/expiry';
 	import { t, tRaw } from '$lib/i18n/index.svelte';
 	import { swipeToDelete } from '$lib/utils/swipeToDelete.svelte';
 	import { dragToReorder } from '$lib/utils/dragToReorder.svelte';
@@ -36,6 +37,12 @@
 			ordered = [...data.items].sort((a, b) => a.quantity - b.quantity);
 		} else {
 			ordered = inventoryOrder.apply(data.items);
+		}
+		if (data.expiringOnly) {
+			ordered = ordered.filter((item) => {
+				const s = expiryStatus(item, expirySettings.daysAhead);
+				return s === 'expired' || s === 'soon';
+			});
 		}
 		const query = searchQuery.trim().toLowerCase();
 		if (!query) return ordered;
@@ -97,12 +104,6 @@
 		return item.lowStockThreshold != null && item.quantity <= item.lowStockThreshold;
 	}
 
-	function isExpiringSoon(item: Inventory) {
-		if (!item.expirationDte) return false;
-		const msAhead = expirySettings.daysAhead * 24 * 60 * 60 * 1000;
-		const expiresAt = new Date(item.expirationDte).getTime();
-		return expiresAt <= Date.now() + msAhead;
-	}
 
 	async function openQuickAdd(item: Inventory) {
 		quickAddItem = item;
@@ -168,8 +169,15 @@
 	</div>
 
 	<div class="chiprow">
-		<button class="chip" class:active={!data.category} onclick={() => selectCategory(null)}>
+		<button
+			class="chip"
+			class:active={!data.category && !data.expiringOnly}
+			onclick={() => selectCategory(null)}
+		>
 			{t('inventory.all')}
+		</button>
+		<button class="chip chip-warn" class:active={data.expiringOnly} onclick={() => goto('/inventory?expiring=1')}>
+			{t('inventory.expiringFilter')}
 		</button>
 		{#each INVENTORY_CATEGORIES as category}
 			<button
@@ -189,7 +197,9 @@
 			ctaHref="/inventory/new"
 		/>
 	{:else if orderedItems.length === 0}
-		<p class="empty">{t('inventory.noSearchResults')}</p>
+		<p class="empty">
+			{data.expiringOnly && !searchQuery.trim() ? t('inventory.noExpiring') : t('inventory.noSearchResults')}
+		</p>
 	{:else}
 		<div class="list">
 			{#each orderedItems as item (item._id)}
@@ -264,8 +274,10 @@
 									{t('inventory.lowBadge')}
 								</button>
 							{/if}
-							{#if isExpiringSoon(item)}
-								<span class="expiring-badge">{t('inventory.expiringBadge')}</span>
+							{#if expiryStatus(item, expirySettings.daysAhead) === 'expired'}
+								<span class="expiring-badge">{t('inventory.expiredBadge')}</span>
+							{:else if expiryStatus(item, expirySettings.daysAhead) === 'soon'}
+								<span class="expiring-badge soon">{t('inventory.expiringBadge')}</span>
 							{/if}
 						</div>
 					</div>
@@ -403,6 +415,10 @@
 		color: var(--paper-raised);
 		border-color: var(--ink);
 	}
+	.chip-warn:not(.active) {
+		border-color: var(--warn);
+		color: var(--warn);
+	}
 	.list {
 		display: flex;
 		flex-direction: column;
@@ -488,6 +504,11 @@
 		font-weight: 600;
 		padding: 0.25rem 0.55rem;
 		border-radius: 999px;
+	}
+	.expiring-badge.soon {
+		border-color: var(--warn);
+		background: var(--warn-soft);
+		color: var(--warn);
 	}
 	.backdrop {
 		position: fixed;

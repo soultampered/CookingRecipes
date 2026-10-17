@@ -27,8 +27,13 @@ inventoryRoutes.post('/', validateJson(createInventorySchema), async (c) => {
 inventoryRoutes.get('/', async (c) => {
     const userId = c.get('userId');
     const category = c.req.query('category');
+    const expiringRaw = c.req.query('expiringWithinDays');
+    const expiringWithinDays = expiringRaw === undefined ? undefined : Number(expiringRaw);
+    if (expiringWithinDays !== undefined && (!Number.isInteger(expiringWithinDays) || expiringWithinDays < 0 || expiringWithinDays > 365)) {
+        return c.json({ error: 'expiringWithinDays must be an integer 0-365' }, 400);
+    }
     try {
-        const items = await inventoryService.getAllInventory(userId, category);
+        const items = await inventoryService.getAllInventory(userId, category, expiringWithinDays);
         return c.json(items, 200);
     } catch (err) {
         if ((err as Error).message === "NOT_FOUND") {
