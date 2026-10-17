@@ -48,4 +48,26 @@
 		color: var(--accent);
 		font-weight: 700;
 	}
+	@media (min-width: 900px) {
+		nav {
+			flex-direction: column;
+			justify-content: flex-start;
+			gap: 0.25rem;
+			width: 200px;
+			border-top: none;
+			border-right: 1px solid var(--line);
+			padding: 1.25rem 0.75rem;
+		}
+		a {
+			flex: 0 0 auto;
+			flex-direction: row;
+			gap: 0.6rem;
+			font-size: var(--text-sm);
+			padding: 0.55rem 0.7rem;
+			border-radius: 8px;
+		}
+		a.active {
+			background: var(--accent-soft);
+		}
+	}
 </style>
