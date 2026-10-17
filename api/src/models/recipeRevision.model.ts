@@ -31,6 +31,11 @@ export const recipeRevisionModel = {
         await db.collection<RecipeRevision>("recipeRevision").deleteMany({ recipeId });
     },
 
+    findAllByUserId: async (userId: string): Promise<RecipeRevision[]> => {
+        const db = await connectToDatabase();
+        return db.collection<RecipeRevision>("recipeRevision").find({ userId }).sort({ editedAt: 1 }).toArray();
+    },
+
     deleteAllByUserId: async (userId: string): Promise<void> => {
         const db = await connectToDatabase();
         await db.collection<RecipeRevision>("recipeRevision").deleteMany({ userId });
