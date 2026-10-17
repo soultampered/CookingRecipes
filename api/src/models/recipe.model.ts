@@ -8,6 +8,12 @@ export const recipeModel = {
         return db.collection<Recipe>('recipes').find({ userId }).toArray();
     },
 
+    // STO-8: yours plus anything shared into a household you're in.
+    findAccessible: async (userId: string, householdIds: string[]): Promise<Recipe[]> => {
+        const db = await connectToDatabase();
+        return db.collection<Recipe>('recipes').find({ $or: [{ userId }, { householdId: { $in: householdIds } }] }).toArray();
+    },
+
     findById: async (id: string): Promise<Recipe> => {
         const db = await connectToDatabase();
         const recipe = await db.collection<Recipe>('recipes').findOne({

@@ -2,6 +2,7 @@ import { mealPlanModel } from "../models/mealPlan.model.js";
 import { recipeService } from "./recipes.service.js";
 import type { MealPlanEntry, MealSlot } from "../types/mealPlan.js";
 import { shoppingPlanService, type RecipeRequest } from "./shoppingPlan.service.js";
+import { accessService } from "./access.service.js";
 
 export interface MealPlanView extends MealPlanEntry {
     recipeTitle: string;
@@ -16,14 +17,14 @@ async function ownedEntry(id: string, userId: string): Promise<MealPlanEntry> {
 
 async function assertOwnsRecipe(recipeId: string, userId: string) {
     const recipe = await recipeService.getRecipeById(recipeId).catch(() => null);
-    if (!recipe || recipe.userId !== userId) throw new Error("UNKNOWN_RECIPE");
+    if (!recipe || !(await accessService.canAccess(userId, recipe))) throw new Error("UNKNOWN_RECIPE");
     return recipe;
 }
 
 export const mealPlanService = {
     async list(userId: string, from: string, to: string): Promise<MealPlanView[]> {
         const entries = await mealPlanModel.findRange(userId, from, to);
-        const recipes = await recipeService.getAllRecipes(userId);
+        const recipes = await recipeService.getAccessibleRecipes(userId);
         const titles = new Map(recipes.map((r) => [r._id.toString(), r.title]));
         // Entries whose recipe was deleted elsewhere are dropped from the view.
         return entries
@@ -45,7 +46,7 @@ export const mealPlanService = {
     // STO-87: entry.servings over recipe.servings sets the scale; repeats of a recipe add up.
     async recipeRequests(userId: string, from: string, to: string): Promise<RecipeRequest[]> {
         const entries = await mealPlanModel.findRange(userId, from, to);
-        const recipes = await recipeService.getAllRecipes(userId);
+        const recipes = await recipeService.getAccessibleRecipes(userId);
         const byId = new Map(recipes.map((r) => [r._id.toString(), r]));
         const scales = new Map<string, number>();
         for (const e of entries) {

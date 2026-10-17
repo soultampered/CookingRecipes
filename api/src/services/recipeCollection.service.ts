@@ -1,6 +1,7 @@
 import { recipeCollectionModel } from "../models/recipeCollection.model.js";
 import { recipeService } from "./recipes.service.js";
 import type { RecipeCollection } from "../types/recipeCollection.js";
+import { accessService } from "./access.service.js";
 
 // STO-79. Throws NOT_FOUND / FORBIDDEN / UNKNOWN_RECIPE like the other services.
 async function owned(id: string, userId: string): Promise<RecipeCollection> {
@@ -13,7 +14,7 @@ async function owned(id: string, userId: string): Promise<RecipeCollection> {
 async function assertOwnsRecipes(recipeIds: string[], userId: string): Promise<void> {
     for (const id of recipeIds) {
         const recipe = await recipeService.getRecipeById(id).catch(() => null);
-        if (!recipe || recipe.userId !== userId) throw new Error("UNKNOWN_RECIPE");
+        if (!recipe || !(await accessService.canAccess(userId, recipe))) throw new Error("UNKNOWN_RECIPE");
     }
 }
 
