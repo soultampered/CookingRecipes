@@ -17,6 +17,7 @@
 	import PullToRefresh from '$lib/components/PullToRefresh.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import EditModeToggle from '$lib/components/EditModeToggle.svelte';
+	import { photoUrl } from '$lib/api/client';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -260,7 +261,11 @@
 								href={`/inventory/${item._id}/edit`}
 								onclick={(e) => (editing ? e.preventDefault() : swipe.handleClick(e, item._id))}
 							>
-								<span class="dot" class:out={item.quantity === 0}></span>
+								{#if item.photoId}
+									<img class="item-thumb" src={photoUrl(item.photoId)} alt="" loading="lazy" />
+								{:else}
+									<span class="dot" class:out={item.quantity === 0}></span>
+								{/if}
 								<span class="name">{item.name}</span>
 								<span class="qty">{item.quantity} {tRaw('unit', item.unit)}</span>
 							</a>
@@ -512,6 +517,13 @@
 		font-weight: 600;
 		padding: 0.25rem 0.55rem;
 		border-radius: 999px;
+	}
+	.item-thumb {
+		width: 28px;
+		height: 28px;
+		border-radius: 6px;
+		object-fit: cover;
+		flex: 0 0 auto;
 	}
 	.leftover-badge {
 		flex: 0 0 auto;

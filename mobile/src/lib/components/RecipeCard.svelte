@@ -2,6 +2,7 @@
 	import type { Recipe } from '$lib/types/recipe';
 	import { t, tRaw } from '$lib/i18n/index.svelte';
 	import { swipeToDelete } from '$lib/utils/swipeToDelete.svelte';
+	import { photoUrl } from '$lib/api/client';
 
 	// onDelete is optional — recipes/suggestions/+page.svelte reuses this card without swipe-
 	// to-delete (deleting a recipe from "what's fully in stock" isn't a natural action there),
@@ -54,7 +55,11 @@
 </script>
 
 {#snippet cardBody()}
-	<div class="thumb" style="background: {thumbColor(recipe._id)};"></div>
+	{#if recipe.photoId}
+		<img class="thumb" src={photoUrl(recipe.photoId)} alt="" loading="lazy" />
+	{:else}
+		<div class="thumb" style="background: {thumbColor(recipe._id)};"></div>
+	{/if}
 	<div class="body">
 		<div class="title">
 			{#if recipe.favorite}<span class="fav" aria-label={t('rating.favorite')}>♥</span>{/if}
@@ -218,6 +223,7 @@
 		cursor: pointer;
 	}
 	.thumb {
+		object-fit: cover;
 		width: 40px;
 		height: 40px;
 		border-radius: 8px;

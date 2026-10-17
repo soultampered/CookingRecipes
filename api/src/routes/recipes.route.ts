@@ -7,6 +7,7 @@ import { validateJson } from "../middleware/validate.middleware.js";
 import { createRecipeSchema, updateRecipeSchema, prepareRecipeSchema } from "../schemas/recipe.schema.js";
 import { InventoryAdjustError } from "../types/inventory.js";
 import { recipeShareService } from "../services/recipeShare.service.js";
+import { photoService } from "../services/photo.service.js";
 
 const recipeRoutes = new Hono<{ Variables: AuthVariables }>();
 
@@ -16,9 +17,11 @@ recipeRoutes.use('*', requireVerified);
 recipeRoutes.post('/', validateJson(createRecipeSchema), async (c) => {
     try {
         const body = c.req.valid('json');
+        if (body.photoId) await photoService.assertOwned(body.photoId, c.get('userId'));
         const newRecipe = await recipeService.createRecipe({ ...body, userId: c.get('userId') });
         return c.json(newRecipe, 201);
     } catch (err) {
+        if ((err as Error).message === 'UNKNOWN_PHOTO') return c.json({ error: 'Photo not found' }, 400);
         if ((err as Error).message === 'DUPLICATE_NAME') {
             console.error(err);
             return c.json({ error: 'Recipe name already exists' }, 400);
@@ -62,9 +65,12 @@ recipeRoutes.patch('/:id', validateJson(updateRecipeSchema), async (c) => {
         const existing = await recipeService.getRecipeById(c.req.param('id'));
         if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
         const { editNote, ...body } = c.req.valid('json');
+        if (body.photoId) await photoService.assertOwned(body.photoId, c.get('userId'));
         const updated = await recipeService.updateRecipe(c.req.param('id'), body, editNote);
+        if ('photoId' in body && existing.photoId && existing.photoId !== body.photoId) await photoService.remove(existing.photoId);
         return c.json(updated, 200);
     } catch (err) {
+        if ((err as Error).message === 'UNKNOWN_PHOTO') return c.json({ error: 'Photo not found' }, 400);
         if ((err as Error).message === 'NOT_FOUND') {
             return c.json({ error: 'Recipe not found' }, 404);
         }
@@ -77,6 +83,7 @@ recipeRoutes.delete('/:id', async (c) => {
         const existing = await recipeService.getRecipeById(c.req.param('id'));
         if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
         await recipeService.deleteRecipe(c.req.param('id'));
+        await photoService.remove(existing.photoId);
         return c.body(null, 204); // No content
     } catch (err) {
         if ((err as Error).message === 'NOT_FOUND') {

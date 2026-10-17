@@ -39,9 +39,11 @@ function renderRecipe(r: PublicRecipe, nonce: string): string {
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:640px;margin:2rem auto;padding:0 1rem;color:#212623;line-height:1.55;background:#eff4f1}
 main{background:#fff;border:1px solid #d9e2dc;border-radius:14px;padding:1.5rem}
 h1{margin:0 0 .25rem}h2{font-size:1.05rem;margin:1.4rem 0 .4rem}.meta{color:#57635d;margin:.2rem 0}
+.hero{width:100%;max-height:340px;object-fit:cover;border-radius:10px;margin-bottom:1rem}
 ul,ol{padding-left:1.3rem}li{margin:.3rem 0}footer{text-align:center;color:#57635d;font-size:.85rem;margin-top:1rem}
 @media print{body{background:#fff}main{border:none}}
 </style></head><body><main>
+${r.photoUrl ? `<img class="hero" src="${escape(r.photoUrl)}" alt="">` : ""}
 <h1>${escape(r.title)}</h1>
 <p class="meta">${escape(meta)}${r.author ? ` · by ${escape(r.author)}` : ""}</p>
 ${r.description ? `<p>${escape(r.description)}</p>` : ""}${nutrition}
@@ -53,7 +55,13 @@ ${r.description ? `<p>${escape(r.description)}</p>` : ""}${nutrition}
 publicPages.use(
     "/r/*",
     secureHeaders({
-        contentSecurityPolicy: { defaultSrc: ["'none'"], styleSrc: [NONCE], baseUri: ["'none'"], frameAncestors: ["'none'"] }
+        contentSecurityPolicy: {
+            defaultSrc: ["'none'"],
+            styleSrc: [NONCE],
+            imgSrc: ["'self'"],
+            baseUri: ["'none'"],
+            frameAncestors: ["'none'"]
+        }
     })
 );
 
