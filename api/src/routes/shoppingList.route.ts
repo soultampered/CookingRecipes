@@ -2,13 +2,15 @@ import { Hono } from 'hono';
 import { shoppingListService } from "../services/shoppingList.service.js"
 import { shoppingListInventoryService } from "../services/shoppingListInventory.service.js"
 import { priceHistoryService } from "../services/priceHistory.service.js";
+import { shoppingPlanService } from "../services/shoppingPlan.service.js";
 import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
 import { requireVerified } from "../middleware/requireVerified.middleware.js";
 import { validateJson } from "../middleware/validate.middleware.js";
 import {
     createShoppingListSchema,
     updateShoppingListSchema,
-    addShoppingListItemSchema
+    addShoppingListItemSchema,
+    fromRecipesSchema
 } from "../schemas/shoppingList.schema.js";
 
 const shoppingListRoute = new Hono<{ Variables: AuthVariables }>();
@@ -38,6 +40,29 @@ shoppingListRoute.post('/', validateJson(createShoppingListSchema), async (c) =>
             return c.json({ error: 'Name and items are required' }, 400);
         }
         return c.json({ error: 'Failed to create shopping list' }, 500);
+    }
+});
+
+// STO-80/87: combined list across recipes. preview = what you'd need vs have, no writes.
+shoppingListRoute.post('/from-recipes/preview', validateJson(fromRecipesSchema), async (c) => {
+    try {
+        return c.json(await shoppingPlanService.plan(c.get('userId'), c.req.valid('json').recipes), 200);
+    } catch (err) {
+        if ((err as Error).message === 'UNKNOWN_RECIPE') return c.json({ error: 'Recipe not found' }, 404);
+        return c.json({ error: 'Failed to build list' }, 500);
+    }
+});
+
+shoppingListRoute.post('/from-recipes', validateJson(fromRecipesSchema), async (c) => {
+    try {
+        const { recipes, name, listId } = c.req.valid('json');
+        return c.json(await shoppingPlanService.createList(c.get('userId'), recipes, { name, listId }), 201);
+    } catch (err) {
+        const message = (err as Error).message;
+        if (message === 'UNKNOWN_RECIPE') return c.json({ error: 'Recipe not found' }, 404);
+        if (message === 'FORBIDDEN') return c.json({ error: 'Forbidden' }, 403);
+        if (message === 'NOT_FOUND') return c.json({ error: 'Shopping list not found' }, 404);
+        return c.json({ error: 'Failed to build list' }, 500);
     }
 });
 

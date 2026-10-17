@@ -14,6 +14,9 @@
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import EditModeToggle from '$lib/components/EditModeToggle.svelte';
 	import { deleteCollection } from '$lib/api/collections';
+	import MealPrepSheet from '$lib/components/MealPrepSheet.svelte';
+
+	let showMealPrep = $state(false);
 	import type { Recipe } from '$lib/types/recipe';
 	import type { PageProps } from './$types';
 
@@ -117,6 +120,9 @@
 			</button>
 			{#if recipeViewMode.current === 'list' && data.recipes.length > 1}
 				<EditModeToggle {editing} onToggle={toggleEditing} />
+			{/if}
+			{#if data.recipes.length > 0}
+				<button type="button" class="btn-outline" onclick={() => (showMealPrep = true)}>{t('mealPrep.button')}</button>
 			{/if}
 			<a class="btn-outline" href="/recipes/suggestions">{t('recipes.suggestions')}</a>
 			<a class="btn-outline" href="/recipes/new">{t('recipes.newRecipe')}</a>
@@ -241,6 +247,10 @@
 	{/if}
 </div>
 </PullToRefresh>
+
+{#if showMealPrep}
+	<MealPrepSheet recipes={orderedRecipes.length ? orderedRecipes : data.recipes} onClose={() => (showMealPrep = false)} />
+{/if}
 
 <ConfirmModal
 	open={deletingCollection}

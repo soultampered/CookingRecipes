@@ -3,6 +3,7 @@ import { shoppingListModel } from "../models/index.js";
 import type { ShoppingList, ShoppingListItem } from "../types/shoppingList.js";
 import { categorizeItemName } from "./foodCategory.service.js";
 import { priceHistoryService } from "./priceHistory.service.js";
+import { convert } from "./unitConversion.js";
 
 type IncomingItem = Omit<ShoppingListItem, "_id"> & { _id?: ObjectId | string };
 
@@ -57,10 +58,19 @@ export const shoppingListService = {
             (i) => i.name.trim().toLowerCase() === item.name.trim().toLowerCase()
         );
         if (existing) {
-            const items = list.items.map((i) =>
-                i === existing ? { ...i, quantity: i.quantity + item.quantity } : i
-            );
-            return shoppingListModel.update(listId, { items });
+            // STO-80: merge when units match or convert; otherwise the new amount gets its own row.
+            const amount =
+                existing.unit === item.unit
+                    ? item.quantity
+                    : existing.unit && item.unit
+                        ? convert(item.quantity, item.unit, existing.unit)
+                        : null;
+            if (amount !== null) {
+                const items = list.items.map((i) =>
+                    i === existing ? { ...i, quantity: Math.round((i.quantity + amount) * 100) / 100 } : i
+                );
+                return shoppingListModel.update(listId, { items });
+            }
         }
         // Category is always derived from the name, never client-supplied — see STO-18.
         const category = await categorizeItemName(item.name);
