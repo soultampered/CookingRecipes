@@ -7,6 +7,7 @@
 	import { prepareRecipe } from '$lib/api/recipes';
 	import { features } from '$lib/state/features.svelte';
 	import RecipeRating from '$lib/components/RecipeRating.svelte';
+	import { printOrShareRecipe } from '$lib/utils/printRecipe';
 	import { formatQuantity } from '$lib/utils/quantity';
 	import { convert, toSystem, type UnitSystem } from '$lib/utils/unitConversion';
 	import { unitSystem } from '$lib/state/unitSystem.svelte';
@@ -120,6 +121,25 @@
 			toast.push(err instanceof ApiError ? err.message : t('recipeDetail.errorPrepare'));
 		} finally {
 			quickPreparing = false;
+		}
+	}
+
+	async function handlePrint() {
+		try {
+			await printOrShareRecipe({
+				recipe: data.recipe,
+				names: data.inventoryNames,
+				scale,
+				unitLabel: (unit) => tRaw('unit', unit),
+				labels: {
+					ingredients: t('recipeDetail.ingredients'),
+					instructions: t('recipeDetail.instructions'),
+					servings: t('recipeDetail.servings')
+				}
+			});
+		} catch (err) {
+			// Dismissing the share sheet rejects too; only show real failures.
+			if (!/cancel/i.test(String((err as Error)?.message))) toast.push(t('recipeDetail.errorPrint'));
 		}
 	}
 
@@ -254,7 +274,10 @@
 			</div>
 			{#if features.has('ratings')}<RecipeRating recipe={data.recipe} />{/if}
 		</div>
-		<a href={`/recipes/${data.recipe._id}/edit`} class="btn-outline">{t('recipeDetail.edit')}</a>
+		<div class="header-actions">
+			<button type="button" class="btn-outline" onclick={handlePrint}>{t('recipeDetail.print')}</button>
+			<a href={`/recipes/${data.recipe._id}/edit`} class="btn-outline">{t('recipeDetail.edit')}</a>
+		</div>
 	</div>
 
 	{#if data.recipe.description}
@@ -588,6 +611,11 @@
 		color: var(--ink-soft);
 		text-decoration: line-through;
 	}
+	.header-actions {
+		display: flex;
+		gap: 0.4rem;
+		flex: 0 0 auto;
+	}
 	.units-row {
 		display: flex;
 		gap: 0.3rem;
@@ -679,6 +707,8 @@
 		color: var(--ink);
 		background: var(--paper-raised);
 		flex: 0 0 auto;
+		font-family: inherit;
+		cursor: pointer;
 	}
 	.primary {
 		padding: 0.75rem;
