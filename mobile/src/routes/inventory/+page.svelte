@@ -15,6 +15,7 @@
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import PullToRefresh from '$lib/components/PullToRefresh.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
+	import EditModeToggle from '$lib/components/EditModeToggle.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -51,6 +52,17 @@
 	let addingToListId = $state<string | null>(null);
 	const swipe = swipeToDelete();
 	const drag = dragToReorder();
+	// STO-118: drag needs Edit mode *and* custom sort; swipe/tap only outside Edit mode.
+	let editing = $state(false);
+	let canReorder = $derived(inventorySortMode.current === 'custom');
+	$effect(() => {
+		if (!canReorder) editing = false;
+	});
+	function toggleEditing() {
+		editing = !editing;
+		drag.cancel();
+		for (const i of data.items) swipe.close(i._id);
+	}
 	function registerItemRef(node: HTMLElement, id: string) {
 		drag.registerRef(id, node);
 		return {
@@ -126,7 +138,12 @@
 <div class="page">
 	<div class="header">
 		<h1>{t('inventory.title')}</h1>
-		<a class="btn-outline" href="/inventory/new">{t('inventory.newItem')}</a>
+		<div class="header-actions">
+			{#if canReorder && data.items.length > 1}
+				<EditModeToggle {editing} onToggle={toggleEditing} />
+			{/if}
+			<a class="btn-outline" href="/inventory/new">{t('inventory.newItem')}</a>
+		</div>
 	</div>
 
 	<div class="search-row">
@@ -185,40 +202,24 @@
 						orderedItems.map((i) => i._id)
 					)}px)`}
 					style:touch-action={drag.isDragging(item._id) ? 'none' : 'auto'}
-					onpointerdown={(e) => {
-						if (inventorySortMode.current === 'custom') {
-							drag.onPointerDown(
-								e,
-								item._id,
-								orderedItems.map((i) => i._id),
-								(ev) => swipe.onPointerDown(ev, item._id)
-							);
-						} else {
-							swipe.onPointerDown(e, item._id);
-						}
-					}}
-					onpointermove={(e) => {
-						if (inventorySortMode.current === 'custom') {
-							drag.onPointerMove(
-								e,
-								item._id,
-								orderedItems.map((i) => i._id)
-							);
-						}
-						swipe.onPointerMove(e, item._id);
-					}}
-					onpointerup={() => {
-						if (inventorySortMode.current === 'custom') {
-							drag.onPointerUp(item._id, (from, to) =>
-								inventoryOrder.reorder(
-									orderedItems.map((i) => i._id),
-									from,
-									to
+					onpointerdown={(e) =>
+						editing
+							? drag.onPointerDown(e, item._id, orderedItems.map((i) => i._id))
+							: swipe.onPointerDown(e, item._id)}
+					onpointermove={(e) =>
+						editing
+							? drag.onPointerMove(e, item._id, orderedItems.map((i) => i._id))
+							: swipe.onPointerMove(e, item._id)}
+					onpointerup={() =>
+						editing
+							? drag.onPointerUp(item._id, (from, to) =>
+									inventoryOrder.reorder(
+										orderedItems.map((i) => i._id),
+										from,
+										to
+									)
 								)
-							);
-						}
-						swipe.onPointerUp(item._id);
-					}}
+							: swipe.onPointerUp(item._id)}
 					onpointercancel={() => {
 						drag.cancel();
 						swipe.onPointerUp(item._id);
@@ -238,6 +239,7 @@
 						</button>
 						<div
 							class="row"
+							class:editing
 							class:dragging={swipe.isDragging(item._id)}
 							style:transform={`translateX(${swipe.offsetFor(item._id)}px)`}
 							role="group"
@@ -246,14 +248,19 @@
 							<a
 								class="row-link"
 								href={`/inventory/${item._id}/edit`}
-								onclick={(e) => swipe.handleClick(e, item._id)}
+								onclick={(e) => (editing ? e.preventDefault() : swipe.handleClick(e, item._id))}
 							>
 								<span class="dot" class:out={item.quantity === 0}></span>
 								<span class="name">{item.name}</span>
 								<span class="qty">{item.quantity} {tRaw('unit', item.unit)}</span>
 							</a>
 							{#if isLowStock(item)}
-								<button type="button" class="low-stock-badge" onclick={() => openQuickAdd(item)}>
+								<button
+									type="button"
+									class="low-stock-badge"
+									disabled={editing}
+									onclick={() => openQuickAdd(item)}
+								>
 									{t('inventory.lowBadge')}
 								</button>
 							{/if}
@@ -336,6 +343,11 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+		gap: 0.5rem;
+	}
+	.header-actions {
+		display: flex;
+		gap: 0.5rem;
 	}
 	.btn-outline {
 		border: 1px solid var(--line);
@@ -442,6 +454,10 @@
 	}
 	.row.dragging {
 		transition: none;
+	}
+	.row.editing {
+		background: var(--accent-soft);
+		cursor: grab;
 	}
 	.row-link {
 		display: flex;
