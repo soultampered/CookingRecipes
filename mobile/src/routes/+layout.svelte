@@ -17,6 +17,7 @@
 	import { recipeOrder } from '$lib/state/recipeOrder.svelte';
 	import { recipeViewMode } from '$lib/state/recipeViewMode.svelte';
 	import { expirySettings } from '$lib/state/expirySettings.svelte';
+	import { unitSystem } from '$lib/state/unitSystem.svelte';
 	import { textScale } from '$lib/state/textScale.svelte';
 	import { keyboardInset } from '$lib/state/keyboardInset.svelte';
 	import { locale } from '$lib/i18n/index.svelte';
@@ -39,6 +40,7 @@
 		recipeOrder.restore();
 		recipeViewMode.restore();
 		expirySettings.restore();
+		unitSystem.restore();
 		textScale.restore();
 		locale.restore();
 		onboarding.restore();
