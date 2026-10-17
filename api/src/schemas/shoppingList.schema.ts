@@ -1,11 +1,14 @@
 import { z } from "zod";
 import { INVENTORY_CATEGORIES } from "../types/inventory.js";
 
+const objectIdString = z.string().regex(/^[0-9a-fA-F]{24}$/, "must be a valid id");
+
 const shoppingListItemSchema = z.object({
     name: z.string().trim().min(1).max(200),
     quantity: z.number().finite(),
     checked: z.boolean().optional(),
-    category: z.enum(INVENTORY_CATEGORIES).optional()
+    category: z.enum(INVENTORY_CATEGORIES).optional(),
+    price: z.number().finite().nonnegative().max(100000).nullable().optional()
 });
 
 // userId/_id are never client-set — createShoppingList always overrides userId from
@@ -15,6 +18,12 @@ export const createShoppingListSchema = z.object({
     items: z.array(shoppingListItemSchema)
 });
 
-export const updateShoppingListSchema = createShoppingListSchema.partial();
+// Items sent back on PATCH (reorder, qty/price edits) keep their _id — without it zod
+// stripped every id and broke check/remove-by-id afterwards.
+export const updateShoppingListSchema = createShoppingListSchema.partial().extend({
+    items: z.array(shoppingListItemSchema.extend({ _id: objectIdString.optional() })).optional(),
+    budget: z.number().finite().nonnegative().max(1000000).nullable().optional(),
+    store: z.string().trim().max(80).nullable().optional()
+});
 
 export const addShoppingListItemSchema = shoppingListItemSchema;
