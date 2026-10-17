@@ -26,3 +26,11 @@ export function revokeToken(id: string) {
 }
 
 export const voiceAddUrl = () => `${apiBaseUrl()}/integrations/voice/add`;
+
+export function getIntegrationStatus() {
+	return apiFetch<{ instacart: boolean }>('/integrations/status');
+}
+
+export function instacartLink(listId: string) {
+	return apiFetch<{ url: string }>(`/shopping-lists/${listId}/instacart`, { method: 'POST' });
+}

@@ -4,6 +4,7 @@ import { shoppingListInventoryService } from "../services/shoppingListInventory.
 import { priceHistoryService } from "../services/priceHistory.service.js";
 import { shoppingPlanService } from "../services/shoppingPlan.service.js";
 import { accessService } from "../services/access.service.js";
+import { instacartService } from "../services/instacart.service.js";
 import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
 import { featuresService } from "../services/features.service.js";
 import { requireFeature } from "../middleware/requireFeature.middleware.js";
@@ -81,6 +82,21 @@ shoppingListRoute.post('/from-recipes', requireFeature('mealPrep'), validateJson
         if (message === 'FORBIDDEN') return c.json({ error: 'Forbidden' }, 403);
         if (message === 'NOT_FOUND') return c.json({ error: 'Shopping list not found' }, 404);
         return c.json({ error: 'Failed to build list' }, 500);
+    }
+});
+
+// Hands the list to Instacart; returns the checkout link.
+shoppingListRoute.post('/:id/instacart', async (c) => {
+    try {
+        const list = await shoppingListService.getShoppingListById(c.req.param('id'));
+        if (!(await accessService.canAccess(c.get('userId'), list))) return c.json({ error: 'Forbidden' }, 403);
+        return c.json({ url: await instacartService.shoppingListLink(list) }, 200);
+    } catch (err) {
+        const message = (err as Error).message;
+        if (message === 'DISABLED') return c.json({ error: 'Instacart ordering is not set up' }, 501);
+        if (message === 'EMPTY') return c.json({ error: 'Nothing left to order on this list' }, 400);
+        if (message === 'NOT_FOUND') return c.json({ error: 'Shopping list not found' }, 404);
+        return c.json({ error: "Couldn't reach Instacart, try again" }, 502);
     }
 });
 
