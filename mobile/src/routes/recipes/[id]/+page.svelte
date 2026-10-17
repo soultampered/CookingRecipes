@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto, invalidate } from '$app/navigation';
 	import { deleteRecipe, type PrepareResult } from '$lib/api/recipes';
-	import { adjustInventory } from '$lib/api/inventory';
+	import { adjustInventory, deleteInventoryItem } from '$lib/api/inventory';
 	import { deletePreparation } from '$lib/api/nutrition';
 	import PrepareSheet from '$lib/components/PrepareSheet.svelte';
 	import { prepareRecipe } from '$lib/api/recipes';
@@ -113,11 +113,13 @@
 		const undo = result.adjustments.map((a) => ({ id: a.id, amount: -a.amount }));
 		// One id per prepare, so Undo can't add stock twice.
 		const undoId = crypto.randomUUID();
-		toast.push(t('recipeDetail.prepared'), 'info', {
+		const leftoverId = result.leftover?._id;
+		toast.push(t(leftoverId ? 'recipeDetail.preparedWithLeftover' : 'recipeDetail.prepared'), 'info', {
 			label: t('recipeDetail.undo'),
 			run: async () => {
 				try {
-					await adjustInventory(undo, undoId);
+					if (undo.length) await adjustInventory(undo, undoId);
+					if (leftoverId) await deleteInventoryItem(leftoverId);
 					if (result.preparationId) await deletePreparation(result.preparationId).catch(() => {});
 					toast.push(t('recipeDetail.undone'), 'info');
 					await invalidate(`app:recipe:${data.recipe._id}`);

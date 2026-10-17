@@ -34,10 +34,30 @@ export const inventoryService = {
     async updateInventory(id: string, data: Partial<Inventory>) {
         // Keep category in sync with name if the item is being renamed; otherwise leave
         // the existing (already-derived) category alone.
-        const patch = data.name ? { ...data, category: await categorizeItemName(data.name) } : data;
+        // Leftovers keep their category through a rename.
+        let patch = data;
+        if (data.name) {
+            const existing = await inventoryModel.findById(id);
+            const category = existing.category === "Leftovers" ? "Leftovers" : await categorizeItemName(data.name);
+            patch = { ...data, category };
+        }
         const updated = await inventoryModel.update(id, patch);
         if (!updated) throw new Error("NOT_FOUND");
         return updated;
+    },
+
+    // Skips name-derived categorization on purpose.
+    async createLeftover(userId: string, recipeId: string, recipeTitle: string, servings: number, expiresInDays: number) {
+        return inventoryModel.create({
+            name: `Leftover ${recipeTitle}`.slice(0, 200),
+            quantity: servings,
+            unit: "pcs",
+            category: "Leftovers",
+            expirationDte: new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000),
+            notes: `Servings of ${recipeTitle}`.slice(0, 1000),
+            leftoverOfRecipeId: recipeId,
+            userId
+        });
     },
 
     async deleteInventory(id: string) {

@@ -1,7 +1,7 @@
 import { inventoryService} from "./inventory.service.js";
 import { recipeService} from "./recipes.service.js";
 import { nutritionService } from "./nutrition.service.js";
-import type { MissingIngredient, RecipeIngredient } from "../types/recipe.js";
+import type { MissingIngredient, Recipe, RecipeIngredient } from "../types/recipe.js";
 import type { Inventory, InventoryAdjustment } from "../types/inventory.js";
 
 export interface PrepareOptions {
@@ -9,12 +9,14 @@ export interface PrepareOptions {
     scale?: number;
     // Amount actually used per ingredient; wins over scale. index beats inventoryItemId.
     overrides?: { inventoryItemId: string; index?: number; quantity: number }[];
+    leftovers?: { servings: number; expiresInDays: number };
 }
 
 export interface PrepareResult {
     adjustments: InventoryAdjustment[];
     updatedInventory: Inventory[];
     preparationId?: string;
+    leftover?: Inventory;
 }
 
 export const recipeInventoryService = {
@@ -24,7 +26,7 @@ export const recipeInventoryService = {
         const scale = options.scale ?? 1;
         if (!recipe.ingredients?.length) {
             const preparationId = await nutritionService.logPreparation(userId, recipe, scale);
-            return { adjustments: [], updatedInventory: [], preparationId };
+            return { adjustments: [], updatedInventory: [], preparationId, leftover: await this.saveLeftover(userId, recipe, options) };
         }
 
         const byIndex = new Map<number, number>();
@@ -41,7 +43,13 @@ export const recipeInventoryService = {
 
         const updatedInventory = await inventoryService.applyAdjustments(userId, adjustments);
         const preparationId = await nutritionService.logPreparation(userId, recipe, scale);
-        return { adjustments, updatedInventory, preparationId };
+        return { adjustments, updatedInventory, preparationId, leftover: await this.saveLeftover(userId, recipe, options) };
+    },
+
+    async saveLeftover(userId: string, recipe: Recipe, options: PrepareOptions): Promise<Inventory | undefined> {
+        if (!options.leftovers) return undefined;
+        const { servings, expiresInDays } = options.leftovers;
+        return inventoryService.createLeftover(userId, recipe._id.toString(), recipe.title, servings, expiresInDays);
     },
 
     async getMissingIngredients(recipeId: string): Promise<MissingIngredient[]> {

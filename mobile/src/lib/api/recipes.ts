@@ -31,6 +31,7 @@ export interface InventoryAdjustment {
 export interface PrepareOptions {
 	scale?: number;
 	overrides?: { inventoryItemId: string; index?: number; quantity: number }[];
+	leftovers?: { servings: number; expiresInDays: number };
 }
 
 export interface PrepareResult {
@@ -39,6 +40,7 @@ export interface PrepareResult {
 	updatedInventory: Inventory[];
 	// nutrition log row, removed on undo
 	preparationId?: string;
+	leftover?: Inventory;
 }
 
 export function prepareRecipe(id: string, options: PrepareOptions = {}) {
