@@ -21,6 +21,7 @@
 	import { hapticLight } from '$lib/utils/haptics';
 	import { keyboardInset } from '$lib/state/keyboardInset.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
+	import EditModeToggle from '$lib/components/EditModeToggle.svelte';
 	import { shoppingListTemplates } from '$lib/state/shoppingListTemplates.svelte';
 	import type { ShoppingListItem } from '$lib/types/shoppingList';
 	import type { PageProps } from './$types';
@@ -80,6 +81,14 @@
 		selectedIds = new Set();
 	}
 
+	// Reorder mode: drag only.
+	let reorderMode = $state(false);
+	function toggleReorderMode() {
+		reorderMode = !reorderMode;
+		itemDrag.cancel();
+		for (const i of data.list.items) itemSwipe.close(i._id!);
+	}
+
 	function toggleSelected(id: string) {
 		const next = new Set(selectedIds);
 		if (next.has(id)) next.delete(id);
@@ -87,29 +96,22 @@
 		selectedIds = next;
 	}
 
-	// Selection is a client-only overlay — drag/swipe stay wired up but only engage when
-	// selectMode is off. itemDrag arms via long-press and hands off to itemSwipe on
-	// horizontal movement (see dragToReorder.svelte.ts), so the two never fight.
+	// Swipe in normal mode, drag in reorder mode, neither while selecting.
 	function rowPointerDown(e: PointerEvent, id: string, orderedIds: string[]) {
-		if (!selectMode) {
-			itemDrag.onPointerDown(e, id, orderedIds, (ev) => itemSwipe.onPointerDown(ev, id));
-		}
+		if (reorderMode) itemDrag.onPointerDown(e, id, orderedIds);
+		else if (!selectMode) itemSwipe.onPointerDown(e, id);
 	}
 	function rowPointerMove(e: PointerEvent, id: string, orderedIds: string[]) {
-		if (!selectMode) {
-			itemDrag.onPointerMove(e, id, orderedIds);
-			itemSwipe.onPointerMove(e, id);
-		}
+		if (reorderMode) itemDrag.onPointerMove(e, id, orderedIds);
+		else if (!selectMode) itemSwipe.onPointerMove(e, id);
 	}
 	function rowPointerUp(
 		id: string,
 		orderedIds: string[],
 		onReorder: (fromIndex: number, toIndex: number) => void
 	) {
-		if (!selectMode) {
-			itemDrag.onPointerUp(id, onReorder);
-			itemSwipe.onPointerUp(id);
-		}
+		if (reorderMode) itemDrag.onPointerUp(id, onReorder);
+		else if (!selectMode) itemSwipe.onPointerUp(id);
 	}
 	function rowPointerCancel(id: string) {
 		itemDrag.cancel();
@@ -413,11 +415,18 @@
 						{t('common.cancel')}
 					</button>
 				</div>
+			{:else if reorderMode}
+				<div class="select-actions">
+					<EditModeToggle editing onToggle={toggleReorderMode} />
+				</div>
 			{:else}
 				<div class="select-actions">
 					<button type="button" class="select-action outline" onclick={toggleSelectMode}>
 						{t('shoppingList.selectItems')}
 					</button>
+					{#if data.list.items.length > 1}
+						<EditModeToggle editing={false} onToggle={toggleReorderMode} />
+					{/if}
 					{#if checkedCount > 0}
 						<button
 							type="button"
@@ -468,6 +477,7 @@
 							</button>
 							<div
 								class="item-row"
+								class:editing={reorderMode}
 								class:dragging={itemSwipe.isDragging(item._id!)}
 								style:transform={`translateX(${itemSwipe.offsetFor(item._id!)}px)`}
 								style:touch-action={itemDrag.isDragging(item._id!) ? 'none' : 'auto'}
@@ -484,6 +494,7 @@
 								<input
 									type="checkbox"
 									checked={item.checked}
+									disabled={reorderMode}
 									onchange={() => handleToggle(item._id!)}
 								/>
 								<span class="item-name" class:checked={item.checked}>{item.name}</span>
@@ -510,7 +521,7 @@
 									<button
 										type="button"
 										class="item-qty"
-										disabled={selectMode}
+										disabled={selectMode || reorderMode}
 										onclick={() => startEditQuantity(item)}
 										aria-label={t('shoppingList.editQuantityAriaLabel', { name: item.name })}
 									>
@@ -520,6 +531,7 @@
 								<button
 									type="button"
 									class="remove"
+									disabled={reorderMode}
 									onclick={() => (removingItemId = item._id!)}
 									aria-label={t('shoppingList.removeItemAriaLabel', { name: item.name })}
 								>
@@ -838,6 +850,10 @@
 		background: var(--paper);
 		touch-action: pan-y;
 		transition: transform 0.15s ease;
+	}
+	.item-row.editing {
+		background: var(--accent-soft);
+		cursor: grab;
 	}
 	.item-row.dragging {
 		transition: none;

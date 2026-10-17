@@ -11,6 +11,7 @@
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import PullToRefresh from '$lib/components/PullToRefresh.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
+	import EditModeToggle from '$lib/components/EditModeToggle.svelte';
 	import { shoppingListTemplates } from '$lib/state/shoppingListTemplates.svelte';
 	import type { PageProps } from './$types';
 
@@ -58,6 +59,13 @@
 
 	const swipe = swipeToDelete();
 	const drag = dragToReorder();
+	// Drag only in Edit mode; tap + swipe outside it.
+	let editing = $state(false);
+	function toggleEditing() {
+		editing = !editing;
+		drag.cancel();
+		for (const l of data.lists) swipe.close(l._id!);
+	}
 	function registerListRef(node: HTMLElement, id: string) {
 		drag.registerRef(id, node);
 		return {
@@ -90,6 +98,9 @@
 	<div class="header">
 		<h1>{t('shoppingLists.title')}</h1>
 		<div class="header-actions">
+			{#if data.lists.length > 1}
+				<EditModeToggle {editing} onToggle={toggleEditing} />
+			{/if}
 			{#if shoppingListTemplates.current.length > 0}
 				<button
 					type="button"
@@ -135,40 +146,34 @@
 						</button>
 						<a
 							class="card"
+							class:editing
 							class:dragging={swipe.isDragging(list._id!) || drag.isDragging(list._id!)}
 							href={`/shopping-lists/${list._id}`}
 							style:transform={`translateX(${swipe.offsetFor(list._id!)}px)`}
 							style:touch-action={drag.isDragging(list._id!) ? 'none' : 'pan-y'}
 							onpointerdown={(e) =>
-								drag.onPointerDown(
-									e,
-									list._id!,
-									orderedLists.map((l) => l._id!),
-									(ev) => swipe.onPointerDown(ev, list._id!)
-								)}
-							onpointermove={(e) => {
-								drag.onPointerMove(
-									e,
-									list._id!,
-									orderedLists.map((l) => l._id!)
-								);
-								swipe.onPointerMove(e, list._id!);
-							}}
-							onpointerup={() => {
-								drag.onPointerUp(list._id!, (from, to) =>
-									shoppingListOrder.reorder(
-										orderedLists.map((l) => l._id!),
-										from,
-										to
-									)
-								);
-								swipe.onPointerUp(list._id!);
-							}}
+								editing
+									? drag.onPointerDown(e, list._id!, orderedLists.map((l) => l._id!))
+									: swipe.onPointerDown(e, list._id!)}
+							onpointermove={(e) =>
+								editing
+									? drag.onPointerMove(e, list._id!, orderedLists.map((l) => l._id!))
+									: swipe.onPointerMove(e, list._id!)}
+							onpointerup={() =>
+								editing
+									? drag.onPointerUp(list._id!, (from, to) =>
+											shoppingListOrder.reorder(
+												orderedLists.map((l) => l._id!),
+												from,
+												to
+											)
+										)
+									: swipe.onPointerUp(list._id!)}
 							onpointercancel={() => {
 								drag.cancel();
 								swipe.onPointerUp(list._id!);
 							}}
-							onclick={(e) => swipe.handleClick(e, list._id!)}
+							onclick={(e) => (editing ? e.preventDefault() : swipe.handleClick(e, list._id!))}
 						>
 							<div class="card-title">{list.name}</div>
 							<div class="card-meta">
@@ -399,6 +404,10 @@
 	}
 	.card.dragging {
 		transition: none;
+	}
+	.card.editing {
+		border-style: dashed;
+		cursor: grab;
 	}
 	.card:active {
 		opacity: 0.85;
