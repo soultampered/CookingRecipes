@@ -38,6 +38,11 @@ export const updateRecipeSchema = createRecipeSchema.partial().extend({
     editNote: z.string().trim().max(500).optional()
 });
 
+// STO-17
+export const importRecipeSchema = z.object({
+    url: z.string().trim().url().max(2048)
+});
+
 // STO-20/117. Whole body optional — older app builds POST with no body.
 export const prepareRecipeSchema = z.object({
     scale: z.number().finite().positive().max(100).optional(),

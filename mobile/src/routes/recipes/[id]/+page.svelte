@@ -272,6 +272,9 @@
 	{#if data.recipe.description}
 		<p class="description">{data.recipe.description}</p>
 	{/if}
+	{#if data.recipe.sourceUrl}
+		<a class="source" href={data.recipe.sourceUrl} target="_blank" rel="noopener noreferrer">{t('recipeDetail.source')} ↗</a>
+	{/if}
 
 	{#if data.recipe.nutrition?.[0] && Object.keys(data.recipe.nutrition[0]).length}
 		{@const n = data.recipe.nutrition[0]}
@@ -650,6 +653,10 @@
 		background: var(--ink);
 		border-color: var(--ink);
 		color: var(--paper-raised);
+	}
+	.source {
+		font-size: var(--text-sm);
+		color: var(--accent);
 	}
 	.hero {
 		width: 100%;
