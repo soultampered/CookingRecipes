@@ -1,5 +1,5 @@
 import { inventoryModel } from "../models/index.js";
-import type { Inventory, NewInventory } from "../types/inventory.js"
+import { InventoryAdjustError, type Inventory, type InventoryAdjustment, type NewInventory } from "../types/inventory.js"
 import { categorizeItemName } from "./foodCategory.service.js";
 
 export const inventoryService = {
@@ -72,5 +72,37 @@ export const inventoryService = {
         return Promise.all(
             items.map(({ id, amount }) => this.adjustQuantity(id, amount))
         );
+    },
+
+    // STO-117: all-or-nothing. Pre-checks ownership + stock, then conditional $inc per item;
+    // if any decrement loses a race, the ones that landed are rolled back.
+    async applyAdjustments(userId: string, adjustments: InventoryAdjustment[]): Promise<Inventory[]> {
+        const merged = new Map<string, number>();
+        for (const { id, amount } of adjustments) {
+            merged.set(id, Math.round(((merged.get(id) ?? 0) + amount) * 1000) / 1000);
+        }
+        const ids = [...merged.keys()];
+        const items = await inventoryModel.findByIds(ids);
+        const byId = new Map(items.map((i) => [i._id.toString(), i]));
+
+        const missing = ids.filter((id) => !byId.has(id));
+        if (missing.length) throw new InventoryAdjustError("INGREDIENT_NOT_FOUND", missing);
+        const foreign = ids.filter((id) => byId.get(id)!.userId !== userId);
+        if (foreign.length) throw new InventoryAdjustError("FORBIDDEN", foreign);
+        const short = ids.filter((id) => (byId.get(id)!.quantity ?? 0) + merged.get(id)! < 0);
+        if (short.length) throw new InventoryAdjustError("INSUFFICIENT_STOCK", short);
+
+        const applied: [string, number][] = [];
+        for (const [id, amount] of merged) {
+            if (amount === 0) continue;
+            if (amount > 0) {
+                await inventoryModel.increment(id, amount);
+            } else if (!(await inventoryModel.decrementIfAvailable(id, -amount))) {
+                for (const [doneId, doneAmount] of applied) await inventoryModel.increment(doneId, -doneAmount);
+                throw new InventoryAdjustError("INSUFFICIENT_STOCK", [id]);
+            }
+            applied.push([id, amount]);
+        }
+        return inventoryModel.findByIds(ids);
     },
 }

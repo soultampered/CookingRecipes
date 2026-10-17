@@ -25,3 +25,11 @@ export function updateInventoryItem(id: string, patch: Partial<Inventory>) {
 export function deleteInventoryItem(id: string) {
 	return apiFetch<{ success: true }>(`/inventory/${id}`, { method: 'DELETE' });
 }
+
+// STO-117: all-or-nothing; used to undo a prepare.
+export function adjustInventory(adjustments: { id: string; amount: number }[]) {
+	return apiFetch<Inventory[]>('/inventory/adjust', {
+		method: 'POST',
+		body: JSON.stringify({ adjustments })
+	});
+}
