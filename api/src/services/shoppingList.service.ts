@@ -2,6 +2,7 @@ import { ObjectId } from "mongodb";
 import { shoppingListModel } from "../models/index.js";
 import type { ShoppingList, ShoppingListItem } from "../types/shoppingList.js";
 import { categorizeItemName } from "./foodCategory.service.js";
+import { priceHistoryService } from "./priceHistory.service.js";
 
 type IncomingItem = Omit<ShoppingListItem, "_id"> & { _id?: ObjectId | string };
 
@@ -63,7 +64,9 @@ export const shoppingListService = {
         }
         // Category is always derived from the name, never client-supplied — see STO-18.
         const category = await categorizeItemName(item.name);
-        list.items.push({ ...item, category, _id: new ObjectId() });
+        // STO-90: prefill with what you last paid (at this list's store if known).
+        const price = item.price ?? (await priceHistoryService.suggestedPrice(list.userId, item.name, list.store));
+        list.items.push({ ...item, category, price, _id: new ObjectId() });
         return shoppingListModel.update(listId, { items: list.items });
     },
 

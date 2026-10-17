@@ -5,6 +5,7 @@ import { shoppingListModel } from "../models/shoppingList.model.js";
 import { preparationModel } from "../models/preparation.model.js";
 import { recipeRevisionModel } from "../models/recipeRevision.model.js";
 import { recipeCollectionModel } from "../models/recipeCollection.model.js";
+import { priceRecordModel } from "../models/priceRecord.model.js";
 import type { User } from "../types/user.js"
 
 export const usersService = {
@@ -23,13 +24,14 @@ export const usersService = {
     // STO-94: everything the user owns, in one portable document. No auth internals.
     async exportUser(id: string) {
         const user = await userModel.findById(id);
-        const [recipes, inventory, shoppingLists, collections, preparations, recipeRevisions] = await Promise.all([
+        const [recipes, inventory, shoppingLists, collections, preparations, recipeRevisions, priceHistory] = await Promise.all([
             recipeModel.findAll(id),
             inventoryModel.findAll(id),
             shoppingListModel.findAllByUserId(id),
             recipeCollectionModel.findAllByUserId(id),
             preparationModel.findAllByUserId(id),
             recipeRevisionModel.findAllByUserId(id),
+            priceRecordModel.findAllByUserId(id),
         ]);
         const { failedLoginAttempts, lockedUntil, verificationCodeAttempts, resetCodeAttempts, loginCodeAttempts, ...profile } =
             stripPassword(user);
@@ -44,6 +46,7 @@ export const usersService = {
             collections,
             preparations,
             recipeRevisions,
+            priceHistory,
         };
     },
 
@@ -58,6 +61,7 @@ export const usersService = {
             preparationModel.deleteAllByUserId(id),
             recipeRevisionModel.deleteAllByUserId(id),
             recipeCollectionModel.deleteAllByUserId(id),
+            priceRecordModel.deleteAllByUserId(id),
         ]);
         const deleted = await userModel.delete(id);
         if (!deleted) throw new Error("Could not delete user")

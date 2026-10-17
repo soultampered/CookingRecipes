@@ -1,5 +1,6 @@
 import { getShoppingList } from '$lib/api/shoppingLists';
 import { listInventory } from '$lib/api/inventory';
+import { getPriceInsights, type PriceInsight } from '$lib/api/prices';
 
 export const load = async ({ params, depends }) => {
 	depends(`app:shopping-list:${params.id}`);
@@ -22,5 +23,8 @@ export const load = async ({ params, depends }) => {
 		if (recentNames.length >= 12) break;
 	}
 
-	return { list, recentNames };
+	// STO-90: never block the list on price hints.
+	const prices: Record<string, PriceInsight> = await getPriceInsights(list.items.map((i) => i.name)).catch(() => ({}));
+
+	return { list, recentNames, prices };
 };
