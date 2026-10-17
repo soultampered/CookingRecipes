@@ -75,7 +75,7 @@ export const recipeInventoryService = {
     },
 
     async suggestRecipes(userId: string) {
-        const recipes = await recipeService.getAllRecipes(userId);
+        const recipes = await recipeService.getAccessibleRecipes(userId);
         // Ingredients can live in any pantry the user can reach (STO-88).
         const inventory = await inventoryModel.findAccessible(userId, await accessService.householdIdsFor(userId));
         const inventoryMap = new Map(inventory.map(item => [item._id.toString(), item]));

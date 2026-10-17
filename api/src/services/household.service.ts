@@ -3,6 +3,14 @@ import { inventoryModel } from "../models/inventory.model.js";
 import { shoppingListModel } from "../models/shoppingList.model.js";
 import { userModel } from "../models/user.model.js";
 import type { Household } from "../types/household.js";
+import crypto from "crypto";
+
+// STO-8: 8 chars from an alphabet without look-alikes (no 0/O/1/I/L) ≈ 2^39 codes.
+const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+function newInviteCode(): string {
+    return Array.from(crypto.randomBytes(8), (b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join("");
+}
+const MAX_MEMBERS = 20;
 
 export interface HouseholdView {
     _id: string;
@@ -58,6 +66,42 @@ export const householdService = {
         await inventoryModel.moveHousehold(id, userId);
         await shoppingListModel.moveHousehold(id, userId);
         await householdModel.delete(id);
+    },
+
+    // STO-8 ------------------------------------------------------------------------------
+    async createInvite(id: string, userId: string): Promise<HouseholdView> {
+        await owned(id, userId);
+        return view((await householdModel.update(id, { inviteCode: newInviteCode() }))!, userId);
+    },
+
+    async revokeInvite(id: string, userId: string): Promise<HouseholdView> {
+        await owned(id, userId);
+        return view((await householdModel.update(id, { inviteCode: null }))!, userId);
+    },
+
+    async join(userId: string, code: string): Promise<HouseholdView> {
+        const household = await householdModel.findByInviteCode(code.trim().toUpperCase());
+        if (!household) throw new Error("INVALID_CODE");
+        if (!household.memberIds.includes(userId)) {
+            if (household.memberIds.length >= MAX_MEMBERS) throw new Error("FULL");
+            await householdModel.addMember(household._id!.toString(), userId);
+        }
+        return view((await householdModel.findById(household._id!.toString()))!, userId);
+    },
+
+    // Leaving keeps everything in the household; the member just loses access.
+    async leave(id: string, userId: string): Promise<void> {
+        const household = await householdModel.findById(id);
+        if (!household || !household.memberIds.includes(userId)) throw new Error("NOT_FOUND");
+        if (household.ownerId === userId) throw new Error("OWNER_CANNOT_LEAVE");
+        await householdModel.removeMember(id, userId);
+    },
+
+    async removeMember(id: string, userId: string, memberId: string): Promise<HouseholdView> {
+        const household = await owned(id, userId);
+        if (memberId === household.ownerId) throw new Error("OWNER_CANNOT_LEAVE");
+        await householdModel.removeMember(id, memberId);
+        return view((await householdModel.findById(id))!, userId);
     },
 
     // Account deletion: hand owned households to the next member, or delete them (and their

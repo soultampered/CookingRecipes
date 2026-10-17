@@ -44,6 +44,8 @@ export interface Recipe {
     shareToken?: string | null;
     photoId?: string | null; // STO-19
     sourceUrl?: string; // STO-17: where an imported recipe came from
+    householdId?: string | null; // STO-8: shared read/prepare/plan access for members
+    sharedBy?: string; // STO-8: response-only — owner's username on recipes that aren't yours
 }
 
 export interface MissingIngredient {

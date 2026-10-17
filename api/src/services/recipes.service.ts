@@ -3,6 +3,8 @@ import { recipeModel } from '../models/index.js';
 import { recipeRevisionModel } from '../models/recipeRevision.model.js';
 import { recipeCollectionModel } from '../models/recipeCollection.model.js';
 import { mealPlanModel } from '../models/mealPlan.model.js';
+import { userModel } from '../models/user.model.js';
+import { accessService } from './access.service.js';
 import type { Recipe, NewRecipe } from '../types/recipe.js';
 import { REVISION_FIELDS, type RecipeSnapshot, type RevisionField } from '../types/recipeRevision.js';
 
@@ -19,6 +21,16 @@ function changedFields(before: Recipe, patch: Partial<Recipe>): RevisionField[] 
 export const recipeService = {
     async getAllRecipes(userId: string) {
         return recipeModel.findAll(userId);
+    },
+
+    // STO-8: own + household-shared, others' tagged with sharedBy.
+    async getAccessibleRecipes(userId: string): Promise<Recipe[]> {
+        const recipes = await recipeModel.findAccessible(userId, await accessService.householdIdsFor(userId));
+        const names = new Map<string, string>();
+        for (const ownerId of new Set(recipes.filter((r) => r.userId !== userId).map((r) => r.userId))) {
+            names.set(ownerId, (await userModel.findById(ownerId).catch(() => null))?.username ?? 'a member');
+        }
+        return recipes.map((r) => (r.userId === userId ? r : { ...r, sharedBy: names.get(r.userId) }));
     },
 
     async getRecipeById(id: string) {
