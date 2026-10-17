@@ -13,3 +13,7 @@ export const addMealPlanSchema = z.object({
 export const updateMealPlanSchema = addMealPlanSchema.omit({ recipeId: true }).partial();
 
 export const mealPlanRangeSchema = z.object({ from: localDate, to: localDate });
+
+export const mealPlanShoppingListSchema = mealPlanRangeSchema.extend({
+    name: z.string().trim().min(1).max(200).optional()
+});
