@@ -104,6 +104,25 @@
 		{/if}
 	</a>
 
+	<a class="card" href="/inventory">
+		<div class="card-header">
+			<span class="card-title">{t('dashboard.runningOut')}</span>
+			<span class="stat" class:stat-warn={data.restock.length > 0}>{data.restock.length}</span>
+		</div>
+		{#if data.restock.length === 0}
+			<p class="empty">{t('dashboard.noRunningOut')}</p>
+		{:else}
+			<ul class="expiring-list">
+				{#each data.restock.slice(0, 3) as p (p.itemId)}
+					<li>
+						<span>{p.name}</span>
+						<span class="when">{t('dashboard.daysLeft', { count: Math.max(0, Math.round(p.daysLeft)) })}</span>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+	</a>
+
 	<a class="card" href="/nutrition">
 		<div class="card-header">
 			<span class="card-title">{t('dashboard.nutritionToday')}</span>

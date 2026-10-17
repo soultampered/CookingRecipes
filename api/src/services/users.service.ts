@@ -6,6 +6,7 @@ import { preparationModel } from "../models/preparation.model.js";
 import { recipeRevisionModel } from "../models/recipeRevision.model.js";
 import { recipeCollectionModel } from "../models/recipeCollection.model.js";
 import { priceRecordModel } from "../models/priceRecord.model.js";
+import { inventoryEventModel } from "../models/inventoryEvent.model.js";
 import type { User } from "../types/user.js"
 
 export const usersService = {
@@ -62,6 +63,7 @@ export const usersService = {
             recipeRevisionModel.deleteAllByUserId(id),
             recipeCollectionModel.deleteAllByUserId(id),
             priceRecordModel.deleteAllByUserId(id),
+            inventoryEventModel.deleteAllByUserId(id),
         ]);
         const deleted = await userModel.delete(id);
         if (!deleted) throw new Error("Could not delete user")

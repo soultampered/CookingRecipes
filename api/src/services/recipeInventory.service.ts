@@ -35,7 +35,7 @@ export const recipeInventoryService = {
             return { id, amount: -Math.round(used * 1000) / 1000 };
         });
 
-        const updatedInventory = await inventoryService.applyAdjustments(userId, adjustments);
+        const updatedInventory = await inventoryService.applyAdjustments(userId, adjustments, "prepare");
         await nutritionService.logPreparation(userId, recipe, scale);
         return { adjustments, updatedInventory, leftover: await this.saveLeftover(userId, recipe, options) };
     },
