@@ -2,9 +2,20 @@
 	import { t } from '$lib/i18n/index.svelte';
 	import { onboarding } from '$lib/state/onboarding.svelte';
 	import OnboardingWalkthrough from '$lib/components/OnboardingWalkthrough.svelte';
+	import { expirySettings } from '$lib/state/expirySettings.svelte';
+	import { daysUntil, expiringItems } from '$lib/utils/expiry';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
+
+	let expiring = $derived(expiringItems(data.inventory, expirySettings.daysAhead));
+
+	function expiryLabel(iso: string) {
+		const days = daysUntil(iso);
+		if (days < 0) return t('dashboard.expiredAgo');
+		if (days === 0) return t('dashboard.expiredToday');
+		return t('dashboard.expiresInDays', { count: days });
+	}
 
 	let outOfStockCount = $derived(data.inventory.filter((i) => i.quantity === 0).length);
 	let uncheckedCount = $derived(
@@ -74,6 +85,25 @@
 		{/if}
 	</a>
 
+	<a class="card" href="/inventory?expiring=1">
+		<div class="card-header">
+			<span class="card-title">{t('dashboard.expiringSoon')}</span>
+			<span class="stat" class:stat-warn={expiring.length > 0}>{expiring.length}</span>
+		</div>
+		{#if expiring.length === 0}
+			<p class="empty">{t('dashboard.noExpiring', { days: expirySettings.daysAhead })}</p>
+		{:else}
+			<ul class="expiring-list">
+				{#each expiring.slice(0, 3) as item (item._id)}
+					<li class:expired={daysUntil(item.expirationDte!) < 0}>
+						<span>{item.name}</span>
+						<span class="when">{expiryLabel(item.expirationDte!)}</span>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+	</a>
+
 	<a class="card" href="/shopping-lists">
 		<div class="card-header">
 			<span class="card-title">{t('dashboard.shoppingLists')}</span>
@@ -125,6 +155,30 @@
 		font-weight: 700;
 		font-variant-numeric: tabular-nums;
 		color: var(--accent);
+	}
+	.stat-warn {
+		color: var(--warn);
+	}
+	.expiring-list {
+		list-style: none;
+		margin: 0.4rem 0 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.2rem;
+		font-size: var(--text-sm);
+	}
+	.expiring-list li {
+		display: flex;
+		justify-content: space-between;
+		gap: 0.5rem;
+	}
+	.expiring-list .when {
+		color: var(--warn);
+		font-weight: 600;
+	}
+	.expiring-list li.expired .when {
+		color: var(--bad);
 	}
 	.preview,
 	.empty {
