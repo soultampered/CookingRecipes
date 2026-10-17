@@ -27,6 +27,7 @@
 	import { shoppingListTemplates } from '$lib/state/shoppingListTemplates.svelte';
 	import type { ShoppingListItem } from '$lib/types/shoppingList';
 	import { money } from '$lib/utils/money';
+	import { priceKey } from '$lib/api/prices';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -111,6 +112,34 @@
 		} catch (err) {
 			await itemsSaveFailed(err);
 		}
+	}
+
+	let editingStore = $state(false);
+	let storeDraft = $state('');
+
+	async function commitStore() {
+		try {
+			await updateShoppingList(data.list._id!, { store: storeDraft.trim() || null });
+			await invalidate(`app:shopping-list:${data.list._id}`);
+			editingStore = false;
+		} catch (err) {
+			toast.push(err instanceof ApiError ? err.message : t('shoppingList.errorUpdateItem'));
+		}
+	}
+
+	function priceHint(item: ShoppingListItem): { text: string; cheaper: boolean } | null {
+		const p = data.prices[priceKey(item.name)];
+		if (!p) return null;
+		const current = item.price ?? p.lastPrice;
+		if (p.cheapestStore && p.cheapestPrice != null && p.cheapestStore !== data.list.store && p.cheapestPrice < current) {
+			return { text: t('cost.cheaperAt', { store: p.cheapestStore, amount: money(p.cheapestPrice) }), cheaper: true };
+		}
+		return {
+			text: p.lastStore
+				? t('cost.lastPaidAt', { amount: money(p.lastPrice), store: p.lastStore })
+				: t('cost.lastPaid', { amount: money(p.lastPrice) }),
+			cheaper: false
+		};
 	}
 
 	async function commitBudget() {
@@ -437,6 +466,33 @@
 		</button>
 	{/if}
 
+	<div class="store-row">
+		<span class="store-label">{t('cost.store')}:</span>
+		{#if editingStore}
+			<form
+				class="store-edit"
+				onsubmit={(e) => {
+					e.preventDefault();
+					commitStore();
+				}}
+			>
+				<input type="text" maxlength="80" placeholder={t('cost.storePlaceholder')} bind:value={storeDraft} use:focusOnMount />
+				<button type="submit">✓</button>
+			</form>
+		{:else}
+			<button
+				type="button"
+				class="store-btn"
+				onclick={() => {
+					storeDraft = data.list.store ?? '';
+					editingStore = true;
+				}}
+			>
+				{data.list.store ?? t('cost.storePlaceholder')}
+			</button>
+		{/if}
+	</div>
+
 	{#if features.has('budget') && data.list.items.length > 0}
 		<div class="cost-bar">
 			<div class="cost-totals">
@@ -601,7 +657,12 @@
 									disabled={reorderMode}
 									onchange={() => handleToggle(item._id!)}
 								/>
-								<span class="item-name" class:checked={item.checked}>{item.name}</span>
+								<span class="item-name-wrap">
+									<span class="item-name" class:checked={item.checked}>{item.name}</span>
+									{#if priceHint(item)}
+										<span class="price-hint" class:cheaper={priceHint(item)!.cheaper}>{priceHint(item)!.text}</span>
+									{/if}
+								</span>
 								{#if editingQuantityId === item._id && !selectMode}
 									<div class="qty-edit">
 										<QuantityStepper
@@ -709,7 +770,7 @@
 	the rename / inline-quantity editors hold the keyboard, since those aren't "adding". -->
 <form
 	class="add-item-form"
-	class:hidden={editingName || editingQuantityId !== null || editingPriceId !== null || editingBudget}
+	class:hidden={editingName || editingQuantityId !== null || editingPriceId !== null || editingBudget || editingStore}
 	style:bottom={keyboardInset.current > 0
 		? `calc(env(safe-area-inset-bottom) + ${keyboardInset.current}px)`
 		: 'calc(env(safe-area-inset-bottom) + 4.75rem)'}
@@ -997,6 +1058,64 @@
 	}
 	.item-row:active {
 		opacity: 0.85;
+	}
+	.item-name-wrap {
+		flex: 1;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+	}
+	.price-hint {
+		font-size: var(--text-xs);
+		color: var(--ink-soft);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.price-hint.cheaper {
+		color: var(--good);
+		font-weight: 600;
+	}
+	.store-row {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		font-size: var(--text-sm);
+	}
+	.store-label {
+		color: var(--ink-soft);
+	}
+	.store-btn {
+		border: none;
+		background: none;
+		color: var(--accent);
+		font: inherit;
+		cursor: pointer;
+		padding: 0;
+		text-decoration: underline dotted;
+	}
+	.store-edit {
+		display: flex;
+		gap: 0.25rem;
+		flex: 1;
+	}
+	.store-edit input {
+		flex: 1;
+		min-width: 0;
+		padding: 0.3rem 0.45rem;
+		border: 1px solid var(--line);
+		border-radius: 6px;
+		background: var(--paper-raised);
+		color: var(--ink);
+		font: inherit;
+	}
+	.store-edit button {
+		border: none;
+		border-radius: 6px;
+		background: var(--accent);
+		color: var(--paper-raised);
+		padding: 0 0.55rem;
+		cursor: pointer;
 	}
 	.item-name {
 		flex: 1;
