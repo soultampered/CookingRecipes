@@ -1,6 +1,6 @@
 import { ObjectId } from "mongodb";
 import { connectToDatabase } from "../mongo.js";
-import type { User, NewUser } from "../types/user.js";
+import type { User, NewUser, RefreshTokenEntry } from "../types/user.js";
 
 export function stripPassword(
     user: User
@@ -24,8 +24,6 @@ export function stripPassword(
     } = user;
     return rest;
 }
-
-type RefreshTokenEntry = NonNullable<User["refreshTokens"]>[number];
 
 export const userModel = {
     findById: async (id: string): Promise<User> => {
@@ -119,6 +117,14 @@ export const userModel = {
         await db.collection<User>("user").updateOne(
             { _id: new ObjectId(userId) },
             { $pull: { refreshTokens: { familyId } }, $set: { updatedAt: new Date() } }
+        );
+    },
+
+    removeOtherRefreshTokenFamilies: async (userId: string, keepFamilyId: string): Promise<void> => {
+        const db = await connectToDatabase();
+        await db.collection<User>("user").updateOne(
+            { _id: new ObjectId(userId) },
+            { $pull: { refreshTokens: { familyId: { $ne: keepFamilyId } } }, $set: { updatedAt: new Date() } }
         );
     }
 
