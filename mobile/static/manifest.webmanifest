@@ -1,0 +1,10 @@
+{
+	"name": "Stokpot",
+	"short_name": "Stokpot",
+	"description": "Recipes, inventory and shopping lists that keep each other in sync.",
+	"start_url": "/dashboard",
+	"display": "standalone",
+	"background_color": "#eff4f1",
+	"theme_color": "#3f9c7c",
+	"icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
