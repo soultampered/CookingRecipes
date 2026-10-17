@@ -4,7 +4,11 @@ import { recipeInventoryService } from "../services/recipeInventory.service.js"
 import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
 import { requireVerified } from "../middleware/requireVerified.middleware.js";
 import { validateJson } from "../middleware/validate.middleware.js";
-import { createRecipeSchema, updateRecipeSchema, prepareRecipeSchema } from "../schemas/recipe.schema.js";
+import { createRecipeSchema, updateRecipeSchema, prepareRecipeSchema, importRecipeSchema } from "../schemas/recipe.schema.js";
+import { recipeImportService } from "../services/recipeImport.service.js";
+import { rateLimit } from "../middleware/rateLimit.middleware.js";
+
+const importLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, prefix: "recipe-import" });
 import { InventoryAdjustError } from "../types/inventory.js";
 import { featuresService } from "../services/features.service.js";
 import { requireFeature } from "../middleware/requireFeature.middleware.js";
@@ -40,6 +44,22 @@ recipeRoutes.post('/', validateJson(createRecipeSchema), async (c) => {
             return c.json({ error: 'Recipe name already exists' }, 400);
         }
         return c.json({ error: 'Failed to create recipe' }, 500);
+    }
+});
+
+recipeRoutes.post('/import', importLimiter, validateJson(importRecipeSchema), async (c) => {
+    try {
+        return c.json(await recipeImportService.importFromUrl(c.get('userId'), c.req.valid('json').url), 201);
+    } catch (err) {
+        const message = (err as Error).message;
+        if (message === 'BAD_URL') return c.json({ error: "That link can't be imported" }, 400);
+        if (message === 'NO_RECIPE') return c.json({ error: 'No recipe found on that page' }, 422);
+        if (message === 'TOO_LARGE') return c.json({ error: 'That page is too large to import' }, 422);
+        if (message === 'FETCH_FAILED' || (err as Error).name === 'TimeoutError') {
+            return c.json({ error: "Couldn't load that page" }, 502);
+        }
+        console.error('Recipe import failed:', err);
+        return c.json({ error: 'Failed to import recipe' }, 500);
     }
 });
 

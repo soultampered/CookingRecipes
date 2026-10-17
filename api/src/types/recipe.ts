@@ -43,6 +43,7 @@ export interface Recipe {
     // Public link token; absent = private.
     shareToken?: string | null;
     photoId?: string | null;
+    sourceUrl?: string; // import source
 }
 
 export interface MissingIngredient {
