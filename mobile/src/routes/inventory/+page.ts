@@ -6,6 +6,8 @@ export const load = async ({ url, depends }) => {
 	const category = (url.searchParams.get('category') as InventoryCategory | null) ?? undefined;
 	return {
 		items: await listInventory({ category }),
-		category: category ?? null
+		category: category ?? null,
+		// Client-side filter using the expiry-days setting.
+		expiringOnly: url.searchParams.get('expiring') === '1'
 	};
 };
