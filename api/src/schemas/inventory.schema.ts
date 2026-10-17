@@ -11,7 +11,8 @@ export const createInventorySchema = z.object({
     expirationDte: z.coerce.date().optional(),
     category: z.enum(INVENTORY_CATEGORIES).optional(),
     notes: z.string().trim().max(1000).optional(),
-    lowStockThreshold: z.number().finite().optional()
+    lowStockThreshold: z.number().finite().optional(),
+    photoId: z.string().regex(/^[0-9a-f]{32}$/).nullable().optional()
 });
 
 export const updateInventorySchema = createInventorySchema.partial();

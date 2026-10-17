@@ -6,6 +6,7 @@
 	import { t, tRaw } from '$lib/i18n/index.svelte';
 	import { dragToReorder } from '$lib/utils/dragToReorder.svelte';
 	import EditModeToggle from '$lib/components/EditModeToggle.svelte';
+	import PhotoPicker from '$lib/components/PhotoPicker.svelte';
 
 	let {
 		initial,
@@ -63,7 +64,8 @@
 		instructions: initialInstructions,
 		ingredients: initialIngredients,
 		tags: initialTags,
-		nutrition: initialNutrition
+		nutrition: initialNutrition,
+		photoId: initial?.photoId ?? null
 	});
 
 	let title = $state(initialTitle);
@@ -78,6 +80,7 @@
 	let instructionRows = $state(initialInstructions.map((text) => ({ id: makeInstructionId(), text })));
 	let ingredients = $state<RecipeIngredient[]>(initialIngredients);
 	let nutrition = $state({ ...initialNutrition });
+	let photoId = $state<string | null>(initial?.photoId ?? null);
 
 	function nutritionPayload(): NutritionFacts[] {
 		const perServing: NutritionFacts = { ...(initial?.nutrition?.[0] ?? {}) };
@@ -108,7 +111,8 @@
 				instructions,
 				ingredients,
 				tags,
-				nutrition
+				nutrition,
+				photoId
 			}) !== initialSnapshot;
 	});
 
@@ -213,7 +217,8 @@
 			ingredients,
 			instructions: instructions.filter((line) => line.trim().length > 0),
 			tags: tags.length ? tags : undefined,
-			nutrition: nutritionPayload()
+			nutrition: nutritionPayload(),
+			photoId
 		});
 	}
 </script>
@@ -229,6 +234,8 @@
 		/>
 		{#if errors.title}<p class="field-error">{errors.title}</p>{/if}
 	</label>
+
+	<PhotoPicker bind:value={photoId} alt={t('photo.alt', { name: title })} />
 
 	<label>
 		{t('recipeForm.description')}

@@ -8,6 +8,7 @@ import { InventoryAdjustError } from "../types/inventory.js";
 import { restockService } from "../services/restock.service.js";
 import { requireFeature } from "../middleware/requireFeature.middleware.js";
 import { appliedAdjustmentModel } from "../models/appliedAdjustment.model.js";
+import { photoService } from "../services/photo.service.js";
 
 const inventoryRoutes = new Hono<{ Variables: AuthVariables }>();
 
@@ -17,9 +18,11 @@ inventoryRoutes.use('*', requireVerified);
 inventoryRoutes.post('/', validateJson(createInventorySchema), async (c) => {
     try {
         const body = c.req.valid('json');
+        if (body.photoId) await photoService.assertOwned(body.photoId, c.get('userId'));
         const newInventory = await inventoryService.createInventory({ ...body, userId: c.get('userId') });
         return c.json(newInventory, 201);
     } catch (err) {
+        if ((err as Error).message === 'UNKNOWN_PHOTO') return c.json({ error: 'Photo not found' }, 400);
         if ((err as Error).message === 'DUPLICATE_NAME') {
             console.error(err);
             return c.json({ error: 'Inventory name already exists' }, 400);
@@ -89,9 +92,12 @@ inventoryRoutes.put('/:id', validateJson(updateInventorySchema), async (c) => {
         const existing = await inventoryService.getInventoryById(c.req.param('id'));
         if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
         const data = c.req.valid('json');
+        if (data.photoId) await photoService.assertOwned(data.photoId, c.get('userId'));
         const item = await inventoryService.updateInventory(c.req.param('id'), data);
+        if ('photoId' in data && existing.photoId && existing.photoId !== data.photoId) await photoService.remove(existing.photoId);
         return c.json(item);
     } catch (err) {
+        if ((err as Error).message === 'UNKNOWN_PHOTO') return c.json({ error: 'Photo not found' }, 400);
         if ((err as Error).message === "NOT_FOUND") {
             return c.json({error: 'Item not found'}, 404);
         }
@@ -104,6 +110,7 @@ inventoryRoutes.delete('/:id', async (c) => {
         const existing = await inventoryService.getInventoryById(c.req.param('id'));
         if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
         await inventoryService.deleteInventory(c.req.param('id'));
+        await photoService.remove(existing.photoId);
         return c.json({ success: true });
     } catch (err) {
         if ((err as Error).message === "NOT_FOUND") {

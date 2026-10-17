@@ -36,6 +36,7 @@ export interface Inventory {
     lowStockThreshold?: number;
     // Set on leftovers from Prepare.
     leftoverOfRecipeId?: string;
+    photoId?: string | null;
 }
 
 export interface InventoryAdjustment {
