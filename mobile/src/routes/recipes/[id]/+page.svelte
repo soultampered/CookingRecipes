@@ -90,11 +90,13 @@
 		showPrepareSheet = false;
 		await invalidate(`app:recipe:${data.recipe._id}`);
 		const undo = result.adjustments.map((a) => ({ id: a.id, amount: -a.amount }));
+		// One id per prepare, so Undo can't add stock twice.
+		const undoId = crypto.randomUUID();
 		toast.push(t('recipeDetail.prepared'), 'info', {
 			label: t('recipeDetail.undo'),
 			run: async () => {
 				try {
-					await adjustInventory(undo);
+					await adjustInventory(undo, undoId);
 					toast.push(t('recipeDetail.undone'), 'info');
 					await invalidate(`app:recipe:${data.recipe._id}`);
 				} catch (err) {

@@ -5,6 +5,7 @@ import { requireVerified } from "../middleware/requireVerified.middleware.js";
 import { validateJson } from "../middleware/validate.middleware.js";
 import { createInventorySchema, updateInventorySchema, adjustInventorySchema } from "../schemas/inventory.schema.js";
 import { InventoryAdjustError } from "../types/inventory.js";
+import { appliedAdjustmentModel } from "../models/appliedAdjustment.model.js";
 
 const inventoryRoutes = new Hono<{ Variables: AuthVariables }>();
 
@@ -40,10 +41,15 @@ inventoryRoutes.get('/', async (c) => {
 });
 
 inventoryRoutes.post('/adjust', validateJson(adjustInventorySchema), async (c) => {
+    const { adjustments, adjustmentId } = c.req.valid('json');
+    if (adjustmentId && !(await appliedAdjustmentModel.claim(adjustmentId, c.get('userId')))) {
+        return c.json(await inventoryService.getInventoryItemsByIds(adjustments.map((a) => a.id)), 200);
+    }
     try {
-        const items = await inventoryService.applyAdjustments(c.get('userId'), c.req.valid('json').adjustments);
+        const items = await inventoryService.applyAdjustments(c.get('userId'), adjustments);
         return c.json(items, 200);
     } catch (err) {
+        if (adjustmentId) await appliedAdjustmentModel.release(adjustmentId).catch(() => {});
         if (err instanceof InventoryAdjustError) {
             const status = err.message === 'FORBIDDEN' ? 403 : err.message === 'INGREDIENT_NOT_FOUND' ? 404 : 400;
             return c.json({ error: 'Could not adjust inventory', code: err.message, itemIds: err.itemIds }, status);

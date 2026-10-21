@@ -21,5 +21,7 @@ export const adjustInventorySchema = z.object({
     adjustments: z
         .array(z.object({ id: z.string().regex(/^[0-9a-fA-F]{24}$/), amount: z.number().finite() }))
         .min(1)
-        .max(200)
+        .max(200),
+    // Idempotency key: a repeat changes nothing.
+    adjustmentId: z.uuid().optional()
 });

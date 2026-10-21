@@ -84,6 +84,7 @@ export const inventoryService = {
         const short = ids.filter((id) => (byId.get(id)!.quantity ?? 0) + merged.get(id)! < 0);
         if (short.length) throw new InventoryAdjustError("INSUFFICIENT_STOCK", short);
 
+        // Best-effort rollback if a decrement loses a race. A crash mid-loop needs a transaction (replica set only).
         const applied: [string, number][] = [];
         for (const [id, amount] of merged) {
             if (amount === 0) continue;

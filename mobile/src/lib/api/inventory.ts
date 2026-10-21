@@ -26,10 +26,10 @@ export function deleteInventoryItem(id: string) {
 	return apiFetch<{ success: true }>(`/inventory/${id}`, { method: 'DELETE' });
 }
 
-// STO-117: all-or-nothing; used to undo a prepare.
-export function adjustInventory(adjustments: { id: string; amount: number }[]) {
+// All-or-nothing; undoes a prepare. Reuse adjustmentId on retry.
+export function adjustInventory(adjustments: { id: string; amount: number }[], adjustmentId?: string) {
 	return apiFetch<Inventory[]>('/inventory/adjust', {
 		method: 'POST',
-		body: JSON.stringify({ adjustments })
+		body: JSON.stringify({ adjustments, adjustmentId })
 	});
 }
