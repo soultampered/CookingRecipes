@@ -4,6 +4,7 @@
 	import OnboardingWalkthrough from '$lib/components/OnboardingWalkthrough.svelte';
 	import { expirySettings } from '$lib/state/expirySettings.svelte';
 	import { daysUntil, expiringItems } from '$lib/utils/expiry';
+	import { features } from '$lib/state/features.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -85,24 +86,26 @@
 		{/if}
 	</a>
 
-	<a class="card" href="/inventory?expiring=1">
-		<div class="card-header">
-			<span class="card-title">{t('dashboard.expiringSoon')}</span>
-			<span class="stat" class:stat-warn={expiring.length > 0}>{expiring.length}</span>
-		</div>
-		{#if expiring.length === 0}
-			<p class="empty">{t('dashboard.noExpiring', { days: expirySettings.daysAhead })}</p>
-		{:else}
-			<ul class="expiring-list">
-				{#each expiring.slice(0, 3) as item (item._id)}
-					<li class:expired={daysUntil(item.expirationDte!) < 0}>
-						<span>{item.name}</span>
-						<span class="when">{expiryLabel(item.expirationDte!)}</span>
-					</li>
-				{/each}
-			</ul>
-		{/if}
-	</a>
+	{#if features.has('expiryAlerts')}
+		<a class="card" href="/inventory?expiring=1">
+			<div class="card-header">
+				<span class="card-title">{t('dashboard.expiringSoon')}</span>
+				<span class="stat" class:stat-warn={expiring.length > 0}>{expiring.length}</span>
+			</div>
+			{#if expiring.length === 0}
+				<p class="empty">{t('dashboard.noExpiring', { days: expirySettings.daysAhead })}</p>
+			{:else}
+				<ul class="expiring-list">
+					{#each expiring.slice(0, 3) as item (item._id)}
+						<li class:expired={daysUntil(item.expirationDte!) < 0}>
+							<span>{item.name}</span>
+							<span class="when">{expiryLabel(item.expirationDte!)}</span>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</a>
+	{/if}
 
 	<a class="card" href="/shopping-lists">
 		<div class="card-header">

@@ -8,6 +8,7 @@
 	import { toast } from '$lib/state/toast.svelte';
 	import { expirySettings } from '$lib/state/expirySettings.svelte';
 	import { expiryStatus } from '$lib/utils/expiry';
+	import { features } from '$lib/state/features.svelte';
 	import { t, tRaw } from '$lib/i18n/index.svelte';
 	import { swipeToDelete } from '$lib/utils/swipeToDelete.svelte';
 	import { dragToReorder } from '$lib/utils/dragToReorder.svelte';
@@ -38,7 +39,7 @@
 		} else {
 			ordered = inventoryOrder.apply(data.items);
 		}
-		if (data.expiringOnly) {
+		if (data.expiringOnly && features.has('expiryAlerts')) {
 			ordered = ordered.filter((item) => {
 				const s = expiryStatus(item, expirySettings.daysAhead);
 				return s === 'expired' || s === 'soon';
@@ -176,9 +177,11 @@
 		>
 			{t('inventory.all')}
 		</button>
-		<button class="chip chip-warn" class:active={data.expiringOnly} onclick={() => goto('/inventory?expiring=1')}>
-			{t('inventory.expiringFilter')}
-		</button>
+		{#if features.has('expiryAlerts')}
+			<button class="chip chip-warn" class:active={data.expiringOnly} onclick={() => goto('/inventory?expiring=1')}>
+				{t('inventory.expiringFilter')}
+			</button>
+		{/if}
 		{#each INVENTORY_CATEGORIES as category}
 			<button
 				class="chip"
