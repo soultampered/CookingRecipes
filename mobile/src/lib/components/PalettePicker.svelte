@@ -9,6 +9,10 @@
 		onSelect
 	}: { value: string; mode: Mode; label: string; onSelect: (name: string) => void } = $props();
 
+	// Focus stays on the trigger; aria-activedescendant marks the option.
+	const uid = $props.id();
+	const optionId = (i: number) => `${uid}-opt-${i}`;
+
 	let open = $state(false);
 	let highlighted = $state(0);
 	let root: HTMLDivElement | undefined = $state();
@@ -72,8 +76,11 @@
 	<button
 		type="button"
 		class="trigger"
+		role="combobox"
 		aria-haspopup="listbox"
 		aria-expanded={open}
+		aria-controls={`${uid}-list`}
+		aria-activedescendant={open ? optionId(highlighted) : undefined}
 		aria-label={label}
 		onclick={toggle}
 		onkeydown={onKeydown}
@@ -84,9 +91,10 @@
 	</button>
 
 	{#if open}
-		<ul class="options" role="listbox" aria-label={label} bind:this={listEl}>
+		<ul id={`${uid}-list`} class="options" role="listbox" aria-label={label} bind:this={listEl}>
 			{#each PALETTES as p, i (p.name)}
 				<li
+					id={optionId(i)}
 					role="option"
 					aria-selected={p.name === value}
 					class:highlighted={i === highlighted}
