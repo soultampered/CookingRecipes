@@ -227,7 +227,7 @@
 				{#if data.recipe.totalTimeMinutes}<span>{t('recipes.minutes', { count: data.recipe.totalTimeMinutes })}</span>{/if}
 				{#if data.recipe.servings}<span>{t('recipes.servesCount', { count: data.recipe.servings })}</span>{/if}
 			</div>
-			<RecipeRating recipe={data.recipe} />
+			{#if features.has('ratings')}<RecipeRating recipe={data.recipe} />{/if}
 		</div>
 		<a href={`/recipes/${data.recipe._id}/edit`} class="btn-outline">{t('recipeDetail.edit')}</a>
 	</div>
