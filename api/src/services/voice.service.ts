@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { apiTokenModel } from "../models/apiToken.model.js";
 import { shoppingListModel } from "../models/shoppingList.model.js";
+import { inventoryModel } from "../models/inventory.model.js";
 import { shoppingListService } from "./shoppingList.service.js";
 import type { ShoppingList } from "../types/shoppingList.js";
 
@@ -14,16 +15,25 @@ function hash(token: string): string {
     return crypto.createHash("sha256").update(token).digest("hex");
 }
 
+// Names with a separator word stay one item ("mac and cheese"). Inventory names added at call time.
+const COMPOUND_NAMES = ["mac and cheese", "half and half", "salt and pepper", "sweet and sour sauce", "bread and butter pickles"];
+
 // "milk, 2 eggs and a dozen bagels" → [{milk,1},{eggs,2},{bagels,12}]
-export function parseSpokenItems(text: string): { name: string; quantity: number }[] {
-    const cleaned = text
+export function parseSpokenItems(text: string, knownNames: string[] = []): { name: string; quantity: number }[] {
+    let cleaned = text
         .toLowerCase()
         .replace(/^(please\s+)?(add|put)\s+/, "")
         .replace(/\s+(to|on)\s+(my|the)\s+.*(list)?$/, "")
         .replace(/[.!?]+$/, "");
+    const compounds = [...COMPOUND_NAMES, ...knownNames.map((n) => n.trim().toLowerCase())]
+        .filter((n) => /\s(and|et|&)\s/.test(n))
+        .sort((a, b) => b.length - a.length);
+    // Swap each compound for a token the separators can't split, then put it back.
+    compounds.forEach((name, i) => (cleaned = cleaned.split(name).join(`\u0001${i}\u0001`)));
+    const restore = (part: string) => part.replace(/\u0001(\d+)\u0001/g, (_, i) => compounds[Number(i)]);
     return cleaned
         .split(/\s*(?:,|\band\b|\bet\b|&|\+)\s*/)
-        .map((part) => part.trim().replace(/^(some|of)\s+/, ""))
+        .map((part) => restore(part.trim()).replace(/^(some|of)\s+/, ""))
         .filter(Boolean)
         .map((part) => {
             // "a dozen bagels" / "a couple of limes" → the quantity word is the second one.
@@ -70,7 +80,8 @@ export const voiceService = {
 
     // Target: the named list (case-insensitive), else the most recent, else a new "Groceries".
     async addSpoken(userId: string, text: string, listName?: string): Promise<{ speech: string; list: ShoppingList }> {
-        const items = parseSpokenItems(text);
+        const known = (await inventoryModel.findAll(userId)).map((i) => i.name);
+        const items = parseSpokenItems(text, known);
         if (!items.length) throw new Error("NOTHING_HEARD");
         const lists = await shoppingListModel.findByScope(userId, null);
         let list =
