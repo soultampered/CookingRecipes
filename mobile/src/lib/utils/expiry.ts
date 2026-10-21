@@ -11,10 +11,10 @@ function startOfToday(): number {
 	return d.getTime();
 }
 
-// Whole days from today; negative once past. Dates are compared by calendar day.
+// Whole days from today (negative once past). Expiry is stored as UTC midnight, so read UTC parts.
 export function daysUntil(iso: string): number {
 	const d = new Date(iso);
-	const day = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+	const day = new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()).getTime();
 	return Math.round((day - startOfToday()) / DAY_MS);
 }
 
