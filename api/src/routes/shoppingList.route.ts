@@ -131,7 +131,7 @@ shoppingListRoute.patch('/:id/items/:itemId', async (c) => {
 
         const item = updated.items.find((i) => i._id?.toString() === c.req.param('itemId'));
         if (item?.checked && item.price != null) {
-            await priceHistoryService.record(c.get('userId'), item.name, item.price, updated.store);
+            await priceHistoryService.record(c.get('userId'), item.name, item.price, updated.store, `${c.req.param('id')}:${item._id}`);
         }
         if (item?.checked) {
             try {

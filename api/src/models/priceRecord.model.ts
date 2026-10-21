@@ -7,6 +7,11 @@ export const priceRecordModel = {
         await db.collection<PriceRecord>("priceRecord").insertOne(data);
     },
 
+    upsertBySource: async (data: Omit<PriceRecord, "_id"> & { source: string }): Promise<void> => {
+        const db = await connectToDatabase();
+        await db.collection<PriceRecord>("priceRecord").updateOne({ userId: data.userId, source: data.source }, { $set: data }, { upsert: true });
+    },
+
     findByKeys: async (userId: string, itemKeys: string[]): Promise<PriceRecord[]> => {
         const db = await connectToDatabase();
         return db

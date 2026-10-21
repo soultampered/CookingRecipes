@@ -9,6 +9,8 @@ export interface PriceRecord {
     price: number; // per unit
     store?: string;
     recordedAt: Date;
+    // "<listId>:<itemId>": one record per list row, so re-checking updates it.
+    source?: string;
 }
 
 export interface PriceInsight {

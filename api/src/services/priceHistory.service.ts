@@ -11,16 +11,12 @@ function storeKey(store?: string | null): string | undefined {
 }
 
 export const priceHistoryService = {
-    async record(userId: string, itemName: string, price: number, store?: string | null): Promise<void> {
+    // source ties a record to one list row, so re-checking updates it.
+    async record(userId: string, itemName: string, price: number, store?: string | null, source?: string): Promise<void> {
         try {
-            await priceRecordModel.create({
-                userId,
-                itemKey: itemKey(itemName),
-                itemName,
-                price,
-                store: storeKey(store),
-                recordedAt: new Date()
-            });
+            const data = { userId, itemKey: itemKey(itemName), itemName, price, store: storeKey(store), recordedAt: new Date() };
+            if (source) await priceRecordModel.upsertBySource({ ...data, source });
+            else await priceRecordModel.create(data);
         } catch (err) {
             // Never fail the toggle over it.
             console.error("Failed to record price:", err);
