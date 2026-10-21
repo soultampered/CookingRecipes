@@ -279,7 +279,7 @@
 		<div class="header-actions">
 			{#if features.has('print')}<button type="button" class="btn-outline" onclick={handlePrint}>{t('recipeDetail.print')}</button>{/if}
 			{#if features.has('versionHistory')}<a href={`/recipes/${data.recipe._id}/history`} class="btn-outline">{t('recipeDetail.history')}</a>{/if}
-			<button type="button" class="btn-outline" onclick={() => (showCollections = true)}>{t('collections.add')}</button>
+			{#if features.has('collections')}<button type="button" class="btn-outline" onclick={() => (showCollections = true)}>{t('collections.add')}</button>{/if}
 			<a href={`/recipes/${data.recipe._id}/edit`} class="btn-outline">{t('recipeDetail.edit')}</a>
 		</div>
 	</div>

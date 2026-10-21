@@ -2,6 +2,7 @@ import { Hono, type Context } from "hono";
 import { recipeCollectionService } from "../services/recipeCollection.service.js";
 import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
 import { requireVerified } from "../middleware/requireVerified.middleware.js";
+import { requireFeature } from "../middleware/requireFeature.middleware.js";
 import { validateJson } from "../middleware/validate.middleware.js";
 import {
     createRecipeCollectionSchema,
@@ -13,6 +14,7 @@ const collectionRoute = new Hono<{ Variables: AuthVariables }>();
 
 collectionRoute.use("*", authMiddleware);
 collectionRoute.use("*", requireVerified);
+collectionRoute.use("*", requireFeature("collections"));
 
 function fail(c: Context, err: unknown) {
     const message = (err as Error).message;

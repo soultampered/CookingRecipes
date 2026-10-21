@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { features } from '$lib/state/features.svelte';
 	import { invalidate } from '$app/navigation';
 	import RecipeCard from '$lib/components/RecipeCard.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
@@ -130,7 +131,7 @@
 		aria-label={t('recipes.searchPlaceholder')}
 	/>
 
-	{#if data.collections.length > 0}
+	{#if features.has('collections') && data.collections.length > 0}
 		<div class="tag-chiprow collection-row">
 			<span class="row-label">{t('collections.title')}</span>
 			{#each data.collections as c (c._id)}
