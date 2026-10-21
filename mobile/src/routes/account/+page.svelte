@@ -198,7 +198,7 @@
 	<TwoFactorSetting />
 	<ActiveSessions />
 	<ExportData />
-	<VoiceTokens />
+	{#if features.has('voiceAdd')}<VoiceTokens />{/if}
 
 	<button type="button" class="outline" onclick={handleLogout}>{t('account.logOut')}</button>
 

@@ -3,6 +3,8 @@ import { z } from "zod";
 import { voiceService, MAX_TOKENS } from "../services/voice.service.js";
 import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
 import { requireVerified } from "../middleware/requireVerified.middleware.js";
+import { requireFeature } from "../middleware/requireFeature.middleware.js";
+import { featuresService } from "../services/features.service.js";
 import { validateJson } from "../middleware/validate.middleware.js";
 import { rateLimit } from "../middleware/rateLimit.middleware.js";
 
@@ -11,7 +13,7 @@ const integrationsRoute = new Hono<{ Variables: AuthVariables }>();
 const voiceLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, prefix: "voice" });
 
 // Token management uses the normal app session.
-integrationsRoute.get("/tokens", authMiddleware, requireVerified, async (c) => {
+integrationsRoute.get("/tokens", authMiddleware, requireVerified, requireFeature("voiceAdd"), async (c) => {
     return c.json(await voiceService.listTokens(c.get("userId")), 200);
 });
 
@@ -19,6 +21,7 @@ integrationsRoute.post(
     "/tokens",
     authMiddleware,
     requireVerified,
+    requireFeature("voiceAdd"),
     validateJson(z.object({ name: z.string().trim().min(1).max(60) })),
     async (c) => {
         try {
@@ -52,6 +55,7 @@ integrationsRoute.post(
             );
         }
         if (!userId) return c.json({ error: "Invalid token", speech: "Stokpot couldn't sign you in." }, 401);
+        if (!featuresService.isOn("voiceAdd", userId)) return c.json({ error: "Not found" }, 404);
         try {
             const { text, list } = c.req.valid("json");
             const result = await voiceService.addSpoken(userId, text, list);
