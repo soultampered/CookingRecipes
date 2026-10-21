@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { features } from '$lib/state/features.svelte';
 	import type { DifficultyLevel, NewRecipe, NutritionFacts, RecipeIngredient } from '$lib/types/recipe';
 	import type { Inventory } from '$lib/types/inventory';
 	import { UNITS } from '$lib/types/unit';
@@ -307,15 +308,17 @@
 		</label>
 	</div>
 
-	<div class="field-label">{t('recipeForm.nutritionPerServing')}</div>
-	<div class="row nutrition-row">
-		{#each ['calories', 'protein', 'carbs', 'fat'] as const as key (key)}
-			<label>
-				{t(`nutrition.${key}`)}
-				<input type="number" inputmode="decimal" min="0" step="any" bind:value={nutrition[key]} />
-			</label>
-		{/each}
-	</div>
+	{#if features.has('nutrition')}
+		<div class="field-label">{t('recipeForm.nutritionPerServing')}</div>
+		<div class="row nutrition-row">
+			{#each ['calories', 'protein', 'carbs', 'fat'] as const as key (key)}
+				<label>
+					{t(`nutrition.${key}`)}
+					<input type="number" inputmode="decimal" min="0" step="any" bind:value={nutrition[key]} />
+				</label>
+			{/each}
+		</div>
+	{/if}
 
 	<div class="field-label">{t('recipeForm.ingredients')}</div>
 	{#if inventoryItems.length === 0}

@@ -238,7 +238,7 @@
 		<p class="description">{data.recipe.description}</p>
 	{/if}
 
-	{#if data.recipe.nutrition?.[0] && Object.keys(data.recipe.nutrition[0]).length}
+	{#if features.has('nutrition') && data.recipe.nutrition?.[0] && Object.keys(data.recipe.nutrition[0]).length}
 		{@const n = data.recipe.nutrition[0]}
 		<p class="per-serving">
 			<strong>{t('nutrition.perServing')}:</strong>

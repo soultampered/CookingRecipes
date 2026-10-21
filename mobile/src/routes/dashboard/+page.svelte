@@ -107,25 +107,27 @@
 		</a>
 	{/if}
 
-	<a class="card" href="/nutrition">
-		<div class="card-header">
-			<span class="card-title">{t('dashboard.nutritionToday')}</span>
-			{#if data.nutritionToday}
-				<span class="stat">{Math.round(data.nutritionToday.calories)}</span>
+	{#if features.has('nutrition')}
+		<a class="card" href="/nutrition">
+			<div class="card-header">
+				<span class="card-title">{t('dashboard.nutritionToday')}</span>
+				{#if data.nutritionToday}
+					<span class="stat">{Math.round(data.nutritionToday.calories)}</span>
+				{/if}
+			</div>
+			{#if !data.nutritionToday || data.nutritionToday.preparations.length === 0}
+				<p class="empty">{t('dashboard.noNutrition')}</p>
+			{:else}
+				<p class="preview">
+					{t('nutrition.macros', {
+						protein: Math.round(data.nutritionToday.protein),
+						carbs: Math.round(data.nutritionToday.carbs),
+						fat: Math.round(data.nutritionToday.fat)
+					})}
+				</p>
 			{/if}
-		</div>
-		{#if !data.nutritionToday || data.nutritionToday.preparations.length === 0}
-			<p class="empty">{t('dashboard.noNutrition')}</p>
-		{:else}
-			<p class="preview">
-				{t('nutrition.macros', {
-					protein: Math.round(data.nutritionToday.protein),
-					carbs: Math.round(data.nutritionToday.carbs),
-					fat: Math.round(data.nutritionToday.fat)
-				})}
-			</p>
-		{/if}
-	</a>
+		</a>
+	{/if}
 
 	<a class="card" href="/shopping-lists">
 		<div class="card-header">

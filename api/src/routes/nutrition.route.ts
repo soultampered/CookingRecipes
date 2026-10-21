@@ -2,11 +2,13 @@ import { Hono } from "hono";
 import { nutritionService } from "../services/nutrition.service.js";
 import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
 import { requireVerified } from "../middleware/requireVerified.middleware.js";
+import { requireFeature } from "../middleware/requireFeature.middleware.js";
 
 const nutritionRoute = new Hono<{ Variables: AuthVariables }>();
 
 nutritionRoute.use("*", authMiddleware);
 nutritionRoute.use("*", requireVerified);
+nutritionRoute.use("*", requireFeature("nutrition"));
 
 // ?days=1..31 (default 7); ?tz = getTimezoneOffset minutes.
 nutritionRoute.get("/summary", async (c) => {
