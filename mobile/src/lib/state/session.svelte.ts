@@ -1,5 +1,5 @@
 import { goto } from '$app/navigation';
-import { SecureStorage } from '@aparajita/capacitor-secure-storage';
+import { tokenStore } from './tokenStore';
 import type { User } from '$lib/types/user';
 import { getCurrentUser } from '$lib/api/auth';
 import { setAuthToken, setRefreshToken } from '$lib/api/client';
@@ -20,8 +20,8 @@ class SessionState {
 
 	async restore() {
 		const [token, refreshToken] = await Promise.all([
-			SecureStorage.getItem(TOKEN_KEY),
-			SecureStorage.getItem(REFRESH_TOKEN_KEY)
+			tokenStore.get(TOKEN_KEY),
+			tokenStore.get(REFRESH_TOKEN_KEY)
 		]);
 		if (!token || !refreshToken) {
 			this.ready = true;
@@ -40,7 +40,7 @@ class SessionState {
 		} catch {
 			setAuthToken(null);
 			setRefreshToken(null);
-			await Promise.all([SecureStorage.removeItem(TOKEN_KEY), SecureStorage.removeItem(REFRESH_TOKEN_KEY)]);
+			await Promise.all([tokenStore.remove(TOKEN_KEY), tokenStore.remove(REFRESH_TOKEN_KEY)]);
 		}
 		this.ready = true;
 	}
@@ -60,8 +60,8 @@ class SessionState {
 		setAuthToken(accessToken);
 		setRefreshToken(refreshToken);
 		await Promise.all([
-			SecureStorage.setItem(TOKEN_KEY, accessToken),
-			SecureStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
+			tokenStore.set(TOKEN_KEY, accessToken),
+			tokenStore.set(REFRESH_TOKEN_KEY, refreshToken)
 		]);
 	}
 
@@ -78,8 +78,8 @@ class SessionState {
 		setAuthToken(null);
 		setRefreshToken(null);
 		await Promise.all([
-			SecureStorage.removeItem(TOKEN_KEY),
-			SecureStorage.removeItem(REFRESH_TOKEN_KEY),
+			tokenStore.remove(TOKEN_KEY),
+			tokenStore.remove(REFRESH_TOKEN_KEY),
 			activePantry.clear()
 		]);
 	}
@@ -105,6 +105,6 @@ onForceLogout(() => {
 onTokensRefreshed(({ accessToken, refreshToken }) => {
 	session.token = accessToken;
 	session.refreshToken = refreshToken;
-	SecureStorage.setItem(TOKEN_KEY, accessToken);
-	SecureStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+	tokenStore.set(TOKEN_KEY, accessToken);
+	tokenStore.set(REFRESH_TOKEN_KEY, refreshToken);
 });

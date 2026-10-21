@@ -9,6 +9,10 @@ in any browser. STO-83 made that a supported target:
   barcode scanning use a file picker (STO-19 / STO-23).
 - ≥900px wide: the bottom tab bar becomes a left sidebar.
 - `static/manifest.webmanifest` makes it installable ("Install app" in Chrome/Edge).
+- Sign-in tokens are memory-only on the web (`lib/state/tokenStore.ts`): SecureStorage's web
+  fallback is plain localStorage. A reload or new tab asks for sign-in again. Persisting web
+  sessions needs the refresh token in an httpOnly cookie, which needs the API and the web
+  app on the same site (e.g. `api.stokpot.ca` + `app.stokpot.ca`).
 
 ## Run locally
 
