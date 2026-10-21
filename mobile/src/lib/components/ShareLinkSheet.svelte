@@ -7,19 +7,32 @@
 	import { toast } from '$lib/state/toast.svelte';
 	import { t } from '$lib/i18n/index.svelte';
 
-	// STO-84: opening the sheet creates (or reuses) the link; Stop sharing revokes it.
-	let { recipeId, title, onClose }: { recipeId: string; title: string; onClose: () => void } = $props();
+	// Shows an existing link; nothing is public until Create link. Stop sharing revokes.
+	let {
+		recipeId,
+		title,
+		shared,
+		onClose
+	}: { recipeId: string; title: string; shared: boolean; onClose: () => void } = $props();
 
 	let url = $state<string | null>(null);
 	let busy = $state(false);
 
-	onMount(async () => {
+	async function createLink(closeOnError: boolean) {
+		busy = true;
 		try {
 			url = (await enableShare(recipeId)).url;
 		} catch (err) {
 			toast.push(err instanceof ApiError ? err.message : t('share.error'));
-			onClose();
+			if (closeOnError) onClose();
+		} finally {
+			busy = false;
 		}
+	}
+
+	// Re-reads the existing link; creates nothing.
+	onMount(() => {
+		if (shared) createLink(true);
 	});
 
 	async function copy() {
@@ -59,14 +72,20 @@
 	<div class="sheet" role="dialog" aria-modal="true" tabindex="-1" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
 		<h2>{t('share.title')}</h2>
 		<p class="hint">{t('share.hint')}</p>
-		<input class="link" type="text" readonly value={url ?? '…'} onfocus={(e) => (e.target as HTMLInputElement).select()} />
-		<div class="actions">
-			<button type="button" class="primary" disabled={!url} onclick={copy}>{t('share.copy')}</button>
-			{#if Capacitor.isNativePlatform()}
-				<button type="button" class="primary" disabled={!url} onclick={send}>{t('share.send')}</button>
-			{/if}
-		</div>
-		<button type="button" class="stop" disabled={!url || busy} onclick={stop}>{t('share.stop')}</button>
+		{#if !shared && !url}
+			<div class="actions">
+				<button type="button" class="primary" disabled={busy} onclick={() => createLink(false)}>{t('share.create')}</button>
+			</div>
+		{:else}
+			<input class="link" type="text" readonly value={url ?? '…'} onfocus={(e) => (e.target as HTMLInputElement).select()} />
+			<div class="actions">
+				<button type="button" class="primary" disabled={!url} onclick={copy}>{t('share.copy')}</button>
+				{#if Capacitor.isNativePlatform()}
+					<button type="button" class="primary" disabled={!url} onclick={send}>{t('share.send')}</button>
+				{/if}
+			</div>
+			<button type="button" class="stop" disabled={!url || busy} onclick={stop}>{t('share.stop')}</button>
+		{/if}
 	</div>
 </div>
 

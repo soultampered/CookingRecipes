@@ -428,6 +428,7 @@
 	<ShareLinkSheet
 		recipeId={data.recipe._id}
 		title={data.recipe.title}
+		shared={!!data.recipe.shareToken}
 		onClose={() => {
 			showShare = false;
 			invalidate(`app:recipe:${data.recipe._id}`);
