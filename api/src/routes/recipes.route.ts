@@ -23,6 +23,7 @@ function releasedFields<T extends Record<string, unknown>>(body: T, userId: stri
         delete out.favorite;
         delete out.rating;
     }
+    if (!featuresService.isOn('photos', userId)) delete out.photoId;
     return out as T;
 }
 

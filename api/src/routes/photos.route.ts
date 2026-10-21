@@ -4,6 +4,7 @@ import { photoService, MAX_PHOTO_BYTES } from "../services/photo.service.js";
 import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
 import { requireVerified } from "../middleware/requireVerified.middleware.js";
 import { rateLimit } from "../middleware/rateLimit.middleware.js";
+import { requireFeature } from "../middleware/requireFeature.middleware.js";
 
 // Raw image body, already resized by the client.
 const photosRoute = new Hono<{ Variables: AuthVariables }>();
@@ -12,6 +13,7 @@ photosRoute.post(
     "/",
     authMiddleware,
     requireVerified,
+    requireFeature("photos"),
     rateLimit({ windowMs: 10 * 60 * 1000, max: 30, prefix: "photo-upload" }),
     bodyLimit({ maxSize: MAX_PHOTO_BYTES, onError: (c) => c.json({ error: "Photo too large (max 5MB)" }, 413) }),
     async (c) => {

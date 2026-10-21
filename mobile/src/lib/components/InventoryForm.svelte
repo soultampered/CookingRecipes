@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { features } from '$lib/state/features.svelte';
 	import type { NewInventory } from '$lib/types/inventory';
 	import { UNITS, type Unit } from '$lib/types/unit';
 	import { t, tRaw } from '$lib/i18n/index.svelte';
@@ -73,7 +74,9 @@
 </script>
 
 <form onsubmit={handleSubmit} novalidate>
-	<PhotoPicker bind:value={photoId} alt={t('photo.alt', { name })} />
+	{#if features.has('photos')}
+		<PhotoPicker bind:value={photoId} alt={t('photo.alt', { name })} />
+	{/if}
 
 	<label>
 		{t('inventoryForm.name')}

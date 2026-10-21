@@ -9,15 +9,23 @@ import { restockService } from "../services/restock.service.js";
 import { requireFeature } from "../middleware/requireFeature.middleware.js";
 import { appliedAdjustmentModel } from "../models/appliedAdjustment.model.js";
 import { photoService } from "../services/photo.service.js";
+import { featuresService } from "../services/features.service.js";
 
 const inventoryRoutes = new Hono<{ Variables: AuthVariables }>();
 
 inventoryRoutes.use('*', authMiddleware);
 inventoryRoutes.use('*', requireVerified);
 
+// photoId is ignored until the photos flag (2.3).
+function withoutPhoto<T extends { photoId?: unknown }>(body: T, userId: string): T {
+    if (featuresService.isOn('photos', userId)) return body;
+    const { photoId, ...rest } = body;
+    return rest as T;
+}
+
 inventoryRoutes.post('/', validateJson(createInventorySchema), async (c) => {
     try {
-        const body = c.req.valid('json');
+        const body = withoutPhoto(c.req.valid('json'), c.get('userId'));
         if (body.photoId) await photoService.assertOwned(body.photoId, c.get('userId'));
         const newInventory = await inventoryService.createInventory({ ...body, userId: c.get('userId') });
         return c.json(newInventory, 201);
@@ -91,7 +99,7 @@ inventoryRoutes.put('/:id', validateJson(updateInventorySchema), async (c) => {
     try {
         const existing = await inventoryService.getInventoryById(c.req.param('id'));
         if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
-        const data = c.req.valid('json');
+        const data = withoutPhoto(c.req.valid('json'), c.get('userId'));
         if (data.photoId) await photoService.assertOwned(data.photoId, c.get('userId'));
         const item = await inventoryService.updateInventory(c.req.param('id'), data);
         if ('photoId' in data && existing.photoId && existing.photoId !== data.photoId) await photoService.remove(existing.photoId);

@@ -235,7 +235,9 @@
 		{#if errors.title}<p class="field-error">{errors.title}</p>{/if}
 	</label>
 
-	<PhotoPicker bind:value={photoId} alt={t('photo.alt', { name: title })} />
+	{#if features.has('photos')}
+		<PhotoPicker bind:value={photoId} alt={t('photo.alt', { name: title })} />
+	{/if}
 
 	<label>
 		{t('recipeForm.description')}
