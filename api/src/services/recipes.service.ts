@@ -4,11 +4,14 @@ import { recipeRevisionModel } from '../models/recipeRevision.model.js';
 import type { Recipe, NewRecipe } from '../types/recipe.js';
 import { REVISION_FIELDS, type RecipeSnapshot, type RevisionField } from '../types/recipeRevision.js';
 
+// Absent fields stay absent (an undefined would be stored as null).
 function snapshot(recipe: Recipe): RecipeSnapshot {
     const out: Partial<RecipeSnapshot> = {};
-    for (const f of REVISION_FIELDS) (out as Record<string, unknown>)[f] = recipe[f];
+    for (const f of REVISION_FIELDS) if (recipe[f] != null) (out as Record<string, unknown>)[f] = recipe[f];
     return out as RecipeSnapshot;
 }
+
+const MAX_REVISIONS = 50;
 
 function changedFields(before: Recipe, patch: Partial<Recipe>): RevisionField[] {
     return REVISION_FIELDS.filter((f) => f in patch && JSON.stringify(patch[f]) !== JSON.stringify(before[f]));
@@ -46,6 +49,7 @@ export const recipeService = {
                 note: editNote?.trim() || undefined,
                 editedAt: new Date()
             });
+            await recipeRevisionModel.pruneOlderThanNewest(id, MAX_REVISIONS);
         }
         return updated;
     },
@@ -59,7 +63,11 @@ export const recipeService = {
         const revision = await recipeRevisionModel.findById(revisionId);
         if (!revision || revision.recipeId !== id) throw new Error('NOT_FOUND');
         const restoredFrom = revision.editedAt.toISOString().slice(0, 10);
-        return this.updateRecipe(id, revision.before, `Restored version from ${restoredFrom}`);
+        // Old snapshots stored missing fields as null: skip those, and clear fields the snapshot lacked.
+        const data = Object.fromEntries(Object.entries(revision.before).filter(([, v]) => v != null)) as Partial<Recipe>;
+        const updated = await this.updateRecipe(id, data, `Restored version from ${restoredFrom}`);
+        const absent = REVISION_FIELDS.filter((f) => !(f in data) && updated[f] != null);
+        return absent.length ? recipeModel.unsetFields(id, absent) : updated;
     },
 
     async deleteRecipe(id: string) {
