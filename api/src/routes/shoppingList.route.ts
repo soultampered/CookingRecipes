@@ -64,6 +64,9 @@ shoppingListRoute.patch('/:id', validateJson(updateShoppingListSchema), async (c
         if ((err as Error).message === 'NOT_FOUND') {
             return c.json({ error: 'Shopping list not found' }, 404);
         }
+        if ((err as Error).message === 'LIST_CHANGED') {
+            return c.json({ error: 'This list was changed elsewhere', code: 'LIST_CHANGED' }, 409);
+        }
         return c.json({ error: 'Failed to update shopping list' }, 500);
     }
 });

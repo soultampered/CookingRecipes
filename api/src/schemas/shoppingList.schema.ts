@@ -22,7 +22,9 @@ export const createShoppingListSchema = z.object({
 export const updateShoppingListSchema = createShoppingListSchema.partial().extend({
     items: z.array(shoppingListItemSchema.extend({ _id: objectIdString.optional() })).optional(),
     budget: z.number().finite().nonnegative().max(1000000).nullable().optional(),
-    store: z.string().trim().max(80).nullable().optional()
+    store: z.string().trim().max(80).nullable().optional(),
+    // The list's updatedAt as the client last saw it.
+    ifUpdatedAt: z.iso.datetime().optional()
 });
 
 export const addShoppingListItemSchema = shoppingListItemSchema;

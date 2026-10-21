@@ -34,10 +34,14 @@ export const shoppingListService = {
         return shoppingListModel.create(data);
     },
 
-    async updateShoppingList(id: string, data: Omit<Partial<ShoppingList>, "items"> & { items?: IncomingItem[] }) {
-        const patch: Partial<ShoppingList> = { ...data, items: data.items ? withIds(data.items) : undefined };
-        if (!data.items) delete patch.items;
-        const updated = await shoppingListModel.update(id, patch);
+    async updateShoppingList(
+        id: string,
+        data: Omit<Partial<ShoppingList>, "items"> & { items?: IncomingItem[]; ifUpdatedAt?: string }
+    ) {
+        const { ifUpdatedAt, ...rest } = data;
+        const patch: Partial<ShoppingList> = { ...rest, items: rest.items ? withIds(rest.items) : undefined };
+        if (!rest.items) delete patch.items;
+        const updated = await shoppingListModel.update(id, patch, ifUpdatedAt ? new Date(ifUpdatedAt) : undefined);
         if (!updated) throw new Error("NOT_FOUND");
         return updated;
     },

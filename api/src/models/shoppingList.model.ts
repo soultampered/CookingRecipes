@@ -34,14 +34,20 @@ export const shoppingListModel = {
         };
     },
 
-    update: async (id: string, data: Partial<ShoppingList>): Promise<ShoppingList> => {
+    // Writes only if unchanged since (else LIST_CHANGED).
+    update: async (id: string, data: Partial<ShoppingList>, expectedUpdatedAt?: Date): Promise<ShoppingList> => {
         const db = await connectToDatabase();
         const now = new Date();
+        const filter = expectedUpdatedAt ? { _id: new ObjectId(id), updatedAt: expectedUpdatedAt } : { _id: new ObjectId(id) };
         const list = await db.collection<ShoppingList>("shoppingLists").findOneAndUpdate(
-            { _id: new ObjectId(id) },
+            filter,
             { $set: { ...data, updatedAt: now } },
             { returnDocument: "after" }
         );
+        if (!list && expectedUpdatedAt) {
+            const exists = await db.collection<ShoppingList>("shoppingLists").countDocuments({ _id: new ObjectId(id) });
+            if (exists) throw new Error("LIST_CHANGED");
+        }
         if (!list) {
             throw new Error(`Shopping list with id "${id}" not found`);
         }

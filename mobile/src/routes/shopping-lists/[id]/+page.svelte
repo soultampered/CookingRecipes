@@ -8,7 +8,8 @@
 		deleteShoppingList,
 		removeItem,
 		toggleItemChecked,
-		updateShoppingList
+		updateShoppingList,
+		updateListItems
 	} from '$lib/api/shoppingLists';
 	import { ApiError } from '$lib/api/client';
 	import { toast } from '$lib/state/toast.svelte';
@@ -62,14 +63,24 @@
 			const reordered = data.list.items.map((i) =>
 				i._id === itemId ? { ...i, quantity: quantityDraft } : i
 			);
-			await updateShoppingList(data.list._id!, { items: reordered });
+			await updateListItems(data.list, reordered);
 			await invalidate(`app:shopping-list:${data.list._id}`);
 			editingQuantityId = null;
 		} catch (err) {
-			toast.push(err instanceof ApiError ? err.message : t('shoppingList.errorUpdateItem'));
+			await itemsSaveFailed(err);
 		} finally {
 			savingQuantity = false;
 		}
+	}
+
+	// Someone else changed the list: show theirs, don't overwrite.
+	async function itemsSaveFailed(err: unknown) {
+		if (err instanceof ApiError && err.status === 409) {
+			toast.push(t('shoppingList.changedElsewhere'), 'info');
+			await invalidate(`app:shopping-list:${data.list._id}`);
+			return;
+		}
+		toast.push(err instanceof ApiError ? err.message : t('shoppingList.errorUpdateItem'));
 	}
 
 	// Per-unit prices + an optional trip budget.
@@ -93,11 +104,11 @@
 		const price = priceDraft == null || Number.isNaN(Number(priceDraft)) ? null : Math.max(0, Number(priceDraft));
 		try {
 			const items = data.list.items.map((i) => (i._id === itemId ? { ...i, price } : i));
-			await updateShoppingList(data.list._id!, { items });
+			await updateListItems(data.list, items);
 			await invalidate(`app:shopping-list:${data.list._id}`);
 			editingPriceId = null;
 		} catch (err) {
-			toast.push(err instanceof ApiError ? err.message : t('shoppingList.errorUpdateItem'));
+			await itemsSaveFailed(err);
 		}
 	}
 
@@ -227,10 +238,10 @@
 			(i.category ?? '') === category ? copy[cursor++] : i
 		);
 		try {
-			await updateShoppingList(data.list._id!, { items: reordered });
+			await updateListItems(data.list, reordered);
 			await invalidate(`app:shopping-list:${data.list._id}`);
 		} catch (err) {
-			toast.push(err instanceof ApiError ? err.message : t('shoppingList.errorUpdateItem'));
+			await itemsSaveFailed(err);
 		}
 	}
 
