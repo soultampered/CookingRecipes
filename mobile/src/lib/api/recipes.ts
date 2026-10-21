@@ -41,6 +41,7 @@ export interface PrepareResult {
 	// nutrition log row, removed on undo
 	preparationId?: string;
 	leftover?: Inventory;
+	leftoverFailed?: boolean;
 }
 
 export function prepareRecipe(id: string, options: PrepareOptions = {}) {

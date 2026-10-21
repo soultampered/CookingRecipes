@@ -17,6 +17,8 @@ export interface PrepareResult {
     updatedInventory: Inventory[];
     preparationId?: string;
     leftover?: Inventory;
+    // Leftovers failed to save; the prepare succeeded.
+    leftoverFailed?: boolean;
 }
 
 export const recipeInventoryService = {
@@ -26,7 +28,7 @@ export const recipeInventoryService = {
         const scale = options.scale ?? 1;
         if (!recipe.ingredients?.length) {
             const preparationId = await nutritionService.logPreparation(userId, recipe, scale);
-            return { adjustments: [], updatedInventory: [], preparationId, leftover: await this.saveLeftover(userId, recipe, options) };
+            return { adjustments: [], updatedInventory: [], preparationId, ...(await this.saveLeftover(userId, recipe, options)) };
         }
 
         const byIndex = new Map<number, number>();
@@ -43,13 +45,19 @@ export const recipeInventoryService = {
 
         const updatedInventory = await inventoryService.applyAdjustments(userId, adjustments);
         const preparationId = await nutritionService.logPreparation(userId, recipe, scale);
-        return { adjustments, updatedInventory, preparationId, leftover: await this.saveLeftover(userId, recipe, options) };
+        return { adjustments, updatedInventory, preparationId, ...(await this.saveLeftover(userId, recipe, options)) };
     },
 
-    async saveLeftover(userId: string, recipe: Recipe, options: PrepareOptions): Promise<Inventory | undefined> {
-        if (!options.leftovers) return undefined;
+    // Never throws: stock is already deducted, and a retry would deduct twice.
+    async saveLeftover(userId: string, recipe: Recipe, options: PrepareOptions): Promise<{ leftover?: Inventory; leftoverFailed?: boolean }> {
+        if (!options.leftovers) return {};
         const { servings, expiresInDays } = options.leftovers;
-        return inventoryService.createLeftover(userId, recipe._id.toString(), recipe.title, servings, expiresInDays);
+        try {
+            return { leftover: await inventoryService.createLeftover(userId, recipe._id.toString(), recipe.title, servings, expiresInDays) };
+        } catch (err) {
+            console.error("Failed to save leftover:", err);
+            return { leftoverFailed: true };
+        }
     },
 
     async getMissingIngredients(recipeId: string): Promise<MissingIngredient[]> {

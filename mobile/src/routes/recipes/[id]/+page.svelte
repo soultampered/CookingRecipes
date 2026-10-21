@@ -114,7 +114,12 @@
 		// One id per prepare, so Undo can't add stock twice.
 		const undoId = crypto.randomUUID();
 		const leftoverId = result.leftover?._id;
-		toast.push(t(leftoverId ? 'recipeDetail.preparedWithLeftover' : 'recipeDetail.prepared'), 'info', {
+		const preparedKey = result.leftoverFailed
+			? 'recipeDetail.preparedLeftoverFailed'
+			: leftoverId
+				? 'recipeDetail.preparedWithLeftover'
+				: 'recipeDetail.prepared';
+		toast.push(t(preparedKey), 'info', {
 			label: t('recipeDetail.undo'),
 			run: async () => {
 				try {

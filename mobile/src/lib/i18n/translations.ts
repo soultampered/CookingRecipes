@@ -289,6 +289,7 @@ export const translations = {
 		'prepareSheet.leftoverServings': 'Servings left',
 		'prepareSheet.keepsDays': 'Keeps (days)',
 		'recipeDetail.preparedWithLeftover': 'Prepared — leftovers added to inventory',
+		'recipeDetail.preparedLeftoverFailed': 'Prepared, but leftovers couldn’t be saved. Add them from Inventory.',
 		'inventory.leftoverBadge': 'Leftover',
 
 		'unsaved.title': 'Discard changes?',
@@ -725,6 +726,7 @@ export const translations = {
 		'prepareSheet.leftoverServings': 'Portions restantes',
 		'prepareSheet.keepsDays': 'Se conserve (jours)',
 		'recipeDetail.preparedWithLeftover': 'Préparé — restes ajoutés à l’inventaire',
+		'recipeDetail.preparedLeftoverFailed': 'Préparé, mais les restes n’ont pas pu être enregistrés. Ajoutez-les depuis l’inventaire.',
 		'inventory.leftoverBadge': 'Reste',
 
 		'unsaved.title': 'Abandonner les modifications ?',
