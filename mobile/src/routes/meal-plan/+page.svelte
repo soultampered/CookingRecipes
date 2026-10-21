@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { features } from '$lib/state/features.svelte';
 	import { goto, invalidate } from '$app/navigation';
 	import { addToMealPlan, removeFromMealPlan, type MealSlot, MEAL_SLOTS } from '$lib/api/mealPlan';
 	import { ApiError } from '$lib/api/client';
@@ -83,7 +84,7 @@
 			<h1>{t('mealPlan.title')}</h1>
 		</div>
 		{#if data.entries.length > 0}
-			<button type="button" class="shop" onclick={() => (showShopping = true)}>{t('mealPlan.shoppingList')}</button>
+			{#if features.has('mealPrep')}<button type="button" class="shop" onclick={() => (showShopping = true)}>{t('mealPlan.shoppingList')}</button>{/if}
 		{/if}
 		<div class="week-nav">
 			<button type="button" onclick={() => shiftWeek(-1)}>{t('mealPlan.prevWeek')}</button>
