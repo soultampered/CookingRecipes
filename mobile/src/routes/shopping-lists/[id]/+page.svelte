@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { features } from '$lib/state/features.svelte';
 	import { goto, invalidate } from '$app/navigation';
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
@@ -436,7 +437,7 @@
 		</button>
 	{/if}
 
-	{#if data.list.items.length > 0}
+	{#if features.has('budget') && data.list.items.length > 0}
 		<div class="cost-bar">
 			<div class="cost-totals">
 				{#if hasPrices}
@@ -631,7 +632,9 @@
 										{item.quantity}
 									</button>
 								{/if}
-								{#if editingPriceId === item._id && !selectMode}
+								{#if !features.has('budget')}
+									<!-- Prices ship with budget (2.3) -->
+								{:else if editingPriceId === item._id && !selectMode}
 									<form
 										class="price-edit"
 										onsubmit={(e) => {
