@@ -47,7 +47,7 @@ recipeRoutes.post('/', validateJson(createRecipeSchema), async (c) => {
     }
 });
 
-recipeRoutes.post('/import', importLimiter, validateJson(importRecipeSchema), async (c) => {
+recipeRoutes.post('/import', requireFeature('recipeImport'), importLimiter, validateJson(importRecipeSchema), async (c) => {
     try {
         return c.json(await recipeImportService.importFromUrl(c.get('userId'), c.req.valid('json').url), 201);
     } catch (err) {
