@@ -2,12 +2,14 @@ import { Hono } from "hono";
 import { barcodeService } from "../services/barcode.service.js";
 import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
 import { requireVerified } from "../middleware/requireVerified.middleware.js";
+import { requireFeature } from "../middleware/requireFeature.middleware.js";
 import { rateLimit } from "../middleware/rateLimit.middleware.js";
 
 const barcodeRoute = new Hono<{ Variables: AuthVariables }>();
 
 barcodeRoute.use("*", authMiddleware);
 barcodeRoute.use("*", requireVerified);
+barcodeRoute.use("*", requireFeature("barcode"));
 
 // Shields Open Food Facts from a scan loop.
 const lookupLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, prefix: "barcode" });

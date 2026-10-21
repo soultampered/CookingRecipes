@@ -787,7 +787,7 @@
 		bind:this={itemNameInput}
 		required
 	/>
-	<BarcodeScanButton compact onFound={(p) => (itemName = p.name)} />
+	{#if features.has('barcode')}<BarcodeScanButton compact onFound={(p) => (itemName = p.name)} />{/if}
 	<QuantityStepper
 		bind:value={itemQuantity}
 		min={1}

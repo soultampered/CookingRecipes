@@ -85,7 +85,7 @@
 			<input type="text" bind:value={name} class:invalid={!!errors.name} aria-invalid={!!errors.name} />
 			{#if errors.name}<p class="field-error">{errors.name}</p>{/if}
 		</label>
-		<BarcodeScanButton onFound={(p) => (name = p.name)} />
+		{#if features.has('barcode')}<BarcodeScanButton onFound={(p) => (name = p.name)} />{/if}
 	</div>
 
 	<div class="row">
