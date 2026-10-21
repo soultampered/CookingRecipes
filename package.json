@@ -8,6 +8,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@growthbook/growthbook": "^1.8.0",
     "@hono/node-server": "^2.1.1",
     "@hono/zod-validator": "^0.9.1",
     "bcryptjs": "^3.0.3",

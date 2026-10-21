@@ -22,6 +22,8 @@ jobs:
       - run: npm ci
       - name: tsc --noEmit
         run: npx tsc --noEmit
+      - name: release flags not past removeAfter
+        run: npx tsx scripts/checkFeatureFlags.ts
 
   # API unit tests (specs import without MONGO_URI).
   test:
