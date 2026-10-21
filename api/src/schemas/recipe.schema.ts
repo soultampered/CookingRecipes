@@ -36,7 +36,8 @@ export const updateRecipeSchema = createRecipeSchema.partial();
 export const prepareRecipeSchema = z.object({
     scale: z.number().finite().positive().max(100).optional(),
     overrides: z
-        .array(z.object({ inventoryItemId: objectIdString, quantity: z.number().finite().nonnegative() }))
+        // index = position in recipe.ingredients; the same item can be listed twice.
+        .array(z.object({ inventoryItemId: objectIdString, index: z.number().int().nonnegative().optional(), quantity: z.number().finite().nonnegative() }))
         .max(200)
         .optional()
 });

@@ -30,7 +30,7 @@ export interface InventoryAdjustment {
 // overrides = amount used per item (wins over scale).
 export interface PrepareOptions {
 	scale?: number;
-	overrides?: { inventoryItemId: string; quantity: number }[];
+	overrides?: { inventoryItemId: string; index?: number; quantity: number }[];
 }
 
 export interface PrepareResult {

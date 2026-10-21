@@ -47,6 +47,7 @@
 			const result = await prepareRecipe(recipe._id, {
 				overrides: recipe.ingredients.map((ing, i) => ({
 					inventoryItemId: ing.inventoryItemId,
+					index: i,
 					quantity: Math.max(0, Number(amounts[i]) || 0)
 				}))
 			});

@@ -6,8 +6,8 @@ import type { Inventory, InventoryAdjustment } from "../types/inventory.js";
 export interface PrepareOptions {
     // Multiplies every ingredient (e.g. 6/4).
     scale?: number;
-    // STO-117: per-ingredient amount actually used; wins over scale.
-    overrides?: { inventoryItemId: string; quantity: number }[];
+    // Amount actually used per ingredient; wins over scale. index beats inventoryItemId.
+    overrides?: { inventoryItemId: string; index?: number; quantity: number }[];
 }
 
 export interface PrepareResult {
@@ -22,10 +22,15 @@ export const recipeInventoryService = {
         if (!recipe.ingredients?.length) return { adjustments: [], updatedInventory: [] };
 
         const scale = options.scale ?? 1;
-        const overrides = new Map((options.overrides ?? []).map((o) => [o.inventoryItemId, o.quantity]));
-        const adjustments: InventoryAdjustment[] = recipe.ingredients.map(item => {
+        const byIndex = new Map<number, number>();
+        const byItem = new Map<string, number>();
+        for (const o of options.overrides ?? []) {
+            if (o.index != null) byIndex.set(o.index, o.quantity);
+            else byItem.set(o.inventoryItemId, o.quantity);
+        }
+        const adjustments: InventoryAdjustment[] = recipe.ingredients.map((item, i) => {
             const id = item.inventoryItemId.toString();
-            const used = overrides.get(id) ?? item.quantity * scale;
+            const used = byIndex.get(i) ?? byItem.get(id) ?? item.quantity * scale;
             return { id, amount: -Math.round(used * 1000) / 1000 };
         });
 
