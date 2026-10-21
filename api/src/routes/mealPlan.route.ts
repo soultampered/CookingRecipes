@@ -4,12 +4,7 @@ import { authMiddleware, type AuthVariables } from "../middleware/auth.middlewar
 import { requireVerified } from "../middleware/requireVerified.middleware.js";
 import { requireFeature } from "../middleware/requireFeature.middleware.js";
 import { validateJson } from "../middleware/validate.middleware.js";
-import {
-    addMealPlanSchema,
-    updateMealPlanSchema,
-    mealPlanRangeSchema,
-    mealPlanShoppingListSchema
-} from "../schemas/mealPlan.schema.js";
+import { addMealPlanSchema, updateMealPlanSchema, mealPlanRangeSchema } from "../schemas/mealPlan.schema.js";
 
 const mealPlanRoute = new Hono<{ Variables: AuthVariables }>();
 
@@ -35,18 +30,6 @@ mealPlanRoute.post("/", validateJson(addMealPlanSchema), async (c) => {
     try {
         return c.json(await mealPlanService.add(c.get("userId"), c.req.valid("json")), 201);
     } catch (err) {
-        return fail(c, err);
-    }
-});
-
-// STO-87: one deduplicated list of what's short for every recipe planned in [from, to].
-mealPlanRoute.post("/shopping-list", validateJson(mealPlanShoppingListSchema), async (c) => {
-    const { from, to, name } = c.req.valid("json");
-    if (from > to) return c.json({ error: "from must be before to" }, 400);
-    try {
-        return c.json(await mealPlanService.buildShoppingList(c.get("userId"), from, to, name), 201);
-    } catch (err) {
-        if ((err as Error).message === "EMPTY_PLAN") return c.json({ error: "Nothing planned in that range" }, 400);
         return fail(c, err);
     }
 });

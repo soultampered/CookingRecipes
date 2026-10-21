@@ -1,7 +1,6 @@
 import { mealPlanModel } from "../models/mealPlan.model.js";
 import { recipeService } from "./recipes.service.js";
 import type { MealPlanEntry, MealSlot } from "../types/mealPlan.js";
-import { shoppingPlanService, type RecipeRequest } from "./shoppingPlan.service.js";
 
 export interface MealPlanView extends MealPlanEntry {
     recipeTitle: string;
@@ -40,27 +39,6 @@ export const mealPlanService = {
     async update(id: string, userId: string, data: { date?: string; slot?: MealSlot; servings?: number }) {
         await ownedEntry(id, userId);
         return mealPlanModel.update(id, data);
-    },
-
-    // STO-87: entry.servings over recipe.servings sets the scale; repeats of a recipe add up.
-    async recipeRequests(userId: string, from: string, to: string): Promise<RecipeRequest[]> {
-        const entries = await mealPlanModel.findRange(userId, from, to);
-        const recipes = await recipeService.getAllRecipes(userId);
-        const byId = new Map(recipes.map((r) => [r._id.toString(), r]));
-        const scales = new Map<string, number>();
-        for (const e of entries) {
-            const recipe = byId.get(e.recipeId);
-            if (!recipe) continue;
-            const scale = e.servings && recipe.servings ? e.servings / recipe.servings : 1;
-            scales.set(e.recipeId, (scales.get(e.recipeId) ?? 0) + scale);
-        }
-        return [...scales].map(([recipeId, scale]) => ({ recipeId, scale }));
-    },
-
-    async buildShoppingList(userId: string, from: string, to: string, name?: string) {
-        const requests = await this.recipeRequests(userId, from, to);
-        if (!requests.length) throw new Error("EMPTY_PLAN");
-        return shoppingPlanService.createList(userId, requests, { name: name ?? `Meal plan ${from}` });
     },
 
     async remove(id: string, userId: string) {

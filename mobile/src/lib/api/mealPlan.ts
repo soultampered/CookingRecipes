@@ -23,11 +23,3 @@ export function addToMealPlan(data: { date: string; recipeId: string; slot?: Mea
 export function removeFromMealPlan(id: string) {
 	return apiFetch<void>(`/meal-plan/${id}`, { method: 'DELETE' });
 }
-
-// STO-87: server-side equivalent of the sheet (no per-recipe tweaks).
-export function shoppingListFromPlan(from: string, to: string, name?: string) {
-	return apiFetch<{ _id: string }>('/meal-plan/shopping-list', {
-		method: 'POST',
-		body: JSON.stringify({ from, to, name })
-	});
-}
