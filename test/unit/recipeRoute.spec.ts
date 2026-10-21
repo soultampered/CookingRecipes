@@ -29,7 +29,7 @@ vi.mock('../../api/src/services/recipes.service.js', () => ({
 
 vi.mock('../../api/src/services/recipeInventory.service.js', () => ({
     recipeInventoryService: {
-        deductIngredients: vi.fn(async () => [{ id: 'inv1', amount: -2 }]),
+        deductIngredients: vi.fn(async () => ({ adjustments: [{ id: 'inv1', amount: -2 }], updatedInventory: [] })),
         getMissingIngredients: vi.fn(async () => []),
         suggestRecipes: vi.fn(async () => [])
     }
@@ -37,6 +37,7 @@ vi.mock('../../api/src/services/recipeInventory.service.js', () => ({
 
 import recipeRoutes from '../../api/src/routes/recipes.route.js'
 import { recipeService } from '../../api/src/services/recipes.service.js'
+import { recipeInventoryService } from '../../api/src/services/recipeInventory.service.js'
 
 describe('Recipe routes', () => {
     let app: Hono
@@ -127,7 +128,19 @@ describe('Recipe routes', () => {
         expect(res.status).toBe(200)
         const body = await res.json()
         expect(body.success).toBe(true)
-        expect(body.updatedInventory).toEqual([{ id: 'inv1', amount: -2 }])
+        expect(body.adjustments).toEqual([{ id: 'inv1', amount: -2 }])
+    })
+
+    it('POST /recipes/:id/prepare passes scale through', async () => {
+        const res = await app.request('/recipes/123/prepare', json('POST', { scale: 2 }))
+        expect(res.status).toBe(200)
+        expect(recipeInventoryService.deductIngredients).toHaveBeenCalledWith('123', 'u1', { scale: 2 })
+    })
+
+    it('POST /recipes/:id/prepare returns 404 for a missing recipe', async () => {
+        const res = await app.request('/recipes/999/prepare', { method: 'POST' })
+        expect(res.status).toBe(404)
+        expect(recipeInventoryService.deductIngredients).not.toHaveBeenCalled()
     })
 
     it('GET /recipes/:id/missing-ingredients returns missing ingredients', async () => {
