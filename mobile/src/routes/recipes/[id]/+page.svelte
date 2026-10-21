@@ -18,7 +18,7 @@
 	function displayAmount(ing: RecipeIngredient): string {
 		const quantity = ing.quantity * scale;
 		if (!ing.unit) return formatQuantity(quantity);
-		const shown = toSystem(quantity, ing.unit, unitSystem.current);
+		const shown = toSystem(quantity, ing.unit, features.has('unitToggle') ? unitSystem.current : 'original');
 		return `${formatQuantity(shown.quantity)} ${tRaw('unit', shown.unit)}`;
 	}
 	import { listShoppingLists, addItem } from '$lib/api/shoppingLists';
@@ -295,19 +295,21 @@
 		</div>
 	{/if}
 
-	<div class="units-row" role="group" aria-label={t('units.label')}>
-		{#each UNIT_SYSTEMS as system (system)}
-			<button
-				type="button"
-				class="unit-btn"
-				class:active={unitSystem.current === system}
-				aria-pressed={unitSystem.current === system}
-				onclick={() => unitSystem.set(system)}
-			>
-				{t(`units.${system}`)}
-			</button>
-		{/each}
-	</div>
+	{#if features.has('unitToggle')}
+		<div class="units-row" role="group" aria-label={t('units.label')}>
+			{#each UNIT_SYSTEMS as system (system)}
+				<button
+					type="button"
+					class="unit-btn"
+					class:active={unitSystem.current === system}
+					aria-pressed={unitSystem.current === system}
+					onclick={() => unitSystem.set(system)}
+				>
+					{t(`units.${system}`)}
+				</button>
+			{/each}
+		</div>
+	{/if}
 
 	<div class="field-label ingredients-label">
 		<span>{t('recipeDetail.ingredients')}</span>
