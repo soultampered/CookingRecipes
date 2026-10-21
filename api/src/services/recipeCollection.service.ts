@@ -1,5 +1,6 @@
 import { recipeCollectionModel } from "../models/recipeCollection.model.js";
-import { recipeService } from "./recipes.service.js";
+import { ObjectId } from "mongodb";
+import { recipeModel } from "../models/recipe.model.js";
 import type { RecipeCollection } from "../types/recipeCollection.js";
 
 // Throws NOT_FOUND / FORBIDDEN / UNKNOWN_RECIPE.
@@ -10,11 +11,11 @@ async function owned(id: string, userId: string): Promise<RecipeCollection> {
     return collection;
 }
 
+// One query for the whole list (a collection can hold up to 1000 recipes).
 async function assertOwnsRecipes(recipeIds: string[], userId: string): Promise<void> {
-    for (const id of recipeIds) {
-        const recipe = await recipeService.getRecipeById(id).catch(() => null);
-        if (!recipe || recipe.userId !== userId) throw new Error("UNKNOWN_RECIPE");
-    }
+    const unique = [...new Set(recipeIds)];
+    if (unique.some((id) => !ObjectId.isValid(id))) throw new Error("UNKNOWN_RECIPE");
+    if ((await recipeModel.countOwned(unique, userId)) !== unique.length) throw new Error("UNKNOWN_RECIPE");
 }
 
 export const recipeCollectionService = {

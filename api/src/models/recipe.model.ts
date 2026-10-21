@@ -47,6 +47,11 @@ export const recipeModel = {
         return result;
     },
 
+    countOwned: async (ids: string[], userId: string): Promise<number> => {
+        const db = await connectToDatabase();
+        return db.collection<Recipe>('recipes').countDocuments({ _id: { $in: ids.map((id) => new ObjectId(id)) }, userId });
+    },
+
     update: async (id: string, data: Partial<Recipe>): Promise<Recipe> => {
         const db = await connectToDatabase();
         const now = new Date();
