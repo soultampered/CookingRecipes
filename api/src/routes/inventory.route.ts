@@ -6,6 +6,7 @@ import { validateJson } from "../middleware/validate.middleware.js";
 import { createInventorySchema, updateInventorySchema, adjustInventorySchema } from "../schemas/inventory.schema.js";
 import { InventoryAdjustError } from "../types/inventory.js";
 import { restockService } from "../services/restock.service.js";
+import { requireFeature } from "../middleware/requireFeature.middleware.js";
 import { appliedAdjustmentModel } from "../models/appliedAdjustment.model.js";
 
 const inventoryRoutes = new Hono<{ Variables: AuthVariables }>();
@@ -42,7 +43,7 @@ inventoryRoutes.get('/', async (c) => {
 });
 
 // Items predicted to run out within ?days= (default 7, max 60).
-inventoryRoutes.get('/restock', async (c) => {
+inventoryRoutes.get('/restock', requireFeature('restock'), async (c) => {
     const days = Number(c.req.query('days') ?? 7);
     if (!Number.isFinite(days) || days < 1 || days > 60) return c.json({ error: 'days must be 1-60' }, 400);
     try {

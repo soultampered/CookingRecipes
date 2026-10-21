@@ -277,7 +277,7 @@
 									{t('inventory.lowBadge')}
 								</button>
 							{/if}
-							{#if data.runsOut[item._id] != null}
+							{#if features.has('restock') && data.runsOut[item._id] != null}
 								<span class="expiring-badge soon">
 									{t('inventory.runsOutBadge', { count: Math.max(0, Math.round(data.runsOut[item._id])) })}
 								</span>
