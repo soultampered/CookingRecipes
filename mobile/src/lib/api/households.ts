@@ -7,6 +7,7 @@ export interface Household {
 	isOwner: boolean;
 	members: { _id: string; username: string; displayName?: string }[];
 	inviteCode?: string | null;
+	inviteExpiresAt?: string | null;
 }
 
 export function listHouseholds() {

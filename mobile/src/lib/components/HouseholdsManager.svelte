@@ -126,6 +126,9 @@
 						{#if h.isOwner}
 							{#if h.inviteCode}
 								<p class="hint">{t('households.inviteHint')}</p>
+								{#if h.inviteExpiresAt}
+									<p class="hint">{t('households.inviteExpires', { date: new Date(h.inviteExpiresAt).toLocaleDateString() })}</p>
+								{/if}
 								<div class="code-row">
 									<code>{h.inviteCode}</code>
 									<button type="button" onclick={() => copyCode(h.inviteCode!)}>{t('households.copyCode')}</button>

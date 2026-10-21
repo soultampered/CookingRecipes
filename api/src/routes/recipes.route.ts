@@ -67,8 +67,10 @@ recipeRoutes.post('/import', requireFeature('recipeImport'), importLimiter, vali
 
 recipeRoutes.get('/', async (c) => {
     try {
-        const recipes = await recipeService.getAccessibleRecipes(c.get('userId'));
-        return c.json(recipes, 200);
+        const userId = c.get('userId');
+        const recipes = await recipeService.getAccessibleRecipes(userId);
+        // A member sees a shared recipe, not its owner's public link.
+        return c.json(recipes.map((r) => (r.userId === userId ? r : { ...r, shareToken: undefined })), 200);
     } catch (err) {
         if ((err as Error).message === 'NOT_FOUND') {
             return c.json({ error: 'Recipe not found' }, 404);
@@ -92,7 +94,7 @@ recipeRoutes.get('/:id', async (c) => {
             recipe.ingredients.map((i) => i.inventoryItemId).filter((id) => /^[0-9a-f]{24}$/i.test(id))
         );
         const ingredientNames = Object.fromEntries(items.map((i) => [i._id.toString(), i.name]));
-        return c.json({ ...recipe, ingredientNames }, 200);
+        return c.json({ ...recipe, shareToken: undefined, ingredientNames }, 200);
     } catch (err) {
         if ((err as Error).message === 'NOT_FOUND') {
             return c.json({ error: 'Recipe not found' }, 404);

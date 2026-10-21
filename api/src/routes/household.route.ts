@@ -21,6 +21,7 @@ export function householdError(c: Context, err: unknown) {
     if (message === "NOT_FOUND") return c.json({ error: "Household not found" }, 404);
     if (message === "FORBIDDEN") return c.json({ error: "Only the owner can do that" }, 403);
     if (message === "INVALID_CODE") return c.json({ error: "That invite code isn't valid" }, 400);
+    if (message === "EXPIRED_CODE") return c.json({ error: "That invite code has expired. Ask for a new one.", code: "EXPIRED_CODE" }, 400);
     if (message === "FULL") return c.json({ error: "That household is full" }, 409);
     if (message === "OWNER_CANNOT_LEAVE") return c.json({ error: "The owner can't leave — delete it or transfer it first" }, 400);
     return c.json({ error: "Failed to update household" }, 500);

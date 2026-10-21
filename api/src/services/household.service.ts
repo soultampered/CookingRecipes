@@ -12,6 +12,12 @@ function newInviteCode(): string {
     return Array.from(crypto.randomBytes(8), (b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join("");
 }
 const MAX_MEMBERS = 20;
+// A code posted once in a group chat shouldn't work forever.
+const INVITE_TTL_MS = 3 * 24 * 60 * 60 * 1000;
+
+function inviteLive(h: Household): boolean {
+    return !!h.inviteCode && (!h.inviteExpiresAt || h.inviteExpiresAt > new Date());
+}
 
 export interface HouseholdView {
     _id: string;
@@ -20,6 +26,7 @@ export interface HouseholdView {
     isOwner: boolean;
     members: { _id: string; username: string; displayName?: string }[];
     inviteCode?: string | null;
+    inviteExpiresAt?: string | null;
 }
 
 async function owned(id: string, userId: string): Promise<Household> {
@@ -42,8 +49,9 @@ async function view(h: Household, userId: string): Promise<HouseholdView> {
         ownerId: h.ownerId,
         isOwner: h.ownerId === userId,
         members,
-        // Only the owner sees the code.
-        inviteCode: h.ownerId === userId ? (h.inviteCode ?? null) : undefined
+        // Only the owner sees the code, and only while it's live.
+        inviteCode: h.ownerId === userId ? (inviteLive(h) ? h.inviteCode : null) : undefined,
+        inviteExpiresAt: h.ownerId === userId && inviteLive(h) ? (h.inviteExpiresAt?.toISOString() ?? null) : undefined
     };
 }
 
@@ -73,17 +81,21 @@ export const householdService = {
 
     async createInvite(id: string, userId: string): Promise<HouseholdView> {
         await owned(id, userId);
-        return view((await householdModel.update(id, { inviteCode: newInviteCode() }))!, userId);
+        return view(
+            (await householdModel.update(id, { inviteCode: newInviteCode(), inviteExpiresAt: new Date(Date.now() + INVITE_TTL_MS) }))!,
+            userId
+        );
     },
 
     async revokeInvite(id: string, userId: string): Promise<HouseholdView> {
         await owned(id, userId);
-        return view((await householdModel.update(id, { inviteCode: null }))!, userId);
+        return view((await householdModel.update(id, { inviteCode: null, inviteExpiresAt: null }))!, userId);
     },
 
     async join(userId: string, code: string): Promise<HouseholdView> {
         const household = await householdModel.findByInviteCode(code.trim().toUpperCase());
         if (!household) throw new Error("INVALID_CODE");
+        if (!inviteLive(household)) throw new Error("EXPIRED_CODE");
         if (!household.memberIds.includes(userId)) {
             if (household.memberIds.length >= MAX_MEMBERS) throw new Error("FULL");
             await householdModel.addMember(household._id!.toString(), userId);
