@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { features } from '$lib/state/features.svelte';
 	import { goto, invalidate } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { activePantry } from '$lib/state/activePantry.svelte';
@@ -21,7 +22,7 @@
 	}
 </script>
 
-{#if activePantry.households.length > 0}
+{#if features.has('households') && activePantry.households.length > 0}
 	<select class="pantry" aria-label={t('pantry.label')} value={activePantry.current ?? ''} onchange={onChange}>
 		<option value="">📍 {t('pantry.mine')}</option>
 		{#each activePantry.households as h (h._id)}

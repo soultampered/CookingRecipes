@@ -2,6 +2,7 @@ import { Hono, type Context } from "hono";
 import { householdService } from "../services/household.service.js";
 import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
 import { requireVerified } from "../middleware/requireVerified.middleware.js";
+import { requireFeature } from "../middleware/requireFeature.middleware.js";
 import { validateJson } from "../middleware/validate.middleware.js";
 import { householdNameSchema } from "../schemas/household.schema.js";
 
@@ -9,6 +10,7 @@ const householdRoute = new Hono<{ Variables: AuthVariables }>();
 
 householdRoute.use("*", authMiddleware);
 householdRoute.use("*", requireVerified);
+householdRoute.use("*", requireFeature("households"));
 
 export function householdError(c: Context, err: unknown) {
     const message = (err as Error).message;

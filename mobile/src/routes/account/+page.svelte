@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { features } from '$lib/state/features.svelte';
 	import { goto } from '$app/navigation';
 	import { logout } from '$lib/api/auth';
 	import { deleteUser } from '$lib/api/users';
@@ -192,7 +193,7 @@
 		</div>
 	</div>
 
-	<HouseholdsManager />
+	{#if features.has('households')}<HouseholdsManager />{/if}
 	<TwoFactorSetting />
 	<ActiveSessions />
 	<ExportData />
