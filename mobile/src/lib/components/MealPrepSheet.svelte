@@ -117,6 +117,7 @@
 						<span class="muted">
 							{t('mealPrep.need', { needed: qty(p.needed, p.unit), have: qty(p.have, p.unit) })}
 							{#if p.unitMismatch}· {t('mealPrep.mismatch')}{/if}
+							{#if p.notInPantry}· {t('mealPrep.notInPantry')}{/if}
 						</span>
 					</div>
 					<span class="buy">{p.toBuy > 0 ? t('mealPrep.buy', { amount: qty(p.toBuy, p.unit) }) : t('mealPrep.covered')}</span>

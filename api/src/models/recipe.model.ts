@@ -14,6 +14,15 @@ export const recipeModel = {
         return db.collection<Recipe>('recipes').find({ $or: [{ userId }, { householdId: { $in: householdIds } }] }).toArray();
     },
 
+    // Unshares a household's recipes; userId limits it to one member's.
+    unshareFromHousehold: async (householdId: string, userId?: string): Promise<void> => {
+        const db = await connectToDatabase();
+        await db.collection<Recipe>('recipes').updateMany(
+            userId ? { householdId, userId } : { householdId },
+            { $unset: { householdId: '' } }
+        );
+    },
+
     findById: async (id: string): Promise<Recipe> => {
         const db = await connectToDatabase();
         const recipe = await db.collection<Recipe>('recipes').findOne({

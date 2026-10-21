@@ -1,6 +1,7 @@
 import { householdModel } from "../models/household.model.js";
 import { inventoryModel } from "../models/inventory.model.js";
 import { shoppingListModel } from "../models/shoppingList.model.js";
+import { recipeModel } from "../models/recipe.model.js";
 import { userModel } from "../models/user.model.js";
 import type { Household } from "../types/household.js";
 import crypto from "crypto";
@@ -65,6 +66,8 @@ export const householdService = {
         await owned(id, userId);
         await inventoryModel.moveHousehold(id, userId);
         await shoppingListModel.moveHousehold(id, userId);
+        // Else canAccess() checks a deleted household and locks owners out.
+        await recipeModel.unshareFromHousehold(id);
         await householdModel.delete(id);
     },
 
@@ -94,12 +97,15 @@ export const householdService = {
         if (!household || !household.memberIds.includes(userId)) throw new Error("NOT_FOUND");
         if (household.ownerId === userId) throw new Error("OWNER_CANNOT_LEAVE");
         await householdModel.removeMember(id, userId);
+        // Their recipes leave with them.
+        await recipeModel.unshareFromHousehold(id, userId);
     },
 
     async removeMember(id: string, userId: string, memberId: string): Promise<HouseholdView> {
         const household = await owned(id, userId);
         if (memberId === household.ownerId) throw new Error("OWNER_CANNOT_LEAVE");
         await householdModel.removeMember(id, memberId);
+        await recipeModel.unshareFromHousehold(id, memberId);
         return view((await householdModel.findById(id))!, userId);
     },
 
