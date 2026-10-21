@@ -37,6 +37,8 @@ export interface PrepareResult {
 	success: true;
 	adjustments: InventoryAdjustment[];
 	updatedInventory: Inventory[];
+	// nutrition log row, removed on undo
+	preparationId?: string;
 }
 
 export function prepareRecipe(id: string, options: PrepareOptions = {}) {

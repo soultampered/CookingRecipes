@@ -2,6 +2,7 @@
 	import { goto, invalidate } from '$app/navigation';
 	import { deleteRecipe, type PrepareResult } from '$lib/api/recipes';
 	import { adjustInventory } from '$lib/api/inventory';
+	import { deletePreparation } from '$lib/api/nutrition';
 	import PrepareSheet from '$lib/components/PrepareSheet.svelte';
 	import { prepareRecipe } from '$lib/api/recipes';
 	import { features } from '$lib/state/features.svelte';
@@ -117,6 +118,7 @@
 			run: async () => {
 				try {
 					await adjustInventory(undo, undoId);
+					if (result.preparationId) await deletePreparation(result.preparationId).catch(() => {});
 					toast.push(t('recipeDetail.undone'), 'info');
 					await invalidate(`app:recipe:${data.recipe._id}`);
 				} catch (err) {

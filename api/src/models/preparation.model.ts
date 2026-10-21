@@ -1,10 +1,17 @@
+import { ObjectId } from "mongodb";
 import { connectToDatabase } from "../mongo.js";
 import type { Preparation } from "../types/preparation.js";
 
 export const preparationModel = {
-    create: async (data: Omit<Preparation, "_id">): Promise<void> => {
+    create: async (data: Omit<Preparation, "_id">): Promise<string> => {
         const db = await connectToDatabase();
-        await db.collection<Preparation>("preparation").insertOne(data);
+        return (await db.collection<Preparation>("preparation").insertOne(data)).insertedId.toString();
+    },
+
+    deleteOwned: async (id: string, userId: string): Promise<boolean> => {
+        if (!ObjectId.isValid(id)) return false;
+        const db = await connectToDatabase();
+        return (await db.collection<Preparation>("preparation").deleteOne({ _id: new ObjectId(id), userId })).deletedCount === 1;
     },
 
     findSince: async (userId: string, since: Date): Promise<Preparation[]> => {

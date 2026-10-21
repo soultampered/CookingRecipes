@@ -23,7 +23,8 @@ export function servingsMade(recipe: Recipe, scale: number): number {
 }
 
 export const nutritionService = {
-    async logPreparation(userId: string, recipe: Recipe, scale: number): Promise<void> {
+    // Returns the log row's id for undo; undefined if logging failed.
+    async logPreparation(userId: string, recipe: Recipe, scale: number): Promise<string | undefined> {
         const perServing = recipe.nutrition?.[0] ?? {};
         const servings = servingsMade(recipe, scale);
         const nutrition: NutritionFacts = {};
@@ -31,7 +32,7 @@ export const nutritionService = {
             if (typeof perServing[key] === "number") nutrition[key] = round(perServing[key]! * servings);
         }
         try {
-            await preparationModel.create({
+            return await preparationModel.create({
                 userId,
                 recipeId: recipe._id.toString(),
                 recipeTitle: recipe.title,
@@ -43,6 +44,10 @@ export const nutritionService = {
             // Stock is already deducted; a lost log row isn't worth failing it.
             console.error("Failed to log preparation:", err);
         }
+    },
+
+    async removePreparation(userId: string, id: string): Promise<boolean> {
+        return preparationModel.deleteOwned(id, userId);
     },
 
     // tzOffsetMinutes = client getTimezoneOffset() (UTC − local).

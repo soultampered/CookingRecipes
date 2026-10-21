@@ -22,4 +22,14 @@ nutritionRoute.get("/summary", async (c) => {
     }
 });
 
+// Undo of a prepare (the app's toast) also takes back its nutrition.
+nutritionRoute.delete("/preparations/:id", async (c) => {
+    try {
+        const removed = await nutritionService.removePreparation(c.get("userId"), c.req.param("id"));
+        return removed ? c.body(null, 204) : c.json({ error: "Preparation not found" }, 404);
+    } catch {
+        return c.json({ error: "Failed to remove preparation" }, 500);
+    }
+});
+
 export default nutritionRoute;

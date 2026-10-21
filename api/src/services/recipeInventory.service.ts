@@ -14,6 +14,7 @@ export interface PrepareOptions {
 export interface PrepareResult {
     adjustments: InventoryAdjustment[];
     updatedInventory: Inventory[];
+    preparationId?: string;
 }
 
 export const recipeInventoryService = {
@@ -22,8 +23,8 @@ export const recipeInventoryService = {
 
         const scale = options.scale ?? 1;
         if (!recipe.ingredients?.length) {
-            await nutritionService.logPreparation(userId, recipe, scale);
-            return { adjustments: [], updatedInventory: [] };
+            const preparationId = await nutritionService.logPreparation(userId, recipe, scale);
+            return { adjustments: [], updatedInventory: [], preparationId };
         }
 
         const byIndex = new Map<number, number>();
@@ -39,8 +40,8 @@ export const recipeInventoryService = {
         });
 
         const updatedInventory = await inventoryService.applyAdjustments(userId, adjustments);
-        await nutritionService.logPreparation(userId, recipe, scale);
-        return { adjustments, updatedInventory };
+        const preparationId = await nutritionService.logPreparation(userId, recipe, scale);
+        return { adjustments, updatedInventory, preparationId };
     },
 
     async getMissingIngredients(recipeId: string): Promise<MissingIngredient[]> {
