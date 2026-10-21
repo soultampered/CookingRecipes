@@ -124,7 +124,9 @@ inventoryRoutes.put('/:id', validateJson(updateInventorySchema), async (c) => {
         if (data.householdId && !(await accessService.isMember(c.get('userId'), data.householdId))) {
             return c.json({ error: 'Forbidden' }, 403);
         }
-        const item = await inventoryService.updateInventory(c.req.param('id'), data);
+        // Moving a household item to My kitchen makes it the mover's, not its creator's.
+        const toPersonal = 'householdId' in data && !data.householdId && !!existing.householdId;
+        const item = await inventoryService.updateInventory(c.req.param('id'), toPersonal ? { ...data, userId: c.get('userId') } : data);
         if ('photoId' in data && existing.photoId && existing.photoId !== data.photoId) await photoService.remove(existing.photoId);
         return c.json(item);
     } catch (err) {
