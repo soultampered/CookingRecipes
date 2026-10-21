@@ -7,6 +7,7 @@ import { validateJson } from "../middleware/validate.middleware.js";
 import { createRecipeSchema, updateRecipeSchema, prepareRecipeSchema } from "../schemas/recipe.schema.js";
 import { InventoryAdjustError } from "../types/inventory.js";
 import { featuresService } from "../services/features.service.js";
+import { requireFeature } from "../middleware/requireFeature.middleware.js";
 
 const recipeRoutes = new Hono<{ Variables: AuthVariables }>();
 
@@ -97,7 +98,7 @@ recipeRoutes.delete('/:id', async (c) => {
     }
 });
 
-recipeRoutes.get('/:id/revisions', async (c) => {
+recipeRoutes.get('/:id/revisions', requireFeature('versionHistory'), async (c) => {
     try {
         const existing = await recipeService.getRecipeById(c.req.param('id'));
         if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
@@ -107,7 +108,7 @@ recipeRoutes.get('/:id/revisions', async (c) => {
     }
 });
 
-recipeRoutes.post('/:id/revisions/:revisionId/restore', async (c) => {
+recipeRoutes.post('/:id/revisions/:revisionId/restore', requireFeature('versionHistory'), async (c) => {
     try {
         const existing = await recipeService.getRecipeById(c.req.param('id'));
         if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);

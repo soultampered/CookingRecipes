@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { features } from '$lib/state/features.svelte';
 	import { goto, invalidate } from '$app/navigation';
 	import RecipeForm from '$lib/components/RecipeForm.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
@@ -35,14 +36,16 @@
 <div class="page">
 	<a class="back" href={`/recipes/${data.recipe._id}`}>‹ {data.recipe.title}</a>
 	<h1>{t('recipeEdit.title')}</h1>
-	<input
-		class="edit-note"
-		type="text"
-		maxlength="500"
-		placeholder={t('recipeEdit.notePlaceholder')}
-		aria-label={t('recipeEdit.notePlaceholder')}
-		bind:value={editNote}
-	/>
+	{#if features.has('versionHistory')}
+		<input
+			class="edit-note"
+			type="text"
+			maxlength="500"
+			placeholder={t('recipeEdit.notePlaceholder')}
+			aria-label={t('recipeEdit.notePlaceholder')}
+			bind:value={editNote}
+		/>
+	{/if}
 	<RecipeForm
 		inventoryItems={data.inventoryItems}
 		initial={data.recipe}
