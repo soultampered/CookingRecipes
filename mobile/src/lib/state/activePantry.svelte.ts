@@ -1,5 +1,6 @@
 import { Preferences } from '@capacitor/preferences';
 import { listHouseholds, type Household } from '$lib/api/households';
+import { ApiError } from '$lib/api/client';
 
 const PANTRY_KEY = 'stokpot.activePantry';
 
@@ -25,6 +26,23 @@ class ActivePantryState {
 			if (this.current && !this.households.some((h) => h._id === this.current)) await this.set(null);
 		} catch {
 			// offline etc. — keep what we have
+		}
+	}
+
+	async clear() {
+		this.households = [];
+		await this.set(null);
+	}
+
+	// Pantry-scoped load; a 403 (pantry gone) falls back to My kitchen.
+	async load<T>(fn: (household: string | null) => Promise<T>): Promise<T> {
+		const household = this.current;
+		try {
+			return await fn(household);
+		} catch (err) {
+			if (!household || !(err instanceof ApiError) || err.status !== 403) throw err;
+			await this.set(null);
+			return fn(null);
 		}
 	}
 
