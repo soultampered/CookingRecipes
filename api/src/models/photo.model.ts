@@ -40,6 +40,29 @@ export const photoModel = {
         for (const f of await b.find({ filename: token }).toArray()) await b.delete(f._id);
     },
 
+    usageBytes: async (userId: string): Promise<number> => {
+        const db = await connectToDatabase();
+        const [row] = await db.collection("photos.files")
+            .aggregate<{ total: number }>([{ $match: { "metadata.userId": userId } }, { $group: { _id: null, total: { $sum: "$length" } } }])
+            .toArray();
+        return row?.total ?? 0;
+    },
+
+    tokensUploadedBefore: async (before: Date): Promise<string[]> => {
+        const b = await bucket();
+        return (await b.find({ uploadDate: { $lt: before } }).project({ filename: 1 }).toArray()).map((f) => f.filename);
+    },
+
+    // Tokens still pointed at by a recipe or inventory item.
+    referencedTokens: async (tokens: string[]): Promise<Set<string>> => {
+        const db = await connectToDatabase();
+        const [recipes, items] = await Promise.all([
+            db.collection("recipes").distinct("photoId", { photoId: { $in: tokens } }),
+            db.collection("inventory").distinct("photoId", { photoId: { $in: tokens } })
+        ]);
+        return new Set([...recipes, ...items] as string[]);
+    },
+
     deleteAllByUserId: async (userId: string): Promise<void> => {
         const b = await bucket();
         for (const f of await b.find({ "metadata.userId": userId }).toArray()) await b.delete(f._id);

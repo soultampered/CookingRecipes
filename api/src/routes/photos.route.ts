@@ -3,6 +3,7 @@ import { bodyLimit } from "hono/body-limit";
 import { photoService, MAX_PHOTO_BYTES } from "../services/photo.service.js";
 import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
 import { requireVerified } from "../middleware/requireVerified.middleware.js";
+import { rateLimit } from "../middleware/rateLimit.middleware.js";
 
 // Raw image body, already resized by the client.
 const photosRoute = new Hono<{ Variables: AuthVariables }>();
@@ -11,6 +12,7 @@ photosRoute.post(
     "/",
     authMiddleware,
     requireVerified,
+    rateLimit({ windowMs: 10 * 60 * 1000, max: 30, prefix: "photo-upload" }),
     bodyLimit({ maxSize: MAX_PHOTO_BYTES, onError: (c) => c.json({ error: "Photo too large (max 5MB)" }, 413) }),
     async (c) => {
         try {
@@ -20,6 +22,7 @@ photosRoute.post(
             const message = (err as Error).message;
             if (message === "BAD_TYPE") return c.json({ error: "Only JPEG, PNG or WebP images" }, 400);
             if (message === "BAD_SIZE") return c.json({ error: "Photo is empty or too large" }, 400);
+            if (message === "QUOTA") return c.json({ error: "Photo storage is full. Remove some photos first.", code: "PHOTO_QUOTA" }, 413);
             return c.json({ error: "Failed to upload photo" }, 500);
         }
     }
