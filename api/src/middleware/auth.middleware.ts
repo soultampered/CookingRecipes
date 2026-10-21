@@ -14,11 +14,11 @@ export type AuthVariables = {
 // plan. A TokenExpiredError from any secret means that secret's signature was valid and
 // only expiry failed, which is more informative than a signature mismatch against a
 // different secret — so it takes priority when deciding which error to report.
-function verifyWithAnySecret(token: string): { userId: string; exp: number } {
+function verifyWithAnySecret(token: string): { userId: string; exp: number; sid?: string } {
     let bestError: unknown;
     for (const secret of verificationSecrets) {
         try {
-            return jwt.verify(token, secret) as { userId: string; exp: number };
+            return jwt.verify(token, secret) as { userId: string; exp: number; sid?: string };
         } catch (err) {
             if (!bestError || (err as Error).name === "TokenExpiredError") {
                 bestError = err;
@@ -42,6 +42,10 @@ export const authMiddleware: MiddlewareHandler<{ Variables: AuthVariables }> = a
 
     try {
         const payload = verifyWithAnySecret(token);
+        // Revoked elsewhere: answer like expiry, so the app's refresh fails and signs out.
+        if (tokenRevocation.isSessionRevoked(payload.sid)) {
+            return c.json({ error: "Access token expired", code: "TOKEN_EXPIRED" }, 401);
+        }
         c.set("userId", payload.userId);
         c.set("accessToken", token);
         c.set("accessTokenExp", payload.exp);
