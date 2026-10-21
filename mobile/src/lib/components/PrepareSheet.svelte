@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { features } from '$lib/state/features.svelte';
 	import { untrack } from 'svelte';
 	import { fly, fade } from 'svelte/transition';
 	import { prepareRecipe, type PrepareResult } from '$lib/api/recipes';
@@ -121,21 +122,23 @@
 		{/each}
 	</ul>
 
-	<label class="leftover-toggle">
-		<input type="checkbox" bind:checked={saveLeftovers} />
-		{t('prepareSheet.saveLeftovers')}
-	</label>
-	{#if saveLeftovers}
-		<div class="leftover-fields">
-			<label>
-				{t('prepareSheet.leftoverServings')}
-				<input type="number" inputmode="decimal" min="0.5" step="0.5" bind:value={leftoverServings} />
-			</label>
-			<label>
-				{t('prepareSheet.keepsDays')}
-				<input type="number" inputmode="numeric" min="0" max="60" bind:value={leftoverDays} />
-			</label>
-		</div>
+	{#if features.has('leftovers')}
+		<label class="leftover-toggle">
+			<input type="checkbox" bind:checked={saveLeftovers} />
+			{t('prepareSheet.saveLeftovers')}
+		</label>
+		{#if saveLeftovers}
+			<div class="leftover-fields">
+				<label>
+					{t('prepareSheet.leftoverServings')}
+					<input type="number" inputmode="decimal" min="0.5" step="0.5" bind:value={leftoverServings} />
+				</label>
+				<label>
+					{t('prepareSheet.keepsDays')}
+					<input type="number" inputmode="numeric" min="0" max="60" bind:value={leftoverDays} />
+				</label>
+			</div>
+		{/if}
 	{/if}
 
 	{#if shortIndexes.length > 0}
