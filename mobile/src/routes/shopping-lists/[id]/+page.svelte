@@ -30,14 +30,23 @@
 	import { priceKey } from '$lib/api/prices';
 	import BarcodeScanButton from '$lib/components/BarcodeScanButton.svelte';
 	import { instacartLink } from '$lib/api/integrations';
+	import { Capacitor } from '@capacitor/core';
 
 	let openingInstacart = $state(false);
 	async function orderOnInstacart() {
 		openingInstacart = true;
+		// Browsers block window.open after an await: open the tab on tap, point it at Instacart later.
+		const tab = Capacitor.isNativePlatform() ? null : window.open('', '_blank');
 		try {
 			const { url } = await instacartLink(data.list._id!);
-			window.open(url, '_blank', 'noopener');
+			if (tab) {
+				tab.opener = null;
+				tab.location.href = url;
+			} else {
+				window.open(url, '_blank', 'noopener');
+			}
 		} catch (err) {
+			tab?.close();
 			toast.push(err instanceof ApiError ? err.message : t('instacart.error'));
 		} finally {
 			openingInstacart = false;
