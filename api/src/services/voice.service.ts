@@ -6,6 +6,14 @@ import { shoppingListService } from "./shoppingList.service.js";
 import type { ShoppingList } from "../types/shoppingList.js";
 
 const TOKEN_PREFIX = "stk_";
+// One per assistant/device plus a spare.
+export const MAX_TOKENS = 5;
+// Unused this long = expired; regular use never hits it.
+const IDLE_EXPIRY_MS = 180 * 24 * 60 * 60 * 1000;
+
+function isExpired(t: { createdAt: Date; lastUsedAt?: Date }, now = Date.now()): boolean {
+    return (t.lastUsedAt ?? t.createdAt).getTime() < now - IDLE_EXPIRY_MS;
+}
 const WORD_NUMBERS: Record<string, number> = {
     a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
     eleven: 11, twelve: 12, dozen: 12, couple: 2, un: 1, une: 1, deux: 2, trois: 3, quatre: 4, cinq: 5
@@ -58,22 +66,26 @@ function joinNames(names: string[]): string {
 
 export const voiceService = {
     async createToken(userId: string, name: string): Promise<{ token: string; id: string; prefix: string }> {
+        const active = (await apiTokenModel.findAllByUserId(userId)).filter((t) => !isExpired(t));
+        if (active.length >= MAX_TOKENS) throw new Error("TOO_MANY_TOKENS");
         const token = TOKEN_PREFIX + crypto.randomBytes(24).toString("base64url");
         const prefix = token.slice(0, 10);
         const saved = await apiTokenModel.create({ userId, name, tokenHash: hash(token), prefix, scopes: ["add-items"], createdAt: new Date() });
         return { token, id: saved._id!.toString(), prefix };
     },
 
-    async authenticate(token: string): Promise<string | null> {
+    // "expired" lets the caller explain the failure.
+    async authenticate(token: string): Promise<string | null | "expired"> {
         if (!token.startsWith(TOKEN_PREFIX)) return null;
         const found = await apiTokenModel.findByHash(hash(token));
         if (!found) return null;
+        if (isExpired(found)) return "expired";
         apiTokenModel.touch(found._id!).catch(() => {});
         return found.userId;
     },
 
     async listTokens(userId: string) {
-        return (await apiTokenModel.findAllByUserId(userId)).map(({ tokenHash, ...rest }) => rest);
+        return (await apiTokenModel.findAllByUserId(userId)).map(({ tokenHash, ...rest }) => ({ ...rest, expired: isExpired(rest) }));
     },
 
     revokeToken: (id: string, userId: string) => apiTokenModel.delete(id, userId),

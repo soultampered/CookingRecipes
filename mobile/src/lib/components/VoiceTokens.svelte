@@ -64,6 +64,7 @@
 <div class="voice">
 	<span class="label">{t('voice.title')}</span>
 	<p class="hint">{t('voice.hint')}</p>
+	<p class="hint">{t('voice.limits')}</p>
 
 	{#if fresh}
 		<div class="fresh">
@@ -81,7 +82,9 @@
 				<li>
 					<div class="info">
 						<span class="name">{tok.name}</span>
-						<span class="hint">{tok.prefix}… · {when(tok.lastUsedAt)}</span>
+						<span class="hint">
+							{tok.prefix}… · {when(tok.lastUsedAt)}{#if tok.expired} · <strong class="expired">{t('voice.expired')}</strong>{/if}
+						</span>
 					</div>
 					<button type="button" class="danger" disabled={busy} onclick={() => revoke(tok._id)}>{t('voice.revoke')}</button>
 				</li>
@@ -109,6 +112,10 @@
 </div>
 
 <style>
+	.expired {
+		color: var(--bad);
+		font-weight: 600;
+	}
 	.voice {
 		display: flex;
 		flex-direction: column;

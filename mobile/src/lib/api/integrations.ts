@@ -6,6 +6,8 @@ export interface ApiTokenSummary {
 	prefix: string;
 	createdAt: string;
 	lastUsedAt?: string;
+	// Unused for 180 days; the shortcut using it now gets "expired".
+	expired?: boolean;
 }
 
 export function listTokens() {

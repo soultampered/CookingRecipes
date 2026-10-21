@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { voiceService } from "../services/voice.service.js";
+import { voiceService, MAX_TOKENS } from "../services/voice.service.js";
 import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
 import { requireVerified } from "../middleware/requireVerified.middleware.js";
 import { validateJson } from "../middleware/validate.middleware.js";
@@ -20,7 +20,16 @@ integrationsRoute.post(
     authMiddleware,
     requireVerified,
     validateJson(z.object({ name: z.string().trim().min(1).max(60) })),
-    async (c) => c.json(await voiceService.createToken(c.get("userId"), c.req.valid("json").name), 201)
+    async (c) => {
+        try {
+            return c.json(await voiceService.createToken(c.get("userId"), c.req.valid("json").name), 201);
+        } catch (err) {
+            if ((err as Error).message === "TOO_MANY_TOKENS") {
+                return c.json({ error: `You can have ${MAX_TOKENS} voice tokens. Revoke one you no longer use.`, code: "TOO_MANY_TOKENS" }, 409);
+            }
+            throw err;
+        }
+    }
 );
 
 integrationsRoute.delete("/tokens/:id", authMiddleware, requireVerified, async (c) => {
@@ -36,6 +45,12 @@ integrationsRoute.post(
     async (c) => {
         const header = c.req.header("Authorization");
         const userId = header?.startsWith("Bearer ") ? await voiceService.authenticate(header.slice(7)) : null;
+        if (userId === "expired") {
+            return c.json(
+                { error: "Token expired", code: "TOKEN_EXPIRED", speech: "This Stokpot voice token has expired. Make a new one in the Stokpot app." },
+                401
+            );
+        }
         if (!userId) return c.json({ error: "Invalid token", speech: "Stokpot couldn't sign you in." }, 401);
         try {
             const { text, list } = c.req.valid("json");
