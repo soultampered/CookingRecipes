@@ -16,7 +16,9 @@ const INDEXES: Record<string, IndexDescription[]> = {
     apiToken: [{ key: { tokenHash: 1 }, unique: true }, { key: { userId: 1 } }],
     user: [{ key: { loginChallenge: 1 }, ...stringOnly("loginChallenge") }, { key: { "refreshTokens.token": 1 } }],
     preparation: [{ key: { userId: 1, preparedAt: 1 } }],
-    priceRecord: [{ key: { userId: 1, itemKey: 1, recordedAt: -1 } }],
+    priceRecord: [{ key: { userId: 1, itemKey: 1, recordedAt: -1 } }, { key: { userId: 1, source: 1 }, sparse: true }],
+    // Idempotency keys for /inventory/adjust only need to outlive a retry.
+    appliedAdjustment: [{ key: { at: 1 }, expireAfterSeconds: 7 * 24 * 60 * 60 }],
     inventoryEvent: [{ key: { userId: 1, at: 1 } }, { key: { itemId: 1, at: 1 } }],
     mealPlanEntry: [{ key: { userId: 1, date: 1 } }, { key: { recipeId: 1 } }],
     recipeCollection: [{ key: { userId: 1 } }, { key: { recipeIds: 1 } }],
