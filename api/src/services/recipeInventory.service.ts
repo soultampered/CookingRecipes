@@ -1,6 +1,7 @@
 import { inventoryService} from "./inventory.service.js";
 import { recipeService} from "./recipes.service.js";
 import { nutritionService } from "./nutrition.service.js";
+import { convert } from "./unitConversion.js";
 import type { MissingIngredient, Recipe, RecipeIngredient } from "../types/recipe.js";
 import type { Inventory, InventoryAdjustment } from "../types/inventory.js";
 
@@ -19,6 +20,12 @@ export interface PrepareResult {
     leftover?: Inventory;
     // Leftovers failed to save; the prepare succeeded.
     leftoverFailed?: boolean;
+}
+
+// Recipe amount in the stock unit; null if unconvertible.
+function neededInStockUnit(ingredient: RecipeIngredient, stock: Inventory): number | null {
+    if (!ingredient.unit || !stock.unit) return ingredient.quantity;
+    return convert(ingredient.quantity, ingredient.unit, stock.unit);
 }
 
 export const recipeInventoryService = {
@@ -74,12 +81,18 @@ export const recipeInventoryService = {
         for (const ingredient of recipe.ingredients) {
             const stock = inventoryMap.get(ingredient.inventoryItemId.toString());
             const available = stock?.quantity ?? 0;
+            const needed = stock ? neededInStockUnit(ingredient, stock) : ingredient.quantity;
 
-            if (available < ingredient.quantity) {
+            // Unconvertible units: only flag when there's no stock at all.
+            if (needed === null) {
+                if (available <= 0) missing.push({ name: stock!.name, needed: ingredient.quantity, unit: ingredient.unit });
+                continue;
+            }
+            if (available < needed) {
                 missing.push({
                     name: stock?.name ?? "Unknown",
-                    needed: ingredient.quantity - available,
-                    unit: ingredient.unit ?? stock?.unit,
+                    needed: Math.round((needed - available) * 100) / 100,
+                    unit: stock?.unit ?? ingredient.unit,
                 });
             }
         }
@@ -94,7 +107,9 @@ export const recipeInventoryService = {
         const makeable = recipes.filter(recipe =>
             recipe.ingredients.every(ingredient => {
                 const stock = inventoryMap.get(ingredient.inventoryItemId.toString());
-                return stock && stock.quantity >= ingredient.quantity;
+                if (!stock) return false;
+                const needed = neededInStockUnit(ingredient, stock);
+                return needed === null ? stock.quantity > 0 : stock.quantity >= needed;
             })
         );
         // Favorites first, then rating; unrated = 3, so disliked recipes sink below it.

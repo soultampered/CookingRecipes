@@ -51,3 +51,23 @@ describe('recipeInventoryService leftovers', () => {
         expect(inventoryService.applyAdjustments).toHaveBeenCalledOnce()
     })
 })
+
+describe('recipeInventoryService.getMissingIngredients units', () => {
+    it('compares in the stock unit', async () => {
+        const { recipeService } = await import('../../api/src/services/recipes.service.js')
+        const { inventoryService } = await import('../../api/src/services/inventory.service.js')
+        vi.mocked(recipeService.getRecipeById).mockResolvedValueOnce({
+            _id: 'r9', userId: 'u1', ingredients: [
+                { inventoryItemId: 'a'.repeat(24), quantity: 1, unit: 'kg' },
+                { inventoryItemId: 'b'.repeat(24), quantity: 2, unit: 'cup' }
+            ]
+        } as any)
+        ;(inventoryService as any).getInventoryItemsByIds = vi.fn(async () => [
+            { _id: 'a'.repeat(24), name: 'Flour', unit: 'g', quantity: 500 },
+            { _id: 'b'.repeat(24), name: 'Rice', unit: 'g', quantity: 900 }
+        ])
+        const missing = await recipeInventoryService.getMissingIngredients('r9')
+        // 1 kg needed, 500 g on hand → 500 g short; cup vs g can't convert but stock exists → not flagged
+        expect(missing).toEqual([{ name: 'Flour', needed: 500, unit: 'g' }])
+    })
+})
