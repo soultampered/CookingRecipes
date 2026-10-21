@@ -11,7 +11,8 @@ const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 function newInviteCode(): string {
     return Array.from(crypto.randomBytes(8), (b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join("");
 }
-const MAX_MEMBERS = 20;
+// Matches Apple/Google family sharing's 6. Raise if needed.
+const MAX_MEMBERS = 6;
 // A code posted once in a group chat shouldn't work forever.
 const INVITE_TTL_MS = 3 * 24 * 60 * 60 * 1000;
 
