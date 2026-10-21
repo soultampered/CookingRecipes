@@ -21,6 +21,8 @@ export interface PlannedItem {
     recipes: string[];
     // A recipe unit can't convert to the stock unit (e.g. cup vs g).
     unitMismatch: boolean;
+    // Those amounts, kept in their own units instead of being summed into needed.
+    unconverted: { quantity: number; unit: Unit }[];
 }
 
 function round(n: number) {
@@ -50,10 +52,17 @@ export const shoppingPlanService = {
                     have: item.quantity,
                     toBuy: 0,
                     recipes: [],
-                    unitMismatch: false
+                    unitMismatch: false,
+                    unconverted: []
                 };
-                row.needed += converted ?? raw;
-                if (converted === null) row.unitMismatch = true;
+                if (converted === null) {
+                    row.unitMismatch = true;
+                    const same = row.unconverted.find((u) => u.unit === ing.unit);
+                    if (same) same.quantity = round(same.quantity + raw);
+                    else row.unconverted.push({ quantity: round(raw), unit: ing.unit! });
+                } else {
+                    row.needed += converted;
+                }
                 if (!row.recipes.includes(recipe.title)) row.recipes.push(recipe.title);
                 totals.set(ing.inventoryItemId, row);
             }
@@ -66,7 +75,7 @@ export const shoppingPlanService = {
 
     // Lists only shortfalls; appends to a list (merging by name) or creates one.
     async createList(userId: string, requests: RecipeRequest[], options: { name?: string; listId?: string }): Promise<ShoppingList> {
-        const planned = (await this.plan(userId, requests)).filter((p) => p.toBuy > 0);
+        const planned = (await this.plan(userId, requests)).filter((p) => p.toBuy > 0 || p.unconverted.length);
         let list: ShoppingList;
         if (options.listId) {
             list = await shoppingListService.getShoppingListById(options.listId);
@@ -75,7 +84,13 @@ export const shoppingPlanService = {
             list = await shoppingListService.createShoppingList({ name: options.name ?? "Meal prep", userId, items: [] });
         }
         for (const p of planned) {
-            list = await shoppingListService.addItem(list._id!.toString(), { name: p.name, quantity: p.toBuy, unit: p.unit });
+            if (p.toBuy > 0) {
+                list = await shoppingListService.addItem(list._id!.toString(), { name: p.name, quantity: p.toBuy, unit: p.unit });
+            }
+            // Stock can't say whether these are covered, so list them as-is.
+            for (const u of p.unconverted) {
+                list = await shoppingListService.addItem(list._id!.toString(), { name: p.name, quantity: u.quantity, unit: u.unit });
+            }
         }
         return list;
     }
