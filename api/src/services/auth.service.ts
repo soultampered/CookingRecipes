@@ -100,7 +100,7 @@ function generateCode(): { code: string; expiresAt: Date } {
     // Plaintext by design: unlike the password hash, this code is single-use, expires in
     // 10 minutes, and only useful to someone who already has DB access — at which point
     // they could just flip emailVerified directly. Hashing it adds no real protection here.
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const code = crypto.randomInt(100000, 1000000).toString();
     const expiresAt = new Date(Date.now() + CODE_TTL_MS);
     return { code, expiresAt };
 }
@@ -194,20 +194,21 @@ export const authService = {
     },
 
     async verifyLoginCode(challengeId: string, code: string, userAgent?: string): Promise<AuthResult> {
-        const user = await userModel.findByLoginChallenge(challengeId);
-        if (!user) throw new Error("INVALID_CODE");
-        const userId = user._id!.toString();
-
-        if ((user.loginCodeAttempts ?? 0) >= MAX_CODE_ATTEMPTS) {
+        // Claim an attempt atomically before comparing, so parallel guesses can't beat the cap.
+        const user = await userModel.claimLoginCodeAttempt(challengeId, MAX_CODE_ATTEMPTS);
+        if (!user) {
+            const existing = await userModel.findByLoginChallenge(challengeId);
+            if (!existing) throw new Error("INVALID_CODE");
             // Burn the challenge: a new code needs the password again.
-            await userModel.update(userId, { loginChallenge: null, loginCode: null, loginCodeExpiresAt: null });
+            await userModel.update(existing._id!.toString(), { loginChallenge: null, loginCode: null, loginCodeExpiresAt: null });
             throw new Error("TOO_MANY_ATTEMPTS");
         }
+        const userId = user._id!.toString();
+
         if (!user.loginCodeExpiresAt || user.loginCodeExpiresAt < new Date()) {
             throw new Error("CODE_EXPIRED");
         }
         if (user.loginCode !== code) {
-            await userModel.update(userId, { loginCodeAttempts: (user.loginCodeAttempts ?? 0) + 1 });
             await securityEventService.record(userId, "login_2fa_failed");
             throw new Error("INVALID_CODE");
         }
@@ -227,6 +228,8 @@ export const authService = {
     async setTwoFactor(userId: string, enabled: boolean, password: string): Promise<Omit<User, "password">> {
         const user = await userModel.findById(userId);
         if (!(await bcrypt.compare(password, user.password))) throw new Error("INVALID_CREDENTIALS");
+        // Codes go here; an unverified address could lock the user out.
+        if (enabled && !user.emailVerified) throw new Error("EMAIL_NOT_VERIFIED");
         const updated = await userModel.update(userId, { twoFactorEnabled: enabled });
         await securityEventService.record(userId, enabled ? "two_factor_enabled" : "two_factor_disabled");
         return stripPassword(updated);

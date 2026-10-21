@@ -91,6 +91,9 @@ authRoute.post("/2fa", authMiddleware, validateJson(setTwoFactorSchema), async (
             // 403 not 401: the mobile client treats any 401 as a dead session.
             return c.json({ error: "Incorrect password" }, 403);
         }
+        if ((err as Error).message === "EMAIL_NOT_VERIFIED") {
+            return c.json({ error: "Verify your email before turning on two-step sign-in", code: "EMAIL_NOT_VERIFIED" }, 403);
+        }
         return c.json({ error: "Failed to update two-factor setting" }, 500);
     }
 });

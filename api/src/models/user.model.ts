@@ -100,6 +100,17 @@ export const userModel = {
         return db.collection<User>("user").findOne({ loginChallenge: challenge });
     },
 
+    // Increments loginCodeAttempts only while under max; null = no such challenge or cap hit.
+    claimLoginCodeAttempt: async (challenge: string, max: number): Promise<User | null> => {
+        if (typeof challenge !== "string") return null;
+        const db = await connectToDatabase();
+        return db.collection<User>("user").findOneAndUpdate(
+            { loginChallenge: challenge, $or: [{ loginCodeAttempts: { $lt: max } }, { loginCodeAttempts: { $exists: false } }] },
+            { $inc: { loginCodeAttempts: 1 } },
+            { returnDocument: "after" }
+        );
+    },
+
     findByRefreshToken: async (token: string): Promise<User | null> => {
         // Same operator-injection risk as findByUsernameOrEmail above: token comes from a
         // JSON body typed as `string` only at the TypeScript level.
