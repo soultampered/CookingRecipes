@@ -63,6 +63,17 @@ export const photoModel = {
         return new Set([...recipes, ...items] as string[]);
     },
 
+    listByUserId: async (userId: string) => {
+        const b = await bucket();
+        return (await b.find({ "metadata.userId": userId }).toArray()).map((f) => ({
+            id: f.filename,
+            url: `/photos/${f.filename}`,
+            contentType: (f.metadata as PhotoMeta).contentType,
+            bytes: f.length,
+            uploadedAt: f.uploadDate
+        }));
+    },
+
     deleteAllByUserId: async (userId: string): Promise<void> => {
         const b = await bucket();
         for (const f of await b.find({ "metadata.userId": userId }).toArray()) await b.delete(f._id);

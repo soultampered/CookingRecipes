@@ -37,6 +37,8 @@ export const usersService = {
             priceRecordModel.findAllByUserId(id),
             mealPlanModel.findAllByUserId(id),
         ]);
+        // Links, not bytes (up to 100 MB per user).
+        const photos = await photoModel.listByUserId(id);
         const { failedLoginAttempts, lockedUntil, verificationCodeAttempts, resetCodeAttempts, loginCodeAttempts, ...profile } =
             stripPassword(user);
         return {
@@ -52,6 +54,7 @@ export const usersService = {
             recipeRevisions,
             priceHistory,
             mealPlan,
+            photos,
         };
     },
 
