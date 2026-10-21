@@ -283,7 +283,7 @@
 		<div class="header-actions">
 			{#if features.has('print')}<button type="button" class="btn-outline" onclick={handlePrint}>{t('recipeDetail.print')}</button>{/if}
 			{#if features.has('versionHistory')}<a href={`/recipes/${data.recipe._id}/history`} class="btn-outline">{t('recipeDetail.history')}</a>{/if}
-			<button type="button" class="btn-outline" onclick={() => (showPlan = true)}>{t('mealPlan.plan')}</button>
+			{#if features.has('mealPlan')}<button type="button" class="btn-outline" onclick={() => (showPlan = true)}>{t('mealPlan.plan')}</button>{/if}
 			{#if features.has('collections')}<button type="button" class="btn-outline" onclick={() => (showCollections = true)}>{t('collections.add')}</button>{/if}
 			{#if features.has('shareLinks')}
 				<button type="button" class="btn-outline" class:shared={!!data.recipe.shareToken} onclick={() => (showShare = true)}>

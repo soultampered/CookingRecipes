@@ -2,6 +2,7 @@ import { Hono, type Context } from "hono";
 import { mealPlanService } from "../services/mealPlan.service.js";
 import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
 import { requireVerified } from "../middleware/requireVerified.middleware.js";
+import { requireFeature } from "../middleware/requireFeature.middleware.js";
 import { validateJson } from "../middleware/validate.middleware.js";
 import { addMealPlanSchema, updateMealPlanSchema, mealPlanRangeSchema } from "../schemas/mealPlan.schema.js";
 
@@ -9,6 +10,7 @@ const mealPlanRoute = new Hono<{ Variables: AuthVariables }>();
 
 mealPlanRoute.use("*", authMiddleware);
 mealPlanRoute.use("*", requireVerified);
+mealPlanRoute.use("*", requireFeature("mealPlan"));
 
 function fail(c: Context, err: unknown) {
     const message = (err as Error).message;

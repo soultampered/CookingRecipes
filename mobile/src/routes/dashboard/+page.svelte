@@ -88,17 +88,19 @@
 		{/if}
 	</a>
 
-	<a class="card" href="/meal-plan">
-		<div class="card-header">
-			<span class="card-title">{t('dashboard.mealPlan')}</span>
-			<span class="stat">{data.mealPlan.length}</span>
-		</div>
-		{#if data.mealPlan.length === 0}
-			<p class="empty">{t('dashboard.noMealPlan')}</p>
-		{:else if todayPlanned.length > 0}
-			<p class="preview">{t('dashboard.todayPlanned', { titles: todayPlanned.map((e) => e.recipeTitle).join(' · ') })}</p>
-		{/if}
-	</a>
+	{#if features.has('mealPlan')}
+		<a class="card" href="/meal-plan">
+			<div class="card-header">
+				<span class="card-title">{t('dashboard.mealPlan')}</span>
+				<span class="stat">{data.mealPlan.length}</span>
+			</div>
+			{#if data.mealPlan.length === 0}
+				<p class="empty">{t('dashboard.noMealPlan')}</p>
+			{:else if todayPlanned.length > 0}
+				<p class="preview">{t('dashboard.todayPlanned', { titles: todayPlanned.map((e) => e.recipeTitle).join(' · ') })}</p>
+			{/if}
+		</a>
+	{/if}
 
 	{#if features.has('expiryAlerts')}
 		<a class="card" href="/inventory?expiring=1">
