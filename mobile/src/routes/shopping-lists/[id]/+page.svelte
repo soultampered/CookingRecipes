@@ -128,6 +128,7 @@
 	}
 
 	function priceHint(item: ShoppingListItem): { text: string; cheaper: boolean } | null {
+		if (!features.has('priceWatch')) return null;
 		const p = data.prices[priceKey(item.name)];
 		if (!p) return null;
 		const current = item.price ?? p.lastPrice;
@@ -466,32 +467,34 @@
 		</button>
 	{/if}
 
-	<div class="store-row">
-		<span class="store-label">{t('cost.store')}:</span>
-		{#if editingStore}
-			<form
-				class="store-edit"
-				onsubmit={(e) => {
-					e.preventDefault();
-					commitStore();
-				}}
-			>
-				<input type="text" maxlength="80" placeholder={t('cost.storePlaceholder')} bind:value={storeDraft} use:focusOnMount />
-				<button type="submit">✓</button>
-			</form>
-		{:else}
-			<button
-				type="button"
-				class="store-btn"
-				onclick={() => {
-					storeDraft = data.list.store ?? '';
-					editingStore = true;
-				}}
-			>
-				{data.list.store ?? t('cost.storePlaceholder')}
-			</button>
-		{/if}
-	</div>
+	{#if features.has('priceWatch')}
+		<div class="store-row">
+			<span class="store-label">{t('cost.store')}:</span>
+			{#if editingStore}
+				<form
+					class="store-edit"
+					onsubmit={(e) => {
+						e.preventDefault();
+						commitStore();
+					}}
+				>
+					<input type="text" maxlength="80" placeholder={t('cost.storePlaceholder')} bind:value={storeDraft} use:focusOnMount />
+					<button type="submit">✓</button>
+				</form>
+			{:else}
+				<button
+					type="button"
+					class="store-btn"
+					onclick={() => {
+						storeDraft = data.list.store ?? '';
+						editingStore = true;
+					}}
+				>
+					{data.list.store ?? t('cost.storePlaceholder')}
+				</button>
+			{/if}
+		</div>
+	{/if}
 
 	{#if features.has('budget') && data.list.items.length > 0}
 		<div class="cost-bar">

@@ -2,11 +2,13 @@ import { Hono } from "hono";
 import { priceHistoryService } from "../services/priceHistory.service.js";
 import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
 import { requireVerified } from "../middleware/requireVerified.middleware.js";
+import { requireFeature } from "../middleware/requireFeature.middleware.js";
 
 const pricesRoute = new Hono<{ Variables: AuthVariables }>();
 
 pricesRoute.use("*", authMiddleware);
 pricesRoute.use("*", requireVerified);
+pricesRoute.use("*", requireFeature("priceWatch"));
 
 // ?names=Milk&names=Eggs → { [normalized name]: insight }
 pricesRoute.get("/insights", async (c) => {

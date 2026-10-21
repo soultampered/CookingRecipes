@@ -3,6 +3,7 @@ import { shoppingListModel } from "../models/index.js";
 import type { ShoppingList, ShoppingListItem } from "../types/shoppingList.js";
 import { categorizeItemName } from "./foodCategory.service.js";
 import { priceHistoryService } from "./priceHistory.service.js";
+import { featuresService } from "./features.service.js";
 
 type IncomingItem = Omit<ShoppingListItem, "_id"> & { _id?: ObjectId | string };
 
@@ -68,8 +69,10 @@ export const shoppingListService = {
         }
         // Category is always derived from the name, never client-supplied — see STO-18.
         const category = await categorizeItemName(item.name);
-        // STO-90: prefill with what you last paid (at this list's store if known).
-        const price = item.price ?? (await priceHistoryService.suggestedPrice(list.userId, item.name, list.store));
+        // Prefill the last price paid (at this store if known), once priceWatch (2.3) is on.
+        const price =
+            item.price ??
+            (featuresService.isOn("priceWatch", list.userId) ? await priceHistoryService.suggestedPrice(list.userId, item.name, list.store) : undefined);
         list.items.push({ ...item, category, price, _id: new ObjectId() });
         return shoppingListModel.update(listId, { items: list.items });
     },
