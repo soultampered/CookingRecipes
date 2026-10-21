@@ -14,7 +14,9 @@ const integrationsRoute = new Hono<{ Variables: AuthVariables }>();
 const voiceLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, prefix: "voice" });
 
 // Lets the app hide unconfigured integrations.
-integrationsRoute.get("/status", authMiddleware, async (c) => c.json({ instacart: instacartService.enabled() }, 200));
+integrationsRoute.get("/status", authMiddleware, async (c) =>
+    c.json({ instacart: instacartService.enabled() && featuresService.isOn("instacart", c.get("userId")) }, 200)
+);
 
 // Token management uses the normal app session.
 integrationsRoute.get("/tokens", authMiddleware, requireVerified, requireFeature("voiceAdd"), async (c) => {

@@ -86,7 +86,7 @@ shoppingListRoute.post('/from-recipes', requireFeature('mealPrep'), validateJson
 });
 
 // Hands the list to Instacart; returns the checkout link.
-shoppingListRoute.post('/:id/instacart', async (c) => {
+shoppingListRoute.post('/:id/instacart', requireFeature('instacart'), async (c) => {
     try {
         const list = await shoppingListService.getShoppingListById(c.req.param('id'));
         if (!(await accessService.canAccess(c.get('userId'), list))) return c.json({ error: 'Forbidden' }, 403);
