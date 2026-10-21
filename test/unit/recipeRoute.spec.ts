@@ -38,6 +38,7 @@ vi.mock('../../api/src/services/recipeInventory.service.js', () => ({
 import recipeRoutes from '../../api/src/routes/recipes.route.js'
 import { recipeService } from '../../api/src/services/recipes.service.js'
 import { recipeInventoryService } from '../../api/src/services/recipeInventory.service.js'
+import { featuresService } from '../../api/src/services/features.service.js'
 
 describe('Recipe routes', () => {
     let app: Hono
@@ -135,6 +136,17 @@ describe('Recipe routes', () => {
         const res = await app.request('/recipes/123/prepare', json('POST', { scale: 2 }))
         expect(res.status).toBe(200)
         expect(recipeInventoryService.deductIngredients).toHaveBeenCalledWith('123', 'u1', { scale: 2 })
+    })
+
+    it('POST /recipes/:id/prepare ignores scale while saferPrepare is off', async () => {
+        featuresService.setOverrides({ saferPrepare: false })
+        try {
+            const res = await app.request('/recipes/123/prepare', json('POST', { scale: 2 }))
+            expect(res.status).toBe(200)
+            expect(recipeInventoryService.deductIngredients).toHaveBeenCalledWith('123', 'u1', {})
+        } finally {
+            featuresService.setOverrides(null)
+        }
     })
 
     it('POST /recipes/:id/prepare returns 404 for a missing recipe', async () => {

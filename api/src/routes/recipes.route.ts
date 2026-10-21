@@ -6,6 +6,7 @@ import { requireVerified } from "../middleware/requireVerified.middleware.js";
 import { validateJson } from "../middleware/validate.middleware.js";
 import { createRecipeSchema, updateRecipeSchema, prepareRecipeSchema } from "../schemas/recipe.schema.js";
 import { InventoryAdjustError } from "../types/inventory.js";
+import { featuresService } from "../services/features.service.js";
 
 const recipeRoutes = new Hono<{ Variables: AuthVariables }>();
 
@@ -86,8 +87,9 @@ recipeRoutes.delete('/:id', async (c) => {
 });
 
 recipeRoutes.post('/:id/prepare', async (c) => {
-    // Parsed by hand (not validateJson) so a bodyless POST from an older build still works.
-    const raw = await c.req.json().catch(() => ({}));
+    // Parsed by hand so an older build's bodyless POST still works.
+    // Before saferPrepare: the old whole-recipe deduction.
+    const raw = featuresService.isOn('saferPrepare', c.get('userId')) ? await c.req.json().catch(() => ({})) : {};
     const parsed = prepareRecipeSchema.safeParse(raw ?? {});
     if (!parsed.success) return c.json({ error: 'Invalid request body' }, 400);
     let existing;

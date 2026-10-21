@@ -3,6 +3,8 @@
 	import { deleteRecipe, type PrepareResult } from '$lib/api/recipes';
 	import { adjustInventory } from '$lib/api/inventory';
 	import PrepareSheet from '$lib/components/PrepareSheet.svelte';
+	import { prepareRecipe } from '$lib/api/recipes';
+	import { features } from '$lib/state/features.svelte';
 	import { formatQuantity } from '$lib/utils/quantity';
 	import { listShoppingLists, addItem } from '$lib/api/shoppingLists';
 	import { ApiError } from '$lib/api/client';
@@ -53,7 +55,7 @@
 	let baseServings = $derived(data.recipe.servings ?? null);
 	let targetServings = $state(data.recipe.servings ?? 1);
 	let multiplier = $state(1);
-	let scale = $derived(baseServings ? targetServings / baseServings : multiplier);
+	let scale = $derived(!features.has('saferPrepare') ? 1 : baseServings ? targetServings / baseServings : multiplier);
 	$effect(() => {
 		// Reset when swiping to another recipe.
 		data.recipe._id;
@@ -85,6 +87,23 @@
 	);
 
 	let showPrepareSheet = $state(false);
+
+	// Before saferPrepare (2.4), Prepare is one tap for the whole recipe.
+	let quickPreparing = $state(false);
+	async function startPrepare() {
+		if (features.has('saferPrepare')) {
+			showPrepareSheet = true;
+			return;
+		}
+		quickPreparing = true;
+		try {
+			await onPrepared(await prepareRecipe(data.recipe._id));
+		} catch (err) {
+			toast.push(err instanceof ApiError ? err.message : t('recipeDetail.errorPrepare'));
+		} finally {
+			quickPreparing = false;
+		}
+	}
 
 	async function onPrepared(result: PrepareResult) {
 		showPrepareSheet = false;
@@ -215,26 +234,28 @@
 		<p class="description">{data.recipe.description}</p>
 	{/if}
 
-	<div class="scale-row">
-		<span class="scale-label">{baseServings ? t('recipeDetail.servings') : t('recipeDetail.scale')}</span>
-		<div class="scale-stepper">
-			<button type="button" onclick={() => stepScale(-1)} aria-label={t('recipeDetail.decreaseServings')}>−</button>
-			<span class="scale-value">{baseServings ? targetServings : `×${formatQuantity(multiplier)}`}</span>
-			<button type="button" onclick={() => stepScale(1)} aria-label={t('recipeDetail.increaseServings')}>+</button>
+	{#if features.has('saferPrepare')}
+		<div class="scale-row">
+			<span class="scale-label">{baseServings ? t('recipeDetail.servings') : t('recipeDetail.scale')}</span>
+			<div class="scale-stepper">
+				<button type="button" onclick={() => stepScale(-1)} aria-label={t('recipeDetail.decreaseServings')}>−</button>
+				<span class="scale-value">{baseServings ? targetServings : `×${formatQuantity(multiplier)}`}</span>
+				<button type="button" onclick={() => stepScale(1)} aria-label={t('recipeDetail.increaseServings')}>+</button>
+			</div>
+			{#if scale !== 1}
+				<button
+					type="button"
+					class="scale-reset"
+					onclick={() => {
+						targetServings = data.recipe.servings ?? 1;
+						multiplier = 1;
+					}}
+				>
+					{t('recipeDetail.resetScale')}
+				</button>
+			{/if}
 		</div>
-		{#if scale !== 1}
-			<button
-				type="button"
-				class="scale-reset"
-				onclick={() => {
-					targetServings = data.recipe.servings ?? 1;
-					multiplier = 1;
-				}}
-			>
-				{t('recipeDetail.resetScale')}
-			</button>
-		{/if}
-	</div>
+	{/if}
 
 	<div class="field-label ingredients-label">
 		<span>{t('recipeDetail.ingredients')}</span>
@@ -283,7 +304,7 @@
 		{/each}
 	</ol>
 
-	<button type="button" class="primary" onclick={() => (showPrepareSheet = true)}>
+	<button type="button" class="primary" disabled={quickPreparing} onclick={startPrepare}>
 		{t('recipeDetail.prepare')}
 	</button>
 
