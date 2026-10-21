@@ -122,7 +122,7 @@
 				<EditModeToggle {editing} onToggle={toggleEditing} />
 			{/if}
 			{#if data.recipes.length > 0}
-				<button type="button" class="btn-outline" onclick={() => (showMealPrep = true)}>{t('mealPrep.button')}</button>
+				{#if features.has('mealPrep')}<button type="button" class="btn-outline" onclick={() => (showMealPrep = true)}>{t('mealPrep.button')}</button>{/if}
 			{/if}
 			<a class="btn-outline" href="/recipes/suggestions">{t('recipes.suggestions')}</a>
 			<a class="btn-outline" href="/recipes/new">{t('recipes.newRecipe')}</a>

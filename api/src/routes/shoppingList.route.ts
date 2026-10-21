@@ -5,6 +5,7 @@ import { priceHistoryService } from "../services/priceHistory.service.js";
 import { shoppingPlanService } from "../services/shoppingPlan.service.js";
 import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
 import { featuresService } from "../services/features.service.js";
+import { requireFeature } from "../middleware/requireFeature.middleware.js";
 import { requireVerified } from "../middleware/requireVerified.middleware.js";
 import { validateJson } from "../middleware/validate.middleware.js";
 import {
@@ -52,7 +53,7 @@ shoppingListRoute.post('/', validateJson(createShoppingListSchema), async (c) =>
 });
 
 // Combined list across recipes; preview = no writes.
-shoppingListRoute.post('/from-recipes/preview', validateJson(fromRecipesSchema), async (c) => {
+shoppingListRoute.post('/from-recipes/preview', requireFeature('mealPrep'), validateJson(fromRecipesSchema), async (c) => {
     try {
         return c.json(await shoppingPlanService.plan(c.get('userId'), c.req.valid('json').recipes), 200);
     } catch (err) {
@@ -61,7 +62,7 @@ shoppingListRoute.post('/from-recipes/preview', validateJson(fromRecipesSchema),
     }
 });
 
-shoppingListRoute.post('/from-recipes', validateJson(fromRecipesSchema), async (c) => {
+shoppingListRoute.post('/from-recipes', requireFeature('mealPrep'), validateJson(fromRecipesSchema), async (c) => {
     try {
         const { recipes, name, listId } = c.req.valid('json');
         return c.json(await shoppingPlanService.createList(c.get('userId'), recipes, { name, listId }), 201);
