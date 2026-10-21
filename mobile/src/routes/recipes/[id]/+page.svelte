@@ -275,7 +275,7 @@
 			{#if features.has('ratings')}<RecipeRating recipe={data.recipe} />{/if}
 		</div>
 		<div class="header-actions">
-			<button type="button" class="btn-outline" onclick={handlePrint}>{t('recipeDetail.print')}</button>
+			{#if features.has('print')}<button type="button" class="btn-outline" onclick={handlePrint}>{t('recipeDetail.print')}</button>{/if}
 			<a href={`/recipes/${data.recipe._id}/edit`} class="btn-outline">{t('recipeDetail.edit')}</a>
 		</div>
 	</div>
