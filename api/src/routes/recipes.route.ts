@@ -100,7 +100,7 @@ recipeRoutes.delete('/:id', async (c) => {
 });
 
 // PUBLIC_BASE_URL allows a custom domain later.
-recipeRoutes.post('/:id/share', async (c) => {
+recipeRoutes.post('/:id/share', requireFeature('shareLinks'), async (c) => {
     try {
         const recipe = await recipeService.getRecipeById(c.req.param('id'));
         if (recipe.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
@@ -112,6 +112,7 @@ recipeRoutes.post('/:id/share', async (c) => {
     }
 });
 
+// Unsharing works even with the flag off.
 recipeRoutes.delete('/:id/share', async (c) => {
     try {
         const recipe = await recipeService.getRecipeById(c.req.param('id'));

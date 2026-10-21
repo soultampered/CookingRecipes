@@ -282,9 +282,11 @@
 			{#if features.has('print')}<button type="button" class="btn-outline" onclick={handlePrint}>{t('recipeDetail.print')}</button>{/if}
 			{#if features.has('versionHistory')}<a href={`/recipes/${data.recipe._id}/history`} class="btn-outline">{t('recipeDetail.history')}</a>{/if}
 			{#if features.has('collections')}<button type="button" class="btn-outline" onclick={() => (showCollections = true)}>{t('collections.add')}</button>{/if}
-			<button type="button" class="btn-outline" class:shared={!!data.recipe.shareToken} onclick={() => (showShare = true)}>
-				{t('share.button')}
-			</button>
+			{#if features.has('shareLinks')}
+				<button type="button" class="btn-outline" class:shared={!!data.recipe.shareToken} onclick={() => (showShare = true)}>
+					{t('share.button')}
+				</button>
+			{/if}
 			<a href={`/recipes/${data.recipe._id}/edit`} class="btn-outline">{t('recipeDetail.edit')}</a>
 		</div>
 	</div>
