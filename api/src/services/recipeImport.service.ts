@@ -136,6 +136,19 @@ export interface ImportResult {
     sourceUrl: string;
 }
 
+// Whole-word match (optional plural s), longest wins: "unsalted butter" → Butter, not Salt.
+export function wholeWordMatch<T extends { name: string }>(ingredient: string, inventory: T[]): T | undefined {
+    let best: T | undefined;
+    for (const item of inventory) {
+        const name = item.name.trim().toLowerCase();
+        if (name.length < 3) continue;
+        const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        if (!new RegExp(`(^|[^\\p{L}])${escaped}s?($|[^\\p{L}])`, "u").test(ingredient)) continue;
+        if (!best || name.length > best.name.trim().length) best = item;
+    }
+    return best;
+}
+
 export const recipeImportService = {
     async importFromUrl(userId: string, url: string): Promise<ImportResult> {
         const { recipe: ld, source } = await fetchRecipeJson(url);
@@ -147,7 +160,7 @@ export const recipeImportService = {
             return (
                 byName.get(key) ??
                 byName.get(key.replace(/s$/, "")) ??
-                inventory.find((i) => key.includes(i.name.trim().toLowerCase()) && i.name.trim().length >= 3)
+                wholeWordMatch(key, inventory)
             );
         };
 
