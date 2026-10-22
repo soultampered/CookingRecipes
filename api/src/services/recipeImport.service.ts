@@ -108,14 +108,15 @@ function pinterestSource(html: string): string | null {
     return candidates.find((u) => !/pinterest\.|pinimg\.com|pin\.it/i.test(u)) ?? null;
 }
 
-async function fetchRecipeJson(url: string): Promise<{ recipe: Json; source: URL }> {
+// A pin is followed once, so a self-linking pin can't loop.
+async function fetchRecipeJson(url: string, pinHops = 0): Promise<{ recipe: Json; source: URL }> {
     const page = await safeFetch(url, MAX_HTML, "text/html,application/xhtml+xml");
     const html = page.body.toString("utf8");
     let recipe = extractJsonLdRecipe(html);
     if (!recipe && /(^|\.)pinterest\.|pin\.it$/i.test(page.url.hostname)) {
         const source = pinterestSource(html);
-        if (!source) throw new Error("NO_RECIPE");
-        return fetchRecipeJson(source);
+        if (!source || pinHops >= 1) throw new Error("NO_RECIPE");
+        return fetchRecipeJson(source, pinHops + 1);
     }
     if (!recipe) throw new Error("NO_RECIPE");
     return { recipe, source: page.url };

@@ -46,7 +46,11 @@
 		<h2>{t('import.title')}</h2>
 		<p class="hint">{t('import.hint')}</p>
 		<form onsubmit={submit}>
-			<input type="url" inputmode="url" required placeholder={t('import.placeholder')} bind:value={url} onfocus={pasteFromClipboard} />
+			<!-- Explicit Paste: reading on focus makes iOS prompt every time. -->
+			<div class="url-row">
+				<input type="url" inputmode="url" required placeholder={t('import.placeholder')} bind:value={url} />
+				<button type="button" class="outline" onclick={pasteFromClipboard}>{t('import.paste')}</button>
+			</div>
 			<div class="actions">
 				<button type="button" class="outline" onclick={onClose}>{t('common.cancel')}</button>
 				<button type="submit" class="primary" disabled={busy || !url.trim()}>{busy ? t('import.importing') : t('import.button')}</button>
@@ -56,6 +60,14 @@
 </div>
 
 <style>
+	.url-row {
+		display: flex;
+		gap: 0.5rem;
+	}
+	.url-row input {
+		flex: 1;
+		min-width: 0;
+	}
 	.backdrop {
 		position: fixed;
 		inset: 0;
