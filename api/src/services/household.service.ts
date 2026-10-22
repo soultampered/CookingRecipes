@@ -9,7 +9,7 @@ import crypto from "crypto";
 // 8 chars, no look-alikes (0/O/1/I/L) ≈ 2^39 codes.
 const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 function newInviteCode(): string {
-    return Array.from(crypto.randomBytes(8), (b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join("");
+    return Array.from({ length: 8 }, () => CODE_ALPHABET[crypto.randomInt(CODE_ALPHABET.length)]).join("");
 }
 // Matches Apple/Google family sharing's 6. Raise if needed.
 const MAX_MEMBERS = 6;
