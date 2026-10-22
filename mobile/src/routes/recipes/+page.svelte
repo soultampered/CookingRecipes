@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { writes } from '$lib/state/writes.svelte';
 	import { features } from '$lib/state/features.svelte';
 	import { invalidate } from '$app/navigation';
 	import RecipeCard from '$lib/components/RecipeCard.svelte';
@@ -124,11 +125,11 @@
 				<EditModeToggle {editing} onToggle={toggleEditing} />
 			{/if}
 			{#if data.recipes.length > 0}
-				{#if features.has('mealPrep')}<button type="button" class="btn-outline" onclick={() => (showMealPrep = true)}>{t('mealPrep.button')}</button>{/if}
+				{#if writes.allowed && features.has('mealPrep')}<button type="button" class="btn-outline" onclick={() => (showMealPrep = true)}>{t('mealPrep.button')}</button>{/if}
 			{/if}
 			<a class="btn-outline" href="/recipes/suggestions">{t('recipes.suggestions')}</a>
-			{#if features.has('recipeImport')}<button type="button" class="btn-outline" onclick={() => (showImport = true)}>{t('import.button')}</button>{/if}
-			<a class="btn-outline" href="/recipes/new">{t('recipes.newRecipe')}</a>
+			{#if writes.allowed && features.has('recipeImport')}<button type="button" class="btn-outline" onclick={() => (showImport = true)}>{t('import.button')}</button>{/if}
+			{#if writes.allowed}<a class="btn-outline" href="/recipes/new">{t('recipes.newRecipe')}</a>{/if}
 		</div>
 	</div>
 
@@ -189,7 +190,7 @@
 	{#if data.recipes.length === 0}
 		<EmptyState
 			message={t('recipes.empty')}
-			ctaLabel={t('recipes.newRecipe')}
+			ctaLabel={writes.allowed ? t('recipes.newRecipe') : undefined}
 			ctaHref="/recipes/new"
 		/>
 	{:else if orderedRecipes.length === 0}

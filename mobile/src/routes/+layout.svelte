@@ -103,6 +103,14 @@
 	// Web is view-only until webEditing (2.6).
 	let webReadOnly = $derived(!Capacitor.isNativePlatform() && !!session.user && !features.has('webEditing'));
 
+	// The view-only web can't save: send create/edit URLs back to the parent.
+	$effect(() => {
+		const path = page.url.pathname;
+		if (!webReadOnly || !features.loaded || !/\/(new|edit)$/.test(path)) return;
+		// Inventory items have no page of their own: go to the list.
+		goto(path.startsWith('/inventory') ? '/inventory' : path.replace(/\/(new|edit)$/, ''), { replaceState: true });
+	});
+
 	const noNavRoutes = ['/', '/welcome', '/verify-email', '/forgot-password'];
 	let showNav = $derived(!noNavRoutes.includes(page.url.pathname));
 

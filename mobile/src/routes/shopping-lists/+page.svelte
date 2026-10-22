@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { writes } from '$lib/state/writes.svelte';
 	import { goto, invalidate } from '$app/navigation';
 	import { page } from '$app/state';
 	import { t } from '$lib/i18n/index.svelte';
@@ -106,7 +107,7 @@
 			{#if data.lists.length > 1}
 				<EditModeToggle {editing} onToggle={toggleEditing} />
 			{/if}
-			{#if shoppingListTemplates.current.length > 0}
+			{#if writes.allowed && shoppingListTemplates.current.length > 0}
 				<button
 					type="button"
 					class="btn-outline"
@@ -115,14 +116,14 @@
 					{t('shoppingLists.fromTemplate')}
 				</button>
 			{/if}
-			<a class="btn-outline" href="/shopping-lists/new">{t('shoppingLists.newList')}</a>
+			{#if writes.allowed}<a class="btn-outline" href="/shopping-lists/new">{t('shoppingLists.newList')}</a>{/if}
 		</div>
 	</div>
 
 	{#if data.lists.length === 0}
 		<EmptyState
 			message={t('shoppingLists.empty')}
-			ctaLabel={t('shoppingLists.newList')}
+			ctaLabel={writes.allowed ? t('shoppingLists.newList') : undefined}
 			ctaHref="/shopping-lists/new"
 		/>
 	{:else}
@@ -159,7 +160,7 @@
 							onpointerdown={(e) =>
 								editing
 									? drag.onPointerDown(e, list._id!, orderedLists.map((l) => l._id!))
-									: swipe.onPointerDown(e, list._id!)}
+									: writes.allowed && swipe.onPointerDown(e, list._id!)}
 							onpointermove={(e) =>
 								editing
 									? drag.onPointerMove(e, list._id!, orderedLists.map((l) => l._id!))
