@@ -28,6 +28,17 @@ function verifyWithAnySecret(token: string): { userId: string; exp: number; sid?
     throw bestError;
 }
 
+// Caller's user id from a valid Bearer token, else undefined.
+export function userIdFromAuthHeader(header: string | undefined): string | undefined {
+    const token = header?.startsWith("Bearer ") ? header.slice(7) : null;
+    if (!token || tokenRevocation.isRevoked(token)) return undefined;
+    try {
+        return verifyWithAnySecret(token).userId;
+    } catch {
+        return undefined;
+    }
+}
+
 export const authMiddleware: MiddlewareHandler<{ Variables: AuthVariables }> = async (c, next) => {
     const header = c.req.header("Authorization");
     const token = header?.startsWith("Bearer ") ? header.slice(7) : null;

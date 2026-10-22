@@ -16,6 +16,7 @@ import mealPlanRoute from "./routes/mealPlan.route.js";
 import photosRoute from "./routes/photos.route.js";
 import barcodeRoute from "./routes/barcode.route.js";
 import householdRoute from "./routes/household.route.js";
+import { webReadOnly } from "./middleware/webReadOnly.middleware.js";
 
 const app = new Hono<{ Variables: SecureHeadersVariables }>();
 
@@ -48,6 +49,7 @@ const allowedOrigins = process.env.CORS_ORIGIN
     : DEFAULT_ALLOWED_ORIGINS;
 
 app.use('*', cors({ origin: allowedOrigins }));
+app.use('*', webReadOnly);
 
 app.route('/auth', authRoute);
 app.route('/recipes', recipeRoutes);

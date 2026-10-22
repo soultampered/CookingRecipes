@@ -20,7 +20,7 @@
 	import { unitSystem } from '$lib/state/unitSystem.svelte';
 	import { textScale } from '$lib/state/textScale.svelte';
 	import { keyboardInset } from '$lib/state/keyboardInset.svelte';
-	import { locale } from '$lib/i18n/index.svelte';
+	import { locale, t } from '$lib/i18n/index.svelte';
 	import { onboarding } from '$lib/state/onboarding.svelte';
 	import SkeletonList from '$lib/components/SkeletonList.svelte';
 	import { session } from '$lib/state/session.svelte';
@@ -100,6 +100,9 @@
 		else features.clear();
 	});
 
+	// Web is view-only until webEditing (2.6).
+	let webReadOnly = $derived(!Capacitor.isNativePlatform() && !!session.user && !features.has('webEditing'));
+
 	const noNavRoutes = ['/', '/welcome', '/verify-email', '/forgot-password'];
 	let showNav = $derived(!noNavRoutes.includes(page.url.pathname));
 
@@ -133,6 +136,9 @@
 
 <div class="app-shell">
 	<main style:padding-bottom="{keyboardInset.current}px">
+		{#if webReadOnly}
+			<p class="web-readonly" role="status">{t('web.readOnly')}</p>
+		{/if}
 		{#if showListSkeleton}
 			<div class="skeleton-overlay" in:fade={{ duration: 100 }}>
 				<SkeletonList />
@@ -153,6 +159,14 @@
 <Toast />
 
 <style>
+	.web-readonly {
+		margin: 0;
+		padding: 0.5rem 1rem;
+		background: var(--warn-soft);
+		color: var(--ink);
+		font-size: var(--text-sm);
+		text-align: center;
+	}
 	.app-shell {
 		/* The nav bar used to be `position: fixed`, which iOS/WKWebView can leave visually
 		   displaced after the on-screen keyboard dismisses (a well-documented WebKit quirk —

@@ -9,6 +9,9 @@ in any browser. STO-83 made that a supported target:
   barcode scanning use a file picker (STO-19 / STO-23).
 - ≥900px wide: the bottom tab bar becomes a left sidebar.
 - `static/manifest.webmanifest` makes it installable ("Install app" in Chrome/Edge).
+- View-only until the `webEditing` release flag (2.6): the API answers 403 `WEB_READ_ONLY` to
+  writes from a browser origin (`api/src/middleware/webReadOnly.middleware.ts`), and the app
+  shows a "view-only" notice on the web. The native app is unaffected.
 - Sign-in tokens are memory-only on the web (`lib/state/tokenStore.ts`): SecureStorage's web
   fallback is plain localStorage. A reload or new tab asks for sign-in again. Persisting web
   sessions needs the refresh token in an httpOnly cookie, which needs the API and the web
