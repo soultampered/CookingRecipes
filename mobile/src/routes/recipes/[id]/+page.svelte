@@ -116,6 +116,8 @@
 
 	// Members can view/prepare/plan; only the owner edits.
 	let isOwner = $derived(!data.recipe.userId || data.recipe.userId === session.user?._id);
+	// Shared recipes may use the owner's own kitchen; Prepare only if every ingredient is reachable.
+	let canPrepare = $derived(isOwner || data.recipe.ingredients.every((ing) => !!data.inventory[ing.inventoryItemId]));
 	let sharedBy = $derived(data.allRecipes.find((r) => r._id === data.recipe._id)?.sharedBy);
 	onMount(() => {
 		activePantry.refresh();
@@ -441,11 +443,15 @@
 		{/each}
 	</ol>
 
-	<button type="button" class="primary" disabled={quickPreparing} onclick={startPrepare}>
-		{t('recipeDetail.prepare')}
-	</button>
+	{#if canPrepare}
+		<button type="button" class="primary" disabled={quickPreparing} onclick={startPrepare}>
+			{t('recipeDetail.prepare')}
+		</button>
+	{:else}
+		<p class="hint">{t('recipeDetail.cantPrepareShared')}</p>
+	{/if}
 
-	{#if missing.length > 0}
+	{#if canPrepare && missing.length > 0}
 		<div class="banner">
 			<strong>
 				{t(missing.length === 1 ? 'recipeDetail.cantPrepare_one' : 'recipeDetail.cantPrepare_other', {
@@ -568,6 +574,10 @@
 />
 
 <style>
+	.hint {
+		color: var(--ink-soft);
+		font-size: var(--text-sm);
+	}
 	.page {
 		max-width: 480px;
 		margin: 0 auto;

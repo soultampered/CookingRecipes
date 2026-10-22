@@ -223,7 +223,8 @@ recipeRoutes.post('/:id/prepare', async (c) => {
 recipeRoutes.get('/:id/missing-ingredients', async (c) => {
     try {
         const existing = await recipeService.getRecipeById(c.req.param('id'));
-        if (!(await accessService.canAccess(c.get('userId'), existing))) return c.json({ error: 'Forbidden' }, 403);
+        // Owner-only: it reads the owner's stock.
+        if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
         const missing = await recipeInventoryService.getMissingIngredients(c.req.param('id'));
         return c.json(missing);
     } catch (err) {
