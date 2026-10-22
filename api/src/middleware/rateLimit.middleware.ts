@@ -19,10 +19,26 @@ setInterval(() => {
     }
 }, 10 * 60 * 1000).unref();
 
+// X-Forwarded-For is "client-supplied, ..., what each proxy saw". Only the entries our own
+// proxies appended can be trusted: the first entry is whatever the client sent, so keying
+// on it let anyone reset their limit with a fake header. Render adds one hop, so the last
+// entry is the real client. TRUST_PROXY_HOPS=0 ignores the header (no proxy in front).
+const TRUSTED_HOPS = Number(process.env.TRUST_PROXY_HOPS ?? 1);
+
+export function clientIp(forwardedFor: string | undefined, socketAddress: string | undefined, hops = TRUSTED_HOPS): string {
+    const parts = forwardedFor?.split(",").map((p) => p.trim()).filter(Boolean) ?? [];
+    if (hops > 0 && parts.length >= hops) return parts[parts.length - hops];
+    return socketAddress || "unknown";
+}
+
 function keyFor(c: Parameters<MiddlewareHandler>[0], prefix: string): string {
-    const forwardedFor = c.req.header("x-forwarded-for");
-    const ip = forwardedFor?.split(",")[0]?.trim() || getConnInfo(c).remote.address || "unknown";
-    return `${prefix}:${ip}`;
+    let socket: string | undefined;
+    try {
+        socket = getConnInfo(c).remote.address;
+    } catch {
+        // not running on @hono/node-server (tests)
+    }
+    return `${prefix}:${clientIp(c.req.header("x-forwarded-for"), socket)}`;
 }
 
 export function rateLimit(options: { windowMs: number; max: number; prefix: string }): MiddlewareHandler {
