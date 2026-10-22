@@ -6,7 +6,7 @@
 	import { t } from '$lib/i18n/index.svelte';
 	import type { Recipe } from '$lib/types/recipe';
 
-	// STO-24: optimistic favorite + 1–5 stars; tapping the current star clears it.
+	// Favorite + 1–5 stars; tapping the current star clears.
 	let { recipe }: { recipe: Recipe } = $props();
 
 	let favorite = $derived(recipe.favorite ?? false);
