@@ -96,6 +96,14 @@ function lockoutMinutesFor(failedAttempts: number): number {
     return Math.min(2 ** (failedAttempts - LOCKOUT_THRESHOLD), LOCKOUT_MAX_MINUTES);
 }
 
+// Constant-time compare.
+function sameCode(expected: string | null | undefined, given: string): boolean {
+    if (!expected) return false;
+    const a = Buffer.from(expected);
+    const b = Buffer.from(given);
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
 function generateCode(): { code: string; expiresAt: Date } {
     // Plaintext by design: unlike the password hash, this code is single-use, expires in
     // 10 minutes, and only useful to someone who already has DB access — at which point
@@ -208,7 +216,7 @@ export const authService = {
         if (!user.loginCodeExpiresAt || user.loginCodeExpiresAt < new Date()) {
             throw new Error("CODE_EXPIRED");
         }
-        if (user.loginCode !== code) {
+        if (!sameCode(user.loginCode, code)) {
             await securityEventService.record(userId, "login_2fa_failed");
             throw new Error("INVALID_CODE");
         }
