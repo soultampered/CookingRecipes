@@ -6,7 +6,7 @@
 	import { ApiError } from '$lib/api/client';
 	import { toast } from '$lib/state/toast.svelte';
 	import { t, tRaw } from '$lib/i18n/index.svelte';
-	import { formatQuantity } from '$lib/utils/quantity';
+	import { buyQuantity, formatQuantity, tidyUnit } from '$lib/utils/quantity';
 	import type { Recipe } from '$lib/types/recipe';
 	import { activePantry } from '$lib/state/activePantry.svelte';
 
@@ -81,7 +81,8 @@
 	}
 
 	function qty(n: number, unit: string) {
-		return `${formatQuantity(n)} ${tRaw('unit', unit)}`;
+		const tidy = tidyUnit(n, unit);
+		return `${formatQuantity(tidy.quantity)} ${tRaw('unit', tidy.unit)}`;
 	}
 </script>
 
@@ -120,7 +121,7 @@
 							{#if p.notInPantry}· {t('mealPrep.notInPantry')}{/if}
 						</span>
 					</div>
-					<span class="buy">{p.toBuy > 0 ? t('mealPrep.buy', { amount: qty(p.toBuy, p.unit) }) : t('mealPrep.covered')}</span>
+					<span class="buy">{p.toBuy > 0 ? t('mealPrep.buy', { amount: qty(buyQuantity(p.toBuy, p.unit), p.unit) }) : t('mealPrep.covered')}</span>
 				</li>
 			{/each}
 		</ul>

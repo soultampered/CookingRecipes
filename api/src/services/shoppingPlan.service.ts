@@ -29,6 +29,11 @@ export interface PlannedItem {
     notInPantry?: boolean;
 }
 
+// You can't buy half a piece: counted items round up.
+function buyAmount(n: number, unit: Unit): number {
+    return unit === "pcs" ? Math.max(0, Math.ceil(n - 1e-9)) : round(n);
+}
+
 function round(n: number) {
     return Math.round(n * 100) / 100;
 }
@@ -89,7 +94,7 @@ export const shoppingPlanService = {
         }
 
         return [...totals.values()]
-            .map((r) => ({ ...r, needed: round(r.needed), toBuy: round(Math.max(0, r.needed - r.have)) }))
+            .map((r) => ({ ...r, needed: round(r.needed), toBuy: buyAmount(Math.max(0, r.needed - r.have), r.unit) }))
             .sort((a, b) => b.toBuy - a.toBuy || a.name.localeCompare(b.name));
     },
 

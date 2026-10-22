@@ -15,7 +15,7 @@
 	import CollectionPicker from '$lib/components/CollectionPicker.svelte';
 	import ShareLinkSheet from '$lib/components/ShareLinkSheet.svelte';
 	import PlanRecipeSheet from '$lib/components/PlanRecipeSheet.svelte';
-	import { formatQuantity } from '$lib/utils/quantity';
+	import { formatApprox, formatQuantity, tidyUnit } from '$lib/utils/quantity';
 	import { convert, toSystem, type UnitSystem } from '$lib/utils/unitConversion';
 	import { unitSystem } from '$lib/state/unitSystem.svelte';
 	import type { RecipeIngredient } from '$lib/types/recipe';
@@ -27,7 +27,9 @@
 		const quantity = ing.quantity * scale;
 		if (!ing.unit) return formatQuantity(quantity);
 		const shown = toSystem(quantity, ing.unit, features.has('unitToggle') ? unitSystem.current : 'original');
-		return `${formatQuantity(shown.quantity)} ${tRaw('unit', shown.unit)}`;
+		if (shown.unit !== ing.unit) return `${formatApprox(shown.quantity)} ${tRaw('unit', shown.unit)}`;
+		const tidy = tidyUnit(shown.quantity, shown.unit);
+		return `${formatQuantity(tidy.quantity)} ${tRaw('unit', tidy.unit)}`;
 	}
 	import { listShoppingLists, addItem } from '$lib/api/shoppingLists';
 	import { ApiError } from '$lib/api/client';

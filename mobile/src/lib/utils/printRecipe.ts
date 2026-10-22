@@ -2,7 +2,7 @@ import { Capacitor } from '@capacitor/core';
 import { Share } from '@capacitor/share';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import type { Recipe } from '$lib/types/recipe';
-import { formatQuantity } from './quantity';
+import { formatQuantity, tidyUnit } from './quantity';
 
 // Web prints a clean page; native shares an .html file (WebView print() is a no-op).
 export interface PrintableRecipe {
@@ -19,8 +19,9 @@ function escape(s: string): string {
 
 function ingredientLines({ recipe, names, scale, unitLabel }: PrintableRecipe): string[] {
 	return recipe.ingredients.map((ing) => {
-		const qty = formatQuantity(ing.quantity * scale);
-		const unit = ing.unit ? ` ${unitLabel(ing.unit)}` : '';
+		const tidy = ing.unit ? tidyUnit(ing.quantity * scale, ing.unit) : null;
+		const qty = formatQuantity(tidy ? tidy.quantity : ing.quantity * scale);
+		const unit = tidy ? ` ${unitLabel(tidy.unit)}` : '';
 		return `${qty}${unit} ${names[ing.inventoryItemId] ?? ''}`.trim();
 	});
 }
