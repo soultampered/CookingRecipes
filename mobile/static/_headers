@@ -1,0 +1,8 @@
+# STO-83: response headers for the web companion (Cloudflare static assets). Ignored by the
+# native apps. A Content-Security-Policy waits for the final web/API domains (see
+# docs/web-companion.md): it has to name the API origin in connect-src and img-src.
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(self), microphone=(), geolocation=()

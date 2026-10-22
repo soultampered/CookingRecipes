@@ -17,6 +17,10 @@ in any browser. STO-83 made that a supported target:
   sessions needs the refresh token in an httpOnly cookie, which needs the API and the web
   app on the same site (e.g. `api.stokpot.ca` + `app.stokpot.ca`).
 
+- `static/_headers` sets X-Frame-Options, nosniff, Referrer-Policy and Permissions-Policy on
+  the worker. Add a Content-Security-Policy once the web and API domains are fixed (it must list
+  the API origin in `connect-src` and `img-src`).
+
 ## Run locally
 
 ```sh
