@@ -34,10 +34,17 @@
 		return inventory[id]?.quantity;
 	}
 
+	// A twice-listed item shares stock: compare the rows' total.
+	let totals = $derived(
+		recipe.ingredients.reduce<Record<string, number>>((sum, ing, i) => {
+			sum[ing.inventoryItemId] = (sum[ing.inventoryItemId] ?? 0) + (Number(amounts[i]) || 0);
+			return sum;
+		}, {})
+	);
 	let shortIndexes = $derived(
 		recipe.ingredients
-			.map((ing, i) => ({ i, have: stockOf(ing.inventoryItemId) }))
-			.filter(({ i, have }) => have === undefined || amounts[i] > have)
+			.map((ing, i) => ({ i, id: ing.inventoryItemId, have: stockOf(ing.inventoryItemId) }))
+			.filter(({ id, have }) => have === undefined || totals[id] > have)
 			.map(({ i }) => i)
 	);
 
