@@ -44,9 +44,19 @@ export const recipeInventoryService = {
             if (o.index != null) byIndex.set(o.index, o.quantity);
             else byItem.set(o.inventoryItemId, o.quantity);
         }
+        // Overrides are in the stock unit; convert the default from the recipe unit when possible.
+        const stock = new Map(
+            (await inventoryService.getInventoryItemsByIds(recipe.ingredients.map((i) => i.inventoryItemId.toString()))).map((s) => [
+                s._id.toString(),
+                s
+            ])
+        );
         const adjustments: InventoryAdjustment[] = recipe.ingredients.map((item, i) => {
             const id = item.inventoryItemId.toString();
-            const used = byIndex.get(i) ?? byItem.get(id) ?? item.quantity * scale;
+            const override = byIndex.get(i) ?? byItem.get(id);
+            const stockUnit = stock.get(id)?.unit;
+            const raw = item.quantity * scale;
+            const used = override ?? (item.unit && stockUnit ? (convert(raw, item.unit, stockUnit) ?? raw) : raw);
             return { id, amount: -Math.round(used * 1000) / 1000 };
         });
 
