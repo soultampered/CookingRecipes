@@ -8,10 +8,9 @@ const nutritionRoute = new Hono<{ Variables: AuthVariables }>();
 
 nutritionRoute.use("*", authMiddleware);
 nutritionRoute.use("*", requireVerified);
-nutritionRoute.use("*", requireFeature("nutrition"));
 
 // ?days=1..31 (default 7); ?tz = getTimezoneOffset minutes.
-nutritionRoute.get("/summary", async (c) => {
+nutritionRoute.get("/summary", requireFeature("nutrition"), async (c) => {
     const days = Number(c.req.query("days") ?? 7);
     const tz = Number(c.req.query("tz") ?? 0);
     if (!Number.isInteger(days) || days < 1 || days > 31 || !Number.isFinite(tz) || Math.abs(tz) > 14 * 60) {
@@ -24,7 +23,7 @@ nutritionRoute.get("/summary", async (c) => {
     }
 });
 
-// Undo of a prepare (the app's toast) also takes back its nutrition.
+// Unflagged: prepares are always logged, so undo must always remove them.
 nutritionRoute.delete("/preparations/:id", async (c) => {
     try {
         const removed = await nutritionService.removePreparation(c.get("userId"), c.req.param("id"));
