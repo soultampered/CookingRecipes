@@ -240,6 +240,8 @@ export const authService = {
         // Codes go here; an unverified address could lock the user out.
         if (enabled && !user.emailVerified) throw new Error("EMAIL_NOT_VERIFIED");
         const updated = await userModel.update(userId, { twoFactorEnabled: enabled });
+        // Enabling 2FA also revokes older tokens.
+        if (enabled) await apiTokenModel.deleteAllByUserId(userId);
         await securityEventService.record(userId, enabled ? "two_factor_enabled" : "two_factor_disabled");
         return stripPassword(updated);
     },

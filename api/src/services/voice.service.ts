@@ -31,7 +31,8 @@ export function parseSpokenItems(text: string, knownNames: string[] = []): { nam
     let cleaned = text
         .toLowerCase()
         .replace(/^(please\s+)?(add|put)\s+/, "")
-        .replace(/\s+(to|on)\s+(my|the)\s+.*(list)?$/, "")
+        // "… to my grocery list" / "on the Costco list"; "hot sauce on the side" stays an item.
+        .replace(/\s+(to|on)\s+(my|the)\s+(.*\s)?list$/, "")
         .replace(/[.!?]+$/, "");
     const compounds = [...COMPOUND_NAMES, ...knownNames.map((n) => n.trim().toLowerCase())]
         .filter((n) => /\s(and|et|&)\s/.test(n))

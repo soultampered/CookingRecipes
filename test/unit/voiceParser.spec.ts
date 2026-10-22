@@ -31,3 +31,11 @@ describe('parseSpokenItems', () => {
         ])
     })
 })
+
+describe('parseSpokenItems list names', () => {
+    it('strips a trailing list name but not other phrases', () => {
+        expect(parseSpokenItems('add milk to my grocery list')).toEqual([{ name: 'milk', quantity: 1 }])
+        expect(parseSpokenItems('add eggs on the costco list')).toEqual([{ name: 'eggs', quantity: 1 }])
+        expect(parseSpokenItems('add hot sauce on the side')).toEqual([{ name: 'hot sauce on the side', quantity: 1 }])
+    })
+})
