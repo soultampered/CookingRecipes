@@ -16,10 +16,10 @@
 	import EditModeToggle from '$lib/components/EditModeToggle.svelte';
 	import { deleteCollection } from '$lib/api/collections';
 	import MealPrepSheet from '$lib/components/MealPrepSheet.svelte';
-
-	let showMealPrep = $state(false);
 	import type { Recipe } from '$lib/types/recipe';
 	import type { PageProps } from './$types';
+
+	let showMealPrep = $state(false);
 
 	let { data }: PageProps = $props();
 
