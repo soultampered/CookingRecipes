@@ -10,7 +10,10 @@ const TIMEOUT_MS = 8000;
 // Globally routable unicast only. process() unwraps IPv4-mapped IPv6.
 export function isPublicIp(ip: string): boolean {
     try {
-        return ipaddr.process(ip).range() === "unicast";
+        const addr = ipaddr.process(ip);
+        // ::/96 (IPv4-compatible, e.g. ::7f00:1): deprecated, and ipaddr calls it unicast.
+        if (addr.kind() === "ipv6" && (addr as ipaddr.IPv6).parts.slice(0, 6).every((p) => p === 0)) return false;
+        return addr.range() === "unicast";
     } catch {
         return false;
     }

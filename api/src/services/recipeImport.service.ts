@@ -42,7 +42,8 @@ function decodeEntities(s: string): string {
         .replace(/&#39;|&#039;|&apos;/g, "'")
         .replace(/&lt;/g, "<")
         .replace(/&gt;/g, ">")
-        .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+        .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+        .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
         .replace(/\s+/g, " ")
         .trim();
 }
@@ -167,6 +168,7 @@ export const recipeImportService = {
         // Unknown ingredients become 0-quantity items (recipes need item refs).
         const ingredients: RecipeIngredient[] = [];
         const createdInventoryNames: string[] = [];
+        const createdIds: string[] = [];
         for (const line of asArray(ld.recipeIngredient as string[]).map((l) => decodeEntities(String(l))).filter(Boolean).slice(0, 80)) {
             const parsed = parseIngredient(line);
             let stock = findStock(parsed.name);
@@ -175,6 +177,7 @@ export const recipeImportService = {
                 byName.set(parsed.name.toLowerCase(), stock);
                 inventory.push(stock);
                 createdInventoryNames.push(parsed.name);
+                createdIds.push(stock._id.toString());
             }
             ingredients.push({ inventoryItemId: stock._id.toString(), quantity: parsed.quantity, unit: parsed.unit });
         }
@@ -190,6 +193,7 @@ export const recipeImportService = {
         const cook = minutes(ld.cookTime);
         const steps = instructions(ld.recipeInstructions);
 
+        // Save failed: remove the placeholder items.
         const recipe = await recipeService.createRecipe({
             userId,
             title: decodeEntities(String(ld.name ?? "Imported recipe")).slice(0, 200),
@@ -209,6 +213,9 @@ export const recipeImportService = {
             difficulty: "medium",
             photoId: await importImage(userId, imageUrl(ld.image), source),
             sourceUrl: source.toString()
+        }).catch(async (err) => {
+            await Promise.all(createdIds.map((id) => inventoryService.deleteInventory(id).catch(() => {})));
+            throw err;
         });
         return { recipe, createdInventoryNames, sourceUrl: source.toString() };
     }
