@@ -79,7 +79,7 @@ recipeRoutes.patch('/:id', validateJson(updateRecipeSchema), async (c) => {
         if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
         const { editNote, ...rest } = c.req.valid('json');
         const body = releasedFields(rest, c.get('userId'));
-        if (body.photoId) await photoService.assertOwned(body.photoId, c.get('userId'));
+        if (body.photoId && body.photoId !== existing.photoId) await photoService.assertOwned(body.photoId, c.get('userId'));
         const updated = await recipeService.updateRecipe(c.req.param('id'), body, editNote);
         if ('photoId' in body && existing.photoId && existing.photoId !== body.photoId) await photoService.remove(existing.photoId);
         return c.json(updated, 200);

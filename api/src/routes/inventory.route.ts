@@ -100,7 +100,8 @@ inventoryRoutes.put('/:id', validateJson(updateInventorySchema), async (c) => {
         const existing = await inventoryService.getInventoryById(c.req.param('id'));
         if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
         const data = withoutPhoto(c.req.valid('json'), c.get('userId'));
-        if (data.photoId) await photoService.assertOwned(data.photoId, c.get('userId'));
+        // Only a new photo must be yours.
+        if (data.photoId && data.photoId !== existing.photoId) await photoService.assertOwned(data.photoId, c.get('userId'));
         const item = await inventoryService.updateInventory(c.req.param('id'), data);
         if ('photoId' in data && existing.photoId && existing.photoId !== data.photoId) await photoService.remove(existing.photoId);
         return c.json(item);
