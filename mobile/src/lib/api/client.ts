@@ -21,6 +21,10 @@ export class NetworkError extends ApiError {
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
 
+export function apiBaseUrl(): string {
+	return BASE_URL;
+}
+
 // Photos are public by token, served from the API origin.
 export function photoUrl(id: string): string {
 	return `${BASE_URL}/photos/${id}`;

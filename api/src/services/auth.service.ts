@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { userModel, stripPassword } from "../models/user.model.js";
+import { apiTokenModel } from "../models/apiToken.model.js";
 import { emailService } from "./email.service.js";
 import { securityEventService } from "./securityEvent.service.js";
 import { isPasswordStrong } from "./passwordPolicy.js";
@@ -239,6 +240,8 @@ export const authService = {
         // Codes go here; an unverified address could lock the user out.
         if (enabled && !user.emailVerified) throw new Error("EMAIL_NOT_VERIFIED");
         const updated = await userModel.update(userId, { twoFactorEnabled: enabled });
+        // Enabling 2FA also revokes older tokens.
+        if (enabled) await apiTokenModel.deleteAllByUserId(userId);
         await securityEventService.record(userId, enabled ? "two_factor_enabled" : "two_factor_disabled");
         return stripPassword(updated);
     },
@@ -376,6 +379,8 @@ export const authService = {
             mustResetPassword: false
         });
         revokeSessionTokens((user.refreshTokens ?? []).map((t) => t.familyId));
+        // Personal API tokens are credentials too.
+        await apiTokenModel.deleteAllByUserId(user._id!.toString());
         await securityEventService.record(user._id!.toString(), "password_reset_completed");
     },
 
@@ -454,6 +459,8 @@ export const authService = {
         if (!current) throw new Error("NOT_FOUND");
         await userModel.removeOtherRefreshTokenFamilies(userId, current.familyId);
         revokeSessionTokens((user.refreshTokens ?? []).map((t) => t.familyId).filter((id) => id !== current.familyId));
+        // "Everywhere else" includes voice shortcuts using personal API tokens.
+        await apiTokenModel.deleteAllByUserId(userId);
         await securityEventService.record(userId, "session_revoked", { others: true });
     },
 
