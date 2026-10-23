@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { writes } from '$lib/state/writes.svelte';
 	import { features } from '$lib/state/features.svelte';
 	import { goto } from '$app/navigation';
 	import { logout } from '$lib/api/auth';
@@ -194,11 +195,11 @@
 		</div>
 	</div>
 
-	{#if features.has('households')}<HouseholdsManager />{/if}
+	{#if writes.allowed && features.has('households')}<HouseholdsManager />{/if}
 	<TwoFactorSetting />
 	<ActiveSessions />
 	<ExportData />
-	{#if features.has('voiceAdd')}<VoiceTokens />{/if}
+	{#if writes.allowed && features.has('voiceAdd')}<VoiceTokens />{/if}
 
 	<button type="button" class="outline" onclick={handleLogout}>{t('account.logOut')}</button>
 

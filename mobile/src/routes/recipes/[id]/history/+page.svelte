@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { writes } from '$lib/state/writes.svelte';
 	import { goto, invalidate } from '$app/navigation';
 	import { restoreRevision, type RecipeRevision } from '$lib/api/recipes';
 	import { ApiError } from '$lib/api/client';
@@ -63,7 +64,7 @@
 									<li>{step}</li>
 								{/each}
 							</ol>
-							<button type="button" class="restore" onclick={() => (restoring = rev)}>{t('history.restore')}</button>
+							{#if writes.allowed}<button type="button" class="restore" onclick={() => (restoring = rev)}>{t('history.restore')}</button>{/if}
 						</div>
 					{/if}
 				</li>

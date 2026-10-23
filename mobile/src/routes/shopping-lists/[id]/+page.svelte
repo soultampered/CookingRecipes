@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { writes } from '$lib/state/writes.svelte';
 	import { features } from '$lib/state/features.svelte';
 	import { goto, invalidate } from '$app/navigation';
 	import { page } from '$app/state';
@@ -390,6 +391,7 @@
 	}
 
 	function startEditName() {
+		if (!writes.allowed) return;
 		nameDraft = data.list.name;
 		editingName = true;
 	}
@@ -606,7 +608,7 @@
 				<div class="select-actions">
 					<EditModeToggle editing onToggle={toggleReorderMode} />
 				</div>
-			{:else}
+			{:else if writes.allowed}
 				<div class="select-actions">
 					<button type="button" class="select-action outline" onclick={toggleSelectMode}>
 						{t('shoppingList.selectItems')}
@@ -681,7 +683,7 @@
 								<input
 									type="checkbox"
 									checked={item.checked}
-									disabled={reorderMode}
+									disabled={reorderMode || !writes.allowed}
 									onchange={() => handleToggle(item._id!)}
 								/>
 								<span class="item-name-wrap">
@@ -713,7 +715,7 @@
 									<button
 										type="button"
 										class="item-qty"
-										disabled={selectMode || reorderMode}
+										disabled={selectMode || reorderMode || !writes.allowed}
 										onclick={() => startEditQuantity(item)}
 										aria-label={t('shoppingList.editQuantityAriaLabel', { name: item.name })}
 									>
@@ -746,7 +748,7 @@
 										type="button"
 										class="item-price"
 										class:empty={item.price == null}
-										disabled={selectMode || reorderMode}
+										disabled={selectMode || reorderMode || !writes.allowed}
 										onclick={() => startEditPrice(item)}
 										aria-label={t('cost.priceAria', { name: item.name })}
 									>
@@ -756,6 +758,7 @@
 								<button
 									type="button"
 									class="remove"
+									hidden={!writes.allowed}
 									disabled={reorderMode}
 									onclick={() => (removingItemId = item._id!)}
 									aria-label={t('shoppingList.removeItemAriaLabel', { name: item.name })}
@@ -776,7 +779,7 @@
 		</button>
 	{/if}
 
-	{#if data.list.items.length > 0}
+	{#if writes.allowed && data.list.items.length > 0}
 		<button
 			type="button"
 			class="save-template-btn"
@@ -791,11 +794,13 @@
 		</button>
 	{/if}
 
-	<div class="danger-zone">
-		<button type="button" class="danger-link" onclick={() => (confirmingDeleteList = true)}>
-			{t('shoppingList.deleteList')}
-		</button>
-	</div>
+	{#if writes.allowed}
+		<div class="danger-zone">
+			<button type="button" class="danger-link" onclick={() => (confirmingDeleteList = true)}>
+				{t('shoppingList.deleteList')}
+			</button>
+		</div>
+	{/if}
 </div>
 
 <!-- STO-110: docked add-item bar. Fixed above the NavBar at rest; rides flush above
@@ -803,7 +808,7 @@
 	the rename / inline-quantity editors hold the keyboard, since those aren't "adding". -->
 <form
 	class="add-item-form"
-	class:hidden={editingName || editingQuantityId !== null || editingPriceId !== null || editingBudget || editingStore}
+	class:hidden={!writes.allowed || editingName || editingQuantityId !== null || editingPriceId !== null || editingBudget || editingStore}
 	style:bottom={keyboardInset.current > 0
 		? `calc(env(safe-area-inset-bottom) + ${keyboardInset.current}px)`
 		: 'calc(env(safe-area-inset-bottom) + 4.75rem)'}

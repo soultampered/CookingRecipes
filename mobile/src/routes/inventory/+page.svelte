@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { writes } from '$lib/state/writes.svelte';
 	import { goto, invalidate } from '$app/navigation';
 	import { INVENTORY_CATEGORIES, type Inventory } from '$lib/types/inventory';
 	import { listShoppingLists, addItem } from '$lib/api/shoppingLists';
@@ -149,7 +150,7 @@
 			{#if canReorder && data.items.length > 1}
 				<EditModeToggle {editing} onToggle={toggleEditing} />
 			{/if}
-			<a class="btn-outline" href="/inventory/new">{t('inventory.newItem')}</a>
+			{#if writes.allowed}<a class="btn-outline" href="/inventory/new">{t('inventory.newItem')}</a>{/if}
 		</div>
 	</div>
 
@@ -201,7 +202,7 @@
 	{#if data.items.length === 0}
 		<EmptyState
 			message={t('inventory.empty')}
-			ctaLabel={t('inventory.newItem')}
+			ctaLabel={writes.allowed ? t('inventory.newItem') : undefined}
 			ctaHref="/inventory/new"
 		/>
 	{:else if orderedItems.length === 0}
@@ -223,7 +224,7 @@
 					onpointerdown={(e) =>
 						editing
 							? drag.onPointerDown(e, item._id, orderedItems.map((i) => i._id))
-							: swipe.onPointerDown(e, item._id)}
+							: writes.allowed && swipe.onPointerDown(e, item._id)}
 					onpointermove={(e) =>
 						editing
 							? drag.onPointerMove(e, item._id, orderedItems.map((i) => i._id))
@@ -265,7 +266,7 @@
 						>
 							<a
 								class="row-link"
-								href={`/inventory/${item._id}/edit`}
+								href={writes.allowed ? `/inventory/${item._id}/edit` : undefined}
 								onclick={(e) => (editing ? e.preventDefault() : swipe.handleClick(e, item._id))}
 							>
 								{#if item.photoId}
@@ -280,7 +281,7 @@
 								<button
 									type="button"
 									class="low-stock-badge"
-									disabled={editing}
+									disabled={editing || !writes.allowed}
 									onclick={() => openQuickAdd(item)}
 								>
 									{t('inventory.lowBadge')}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { writes } from '$lib/state/writes.svelte';
 	import { goto, invalidate } from '$app/navigation';
 	import { deleteRecipe, updateRecipe, type PrepareResult } from '$lib/api/recipes';
 	import { onMount } from 'svelte';
@@ -306,7 +307,7 @@
 				{#if data.recipe.servings}<span>{t('recipes.servesCount', { count: data.recipe.servings })}</span>{/if}
 			</div>
 			{#if isOwner}
-				{#if features.has('ratings')}<RecipeRating recipe={data.recipe} />{/if}
+				{#if writes.allowed && features.has('ratings')}<RecipeRating recipe={data.recipe} />{/if}
 			{:else}
 				<span class="shared-by">👪 {t('recipeDetail.sharedBy', { name: sharedBy ?? '…' })}</span>
 			{/if}
@@ -316,9 +317,9 @@
 			{#if isOwner}
 			{#if features.has('versionHistory')}<a href={`/recipes/${data.recipe._id}/history`} class="btn-outline">{t('recipeDetail.history')}</a>{/if}
 			{/if}
-			{#if features.has('mealPlan')}<button type="button" class="btn-outline" onclick={() => (showPlan = true)}>{t('mealPlan.plan')}</button>{/if}
-			{#if features.has('collections')}<button type="button" class="btn-outline" onclick={() => (showCollections = true)}>{t('collections.add')}</button>{/if}
-			{#if isOwner}
+			{#if writes.allowed && features.has('mealPlan')}<button type="button" class="btn-outline" onclick={() => (showPlan = true)}>{t('mealPlan.plan')}</button>{/if}
+			{#if writes.allowed && features.has('collections')}<button type="button" class="btn-outline" onclick={() => (showCollections = true)}>{t('collections.add')}</button>{/if}
+			{#if isOwner && writes.allowed}
 				{#if features.has('shareLinks')}
 					<button type="button" class="btn-outline" class:shared={!!data.recipe.shareToken} onclick={() => (showShare = true)}>
 						{t('share.button')}
@@ -329,7 +330,7 @@
 		</div>
 	</div>
 
-	{#if isOwner && activePantry.households.length > 0}
+	{#if isOwner && writes.allowed && activePantry.households.length > 0}
 		<label class="share-household">
 			👪 {t('recipeDetail.sharedWith')}
 			<select value={data.recipe.householdId ?? ''} onchange={(e) => setHousehold((e.target as HTMLSelectElement).value)}>
@@ -445,11 +446,11 @@
 		{/each}
 	</ol>
 
-	{#if canPrepare}
+	{#if canPrepare && writes.allowed}
 		<button type="button" class="primary" disabled={quickPreparing} onclick={startPrepare}>
 			{t('recipeDetail.prepare')}
 		</button>
-	{:else}
+	{:else if !canPrepare}
 		<p class="hint">{t('recipeDetail.cantPrepareShared')}</p>
 	{/if}
 
@@ -470,13 +471,15 @@
 					{/if}
 				</div>
 			{/each}
-			<button type="button" class="add-missing-btn" onclick={openAddMissingToList}>
-				{t('recipeDetail.addMissingToList')}
-			</button>
+			{#if writes.allowed}
+				<button type="button" class="add-missing-btn" onclick={openAddMissingToList}>
+					{t('recipeDetail.addMissingToList')}
+				</button>
+			{/if}
 		</div>
 	{/if}
 
-	{#if isOwner}
+	{#if isOwner && writes.allowed}
 		<div class="danger-zone">
 			<button type="button" class="danger-link" onclick={() => (confirmingDelete = true)}>
 				{t('recipeDetail.deleteRecipe')}

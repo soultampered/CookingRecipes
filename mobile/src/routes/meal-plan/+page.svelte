@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { writes } from '$lib/state/writes.svelte';
 	import { features } from '$lib/state/features.svelte';
 	import { goto, invalidate } from '$app/navigation';
 	import { addToMealPlan, removeFromMealPlan, type MealSlot, MEAL_SLOTS } from '$lib/api/mealPlan';
@@ -84,7 +85,7 @@
 			<h1>{t('mealPlan.title')}</h1>
 		</div>
 		{#if data.entries.length > 0}
-			{#if features.has('mealPrep')}<button type="button" class="shop" onclick={() => (showShopping = true)}>{t('mealPlan.shoppingList')}</button>{/if}
+			{#if writes.allowed && features.has('mealPrep')}<button type="button" class="shop" onclick={() => (showShopping = true)}>{t('mealPlan.shoppingList')}</button>{/if}
 		{/if}
 		<div class="week-nav">
 			<button type="button" onclick={() => shiftWeek(-1)}>{t('mealPlan.prevWeek')}</button>
@@ -96,7 +97,7 @@
 			<section class="day" class:today={day === todayIso}>
 				<div class="day-head">
 					<span class="day-name">{dayLabel(day)}</span>
-					<button type="button" class="add" onclick={() => (pickingDate = day)}>{t('mealPlan.add')}</button>
+					{#if writes.allowed}<button type="button" class="add" onclick={() => (pickingDate = day)}>{t('mealPlan.add')}</button>{/if}
 				</div>
 				{#if entriesFor(day).length === 0}
 					<p class="muted">{t('mealPlan.nothing')}</p>
@@ -109,6 +110,7 @@
 								<button
 									type="button"
 									class="remove"
+									hidden={!writes.allowed}
 									aria-label={t('mealPlan.removeAria', { title: entry.recipeTitle, day: dayLabel(day) })}
 									onclick={() => remove(entry._id)}
 								>
