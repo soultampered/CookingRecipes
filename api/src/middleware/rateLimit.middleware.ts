@@ -19,10 +19,38 @@ setInterval(() => {
     }
 }, 10 * 60 * 1000).unref();
 
+// Prefer CF-Connecting-IP (Cloudflare overwrites it). Else XFF, counting TRUST_PROXY_HOPS from the
+// end: the first entry is client-controlled. 0 = no proxy (local dev).
+const TRUSTED_HOPS = Number(process.env.TRUST_PROXY_HOPS ?? 1);
+// LOG_CLIENT_IP_HEADERS=1 logs the raw IP headers of the first 20 requests.
+let headerLogsLeft = process.env.LOG_CLIENT_IP_HEADERS === "1" ? 20 : 0;
+
+export function clientIp(
+    forwardedFor: string | undefined,
+    socketAddress: string | undefined,
+    hops = TRUSTED_HOPS,
+    cfConnectingIp?: string
+): string {
+    if (cfConnectingIp?.trim()) return cfConnectingIp.trim();
+    const parts = forwardedFor?.split(",").map((p) => p.trim()).filter(Boolean) ?? [];
+    if (hops > 0 && parts.length >= hops) return parts[parts.length - hops];
+    return socketAddress || "unknown";
+}
+
 function keyFor(c: Parameters<MiddlewareHandler>[0], prefix: string): string {
-    const forwardedFor = c.req.header("x-forwarded-for");
-    const ip = forwardedFor?.split(",")[0]?.trim() || getConnInfo(c).remote.address || "unknown";
-    return `${prefix}:${ip}`;
+    let socket: string | undefined;
+    try {
+        socket = getConnInfo(c).remote.address;
+    } catch {
+        // not running on @hono/node-server (tests)
+    }
+    const xff = c.req.header("x-forwarded-for");
+    const cf = c.req.header("cf-connecting-ip");
+    if (headerLogsLeft > 0) {
+        headerLogsLeft--;
+        console.log("client-ip headers", { xff, cf, trueClientIp: c.req.header("true-client-ip"), socket });
+    }
+    return `${prefix}:${clientIp(xff, socket, TRUSTED_HOPS, cf)}`;
 }
 
 export function rateLimit(options: { windowMs: number; max: number; prefix: string }): MiddlewareHandler {
