@@ -97,6 +97,16 @@ describe('Recipe routes', () => {
         expect((await res.json()).title).toBe('Updated Recipe')
     })
 
+    it('PATCH /recipes/:id ignores rating fields while ratings is off', async () => {
+        featuresService.setOverrides({ ratings: false })
+        try {
+            await app.request('/recipes/123', json('PATCH', { title: 'T', rating: 5, favorite: true }))
+            expect(vi.mocked(recipeService.updateRecipe).mock.calls[0][1]).toEqual({ title: 'T' })
+        } finally {
+            featuresService.setOverrides(null)
+        }
+    })
+
     it('PATCH /recipes/:id returns 404 if not found', async () => {
         const res = await app.request('/recipes/999', json('PATCH', { title: 'Updated Recipe' }))
         expect(res.status).toBe(404)

@@ -13,9 +13,19 @@ const recipeRoutes = new Hono<{ Variables: AuthVariables }>();
 recipeRoutes.use('*', authMiddleware);
 recipeRoutes.use('*', requireVerified);
 
+// Fields of unreleased features are ignored.
+function releasedFields<T extends Record<string, unknown>>(body: T, userId: string): T {
+    const out: Record<string, unknown> = { ...body };
+    if (!featuresService.isOn('ratings', userId)) {
+        delete out.favorite;
+        delete out.rating;
+    }
+    return out as T;
+}
+
 recipeRoutes.post('/', validateJson(createRecipeSchema), async (c) => {
     try {
-        const body = c.req.valid('json');
+        const body = releasedFields(c.req.valid('json'), c.get('userId'));
         const newRecipe = await recipeService.createRecipe({ ...body, userId: c.get('userId') });
         return c.json(newRecipe, 201);
     } catch (err) {
@@ -61,7 +71,7 @@ recipeRoutes.patch('/:id', validateJson(updateRecipeSchema), async (c) => {
     try {
         const existing = await recipeService.getRecipeById(c.req.param('id'));
         if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
-        const body = c.req.valid('json');
+        const body = releasedFields(c.req.valid('json'), c.get('userId'));
         const updated = await recipeService.updateRecipe(c.req.param('id'), body);
         return c.json(updated, 200);
     } catch (err) {

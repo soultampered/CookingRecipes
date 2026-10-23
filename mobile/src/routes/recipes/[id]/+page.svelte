@@ -5,6 +5,7 @@
 	import PrepareSheet from '$lib/components/PrepareSheet.svelte';
 	import { prepareRecipe } from '$lib/api/recipes';
 	import { features } from '$lib/state/features.svelte';
+	import RecipeRating from '$lib/components/RecipeRating.svelte';
 	import { formatQuantity } from '$lib/utils/quantity';
 	import { listShoppingLists, addItem } from '$lib/api/shoppingLists';
 	import { ApiError } from '$lib/api/client';
@@ -226,6 +227,7 @@
 				{#if data.recipe.totalTimeMinutes}<span>{t('recipes.minutes', { count: data.recipe.totalTimeMinutes })}</span>{/if}
 				{#if data.recipe.servings}<span>{t('recipes.servesCount', { count: data.recipe.servings })}</span>{/if}
 			</div>
+			{#if features.has('ratings')}<RecipeRating recipe={data.recipe} />{/if}
 		</div>
 		<a href={`/recipes/${data.recipe._id}/edit`} class="btn-outline">{t('recipeDetail.edit')}</a>
 	</div>

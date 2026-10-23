@@ -37,6 +37,9 @@ export interface Recipe {
     author: string;
     nutrition: NutritionFacts[];
     difficulty: DifficultyLevel;
+    // Suggestions ordering. rating null = cleared.
+    favorite?: boolean;
+    rating?: number | null;
 }
 
 export interface MissingIngredient {
