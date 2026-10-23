@@ -12,3 +12,8 @@ export function updateUser(id: string, patch: Partial<User>) {
 export function deleteUser(id: string) {
 	return apiFetch<void>(`/users/${id}`, { method: 'DELETE' });
 }
+
+// Raw JSON, saved as sent.
+export function exportUserData(id: string) {
+	return apiFetch<Record<string, unknown>>(`/users/${id}/export`);
+}
