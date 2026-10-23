@@ -21,6 +21,11 @@ export class NetworkError extends ApiError {
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
 
+// Photos are public by token, served from the API origin.
+export function photoUrl(id: string): string {
+	return `${BASE_URL}/photos/${id}`;
+}
+
 let authToken: string | null = null;
 let refreshTokenValue: string | null = null;
 
@@ -90,13 +95,14 @@ export async function apiFetch<T>(
 ): Promise<T> {
 	await authReady;
 
+	// options first, so its headers merge instead of replacing Authorization.
 	const init: RequestInit = {
+		...options,
 		headers: {
 			'Content-Type': 'application/json',
 			...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
 			...options.headers
-		},
-		...options
+		}
 	};
 
 	let res: Response;

@@ -36,6 +36,7 @@ export interface Recipe {
 	favorite?: boolean;
 	rating?: number | null;
 	shareToken?: string | null;
+	photoId?: string | null;
 }
 
 export type NewRecipe = Omit<Recipe, '_id' | 'createdAt' | 'updatedAt'>;

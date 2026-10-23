@@ -13,21 +13,21 @@ import collectionRoute from "./routes/recipeCollection.route.js";
 import publicRoute, { publicPages } from "./routes/public.route.js";
 import pricesRoute from "./routes/prices.route.js";
 import mealPlanRoute from "./routes/mealPlan.route.js";
+import photosRoute from "./routes/photos.route.js";
 
 const app = new Hono<{ Variables: SecureHeadersVariables }>();
 
-app.use('*', secureHeaders());
+// Let the app's origins load photos via <img>.
+const defaultSecureHeaders = secureHeaders();
+const photoSecureHeaders = secureHeaders({ crossOriginResourcePolicy: 'cross-origin' });
+app.use('*', (c, next) => (c.req.path.startsWith('/photos/') ? photoSecureHeaders(c, next) : defaultSecureHeaders(c, next)));
 
-// No route accepts file uploads — every body is JSON, so 1MB comfortably covers the
-// largest legitimate payload (a recipe with a long instructions/ingredients list) with
-// plenty of headroom, while still capping an oversized-payload DoS attempt.
-app.use(
-    '*',
-    bodyLimit({
-        maxSize: 1 * 1024 * 1024,
-        onError: (c) => c.json({ error: 'Request body too large' }, 413)
-    })
-);
+// JSON bodies stay under 1MB; photo upload enforces its own 5MB.
+const jsonBodyLimit = bodyLimit({
+    maxSize: 1 * 1024 * 1024,
+    onError: (c) => c.json({ error: 'Request body too large' }, 413)
+});
+app.use('*', (c, next) => (c.req.method === 'POST' && c.req.path === '/photos' ? next() : jsonBodyLimit(c, next)));
 
 // Capacitor's WebView sends these origins by default (iOS: capacitor://localhost,
 // Android: http://localhost); https://localhost covers a custom server.hostname/scheme
@@ -57,6 +57,7 @@ app.route('/nutrition', nutritionRoute);
 app.route('/collections', collectionRoute);
 app.route('/prices', pricesRoute);
 app.route('/meal-plan', mealPlanRoute);
+app.route('/photos', photosRoute);
 // No auth: /public/recipes/:token and /r/:token.
 app.route('/public', publicRoute);
 app.route('/', publicPages);

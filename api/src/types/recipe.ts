@@ -42,6 +42,7 @@ export interface Recipe {
     rating?: number | null;
     // Public link token; absent = private.
     shareToken?: string | null;
+    photoId?: string | null;
 }
 
 export interface MissingIngredient {

@@ -8,6 +8,7 @@ import { recipeCollectionModel } from "../models/recipeCollection.model.js";
 import { priceRecordModel } from "../models/priceRecord.model.js";
 import { inventoryEventModel } from "../models/inventoryEvent.model.js";
 import { mealPlanModel } from "../models/mealPlan.model.js";
+import { photoModel } from "../models/photo.model.js";
 import type { User } from "../types/user.js"
 
 export const usersService = {
@@ -36,6 +37,8 @@ export const usersService = {
             priceRecordModel.findAllByUserId(id),
             mealPlanModel.findAllByUserId(id),
         ]);
+        // Links, not bytes (up to 100 MB per user).
+        const photos = await photoModel.listByUserId(id);
         const { failedLoginAttempts, lockedUntil, verificationCodeAttempts, resetCodeAttempts, loginCodeAttempts, ...profile } =
             stripPassword(user);
         return {
@@ -51,6 +54,7 @@ export const usersService = {
             recipeRevisions,
             priceHistory,
             mealPlan,
+            photos,
         };
     },
 
@@ -68,6 +72,7 @@ export const usersService = {
             priceRecordModel.deleteAllByUserId(id),
             inventoryEventModel.deleteAllByUserId(id),
             mealPlanModel.deleteAllByUserId(id),
+            photoModel.deleteAllByUserId(id),
         ]);
         const deleted = await userModel.delete(id);
         if (!deleted) throw new Error("Could not delete user")

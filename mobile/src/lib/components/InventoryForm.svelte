@@ -1,8 +1,10 @@
 <script lang="ts">
+	import { features } from '$lib/state/features.svelte';
 	import type { NewInventory } from '$lib/types/inventory';
 	import { UNITS, type Unit } from '$lib/types/unit';
 	import { t, tRaw } from '$lib/i18n/index.svelte';
 	import QuantityStepper from './QuantityStepper.svelte';
+	import PhotoPicker from './PhotoPicker.svelte';
 
 	let {
 		initial,
@@ -31,6 +33,8 @@
 	let expirationDte = $state(initialExpiration);
 	let lowStockThreshold = $state(initialLowStock);
 	let notes = $state(initialNotes);
+	const initialPhoto = initial?.photoId ?? null;
+	let photoId = $state<string | null>(initialPhoto);
 	let errors = $state<{ name?: string; quantity?: string }>({});
 
 	$effect(() => {
@@ -40,7 +44,8 @@
 			unit !== initialUnit ||
 			expirationDte !== initialExpiration ||
 			lowStockThreshold !== initialLowStock ||
-			notes !== initialNotes;
+			notes !== initialNotes ||
+			photoId !== initialPhoto;
 	});
 
 	// The backend's INVALID_INPUT error on missing name/quantity never surfaces as a 400, so
@@ -62,12 +67,17 @@
 			unit,
 			expirationDte: expirationDte || undefined,
 			lowStockThreshold: lowStockThreshold ?? undefined,
-			notes: notes || undefined
+			notes: notes || undefined,
+			photoId
 		});
 	}
 </script>
 
 <form onsubmit={handleSubmit} novalidate>
+	{#if features.has('photos')}
+		<PhotoPicker bind:value={photoId} alt={t('photo.alt', { name })} />
+	{/if}
+
 	<label>
 		{t('inventoryForm.name')}
 		<input type="text" bind:value={name} class:invalid={!!errors.name} aria-invalid={!!errors.name} />
