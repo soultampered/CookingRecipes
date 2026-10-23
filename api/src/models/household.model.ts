@@ -34,7 +34,7 @@ export const householdModel = {
     findByInviteCode: async (code: string): Promise<Household | null> => {
         if (typeof code !== "string" || !code) return null;
         const db = await connectToDatabase();
-        return db.collection<Household>(NAME).findOne({ inviteCode: code });
+        return db.collection<Household>(NAME).findOne({ inviteCode: { $eq: code, $type: "string" } });
     },
 
     addMember: async (id: string, userId: string): Promise<void> => {

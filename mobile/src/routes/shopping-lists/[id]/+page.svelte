@@ -29,6 +29,29 @@
 	import { money } from '$lib/utils/money';
 	import { priceKey } from '$lib/api/prices';
 	import BarcodeScanButton from '$lib/components/BarcodeScanButton.svelte';
+	import { instacartLink } from '$lib/api/integrations';
+	import { Capacitor } from '@capacitor/core';
+
+	let openingInstacart = $state(false);
+	async function orderOnInstacart() {
+		openingInstacart = true;
+		// Browsers block window.open after an await: open the tab on tap, point it at Instacart later.
+		const tab = Capacitor.isNativePlatform() ? null : window.open('', '_blank');
+		try {
+			const { url } = await instacartLink(data.list._id!);
+			if (tab) {
+				tab.opener = null;
+				tab.location.href = url;
+			} else {
+				window.open(url, '_blank', 'noopener');
+			}
+		} catch (err) {
+			tab?.close();
+			toast.push(err instanceof ApiError ? err.message : t('instacart.error'));
+		} finally {
+			openingInstacart = false;
+		}
+	}
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -747,6 +770,12 @@
 		{/each}
 	{/if}
 
+	{#if data.instacartEnabled && data.list.items.some((i) => !i.checked)}
+		<button type="button" class="instacart-btn" disabled={openingInstacart} onclick={orderOnInstacart}>
+			🛒 {openingInstacart ? t('instacart.opening') : t('instacart.order')}
+		</button>
+	{/if}
+
 	{#if data.list.items.length > 0}
 		<button
 			type="button"
@@ -1142,6 +1171,16 @@
 		font-size: 0.85rem;
 		color: var(--ink-soft);
 		font-variant-numeric: tabular-nums;
+		cursor: pointer;
+	}
+	.instacart-btn {
+		border: none;
+		border-radius: 10px;
+		background: #0aad0a;
+		color: #fff;
+		font: inherit;
+		font-weight: 700;
+		padding: 0.65rem;
 		cursor: pointer;
 	}
 	.item-price {

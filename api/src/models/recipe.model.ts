@@ -100,7 +100,7 @@ export const recipeModel = {
     findByShareToken: async (token: string): Promise<Recipe | null> => {
         if (typeof token !== 'string' || !token) return null;
         const db = await connectToDatabase();
-        return db.collection<Recipe>('recipes').findOne({ shareToken: token });
+        return db.collection<Recipe>('recipes').findOne({ shareToken: { $eq: token, $type: 'string' } });
     },
 
     deleteAllByUserId: async (userId: string): Promise<number> => {

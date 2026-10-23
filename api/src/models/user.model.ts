@@ -97,7 +97,7 @@ export const userModel = {
     findByLoginChallenge: async (challenge: string): Promise<User | null> => {
         if (typeof challenge !== "string") return null;
         const db = await connectToDatabase();
-        return db.collection<User>("user").findOne({ loginChallenge: challenge });
+        return db.collection<User>("user").findOne({ loginChallenge: { $eq: challenge, $type: "string" } });
     },
 
     // Increments loginCodeAttempts only while under max; null = no such challenge or cap hit.
@@ -105,7 +105,7 @@ export const userModel = {
         if (typeof challenge !== "string") return null;
         const db = await connectToDatabase();
         return db.collection<User>("user").findOneAndUpdate(
-            { loginChallenge: challenge, $or: [{ loginCodeAttempts: { $lt: max } }, { loginCodeAttempts: { $exists: false } }] },
+            { loginChallenge: { $eq: challenge, $type: "string" }, $or: [{ loginCodeAttempts: { $lt: max } }, { loginCodeAttempts: { $exists: false } }] },
             { $inc: { loginCodeAttempts: 1 } },
             { returnDocument: "after" }
         );

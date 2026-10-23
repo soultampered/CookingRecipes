@@ -3,6 +3,7 @@ import 'dotenv/config';
 import app from "./index.js";
 import { featuresService } from "./services/features.service.js";
 import { startPhotoSweep } from "./services/photo.service.js";
+import { ensureIndexes } from "./indexes.js";
 
 const port = parseInt(process.env.PORT || '3000');
 
@@ -15,5 +16,6 @@ serve({
 });
 
 startPhotoSweep();
+ensureIndexes().catch((err) => console.error("Failed to ensure indexes:", err));
 
 console.log(`Server is running at http://localhost:${port}`);
