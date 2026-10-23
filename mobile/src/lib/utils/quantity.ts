@@ -22,3 +22,20 @@ export function formatQuantity(n: number): string {
 export function roundQuantity(n: number): number {
 	return Math.round(n * 1000) / 1000;
 }
+
+// 2700 g → 2.7 kg, 1500 ml → 1.5 l.
+export function tidyUnit<U extends string>(quantity: number, unit: U): { quantity: number; unit: U | 'kg' | 'l' } {
+	if (unit === 'g' && quantity >= 1000) return { quantity: quantity / 1000, unit: 'kg' };
+	if (unit === 'ml' && quantity >= 1000) return { quantity: quantity / 1000, unit: 'l' };
+	return { quantity, unit };
+}
+
+// Converted amounts are approximate: nearest ⅛.
+export function formatApprox(n: number): string {
+	return formatQuantity(Math.round(n * 8) / 8);
+}
+
+// Counted units round up: no half pieces.
+export function buyQuantity(n: number, unit: string): number {
+	return unit === 'pcs' ? Math.max(0, Math.ceil(n - 1e-9)) : n;
+}
