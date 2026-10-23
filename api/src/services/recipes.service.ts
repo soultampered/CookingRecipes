@@ -2,6 +2,7 @@ import { ObjectId } from 'mongodb';
 import { recipeModel } from '../models/index.js';
 import { recipeRevisionModel } from '../models/recipeRevision.model.js';
 import { recipeCollectionModel } from '../models/recipeCollection.model.js';
+import { mealPlanModel } from '../models/mealPlan.model.js';
 import type { Recipe, NewRecipe } from '../types/recipe.js';
 import { REVISION_FIELDS, type RecipeSnapshot, type RevisionField } from '../types/recipeRevision.js';
 
@@ -76,6 +77,7 @@ export const recipeService = {
         if (!deleted) throw new Error('Could not delete recipe');
         await recipeRevisionModel.deleteByRecipeId(id);
         await recipeCollectionModel.pullRecipeEverywhere(id);
+        await mealPlanModel.deleteByRecipeId(id);
         return true;
     },
 };
