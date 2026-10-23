@@ -67,3 +67,13 @@ describe('GET /features', () => {
         expect(await res.json()).toEqual({ enabled: ['ratings', 'photos'] })
     })
 })
+
+describe('flagged route groups', () => {
+    it('/nutrition answers 404 while nutrition is off', async () => {
+        vi.doMock('../../api/src/middleware/requireVerified.middleware.js', () => ({ requireVerified: async (_c: any, next: any) => { await next() } }))
+        const { default: nutritionRoute } = await import('../../api/src/routes/nutrition.route.js')
+        const app = new Hono().route('/nutrition', nutritionRoute)
+        featuresService.setOverrides({ nutrition: false })
+        expect((await app.request('/nutrition/summary?days=1&tz=0')).status).toBe(404)
+    })
+})

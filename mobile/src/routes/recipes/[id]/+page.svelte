@@ -2,6 +2,7 @@
 	import { goto, invalidate } from '$app/navigation';
 	import { deleteRecipe, type PrepareResult } from '$lib/api/recipes';
 	import { adjustInventory } from '$lib/api/inventory';
+	import { deletePreparation } from '$lib/api/nutrition';
 	import PrepareSheet from '$lib/components/PrepareSheet.svelte';
 	import { prepareRecipe } from '$lib/api/recipes';
 	import { features } from '$lib/state/features.svelte';
@@ -117,6 +118,7 @@
 			run: async () => {
 				try {
 					await adjustInventory(undo, undoId);
+					if (result.preparationId) await deletePreparation(result.preparationId).catch(() => {});
 					toast.push(t('recipeDetail.undone'), 'info');
 					await invalidate(`app:recipe:${data.recipe._id}`);
 				} catch (err) {
@@ -234,6 +236,17 @@
 
 	{#if data.recipe.description}
 		<p class="description">{data.recipe.description}</p>
+	{/if}
+
+	{#if features.has('nutrition') && data.recipe.nutrition?.[0] && Object.keys(data.recipe.nutrition[0]).length}
+		{@const n = data.recipe.nutrition[0]}
+		<p class="per-serving">
+			<strong>{t('nutrition.perServing')}:</strong>
+			{#if n.calories != null}{t('nutrition.kcal', { count: n.calories })}{/if}
+			{#if n.protein != null} · P {n.protein}g{/if}
+			{#if n.carbs != null} · C {n.carbs}g{/if}
+			{#if n.fat != null} · F {n.fat}g{/if}
+		</p>
 	{/if}
 
 	{#if features.has('saferPrepare')}
@@ -535,6 +548,11 @@
 	.ingredient-row.gathered .ingredient-text {
 		color: var(--ink-soft);
 		text-decoration: line-through;
+	}
+	.per-serving {
+		margin: 0;
+		font-size: var(--text-sm);
+		color: var(--ink-soft);
 	}
 	.scale-row {
 		display: flex;
