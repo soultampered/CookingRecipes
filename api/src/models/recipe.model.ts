@@ -36,6 +36,17 @@ export const recipeModel = {
         return recipe;
     },
 
+    unsetFields: async (id: string, fields: string[]): Promise<Recipe> => {
+        const db = await connectToDatabase();
+        const result = await db.collection<Recipe>('recipes').findOneAndUpdate(
+            { _id: new ObjectId(id) },
+            { $unset: Object.fromEntries(fields.map((f) => [f, ''])), $set: { updatedAt: new Date() } },
+            { returnDocument: 'after' }
+        );
+        if (!result) throw new Error(`Recipe with id "${id}" not found`);
+        return result;
+    },
+
     update: async (id: string, data: Partial<Recipe>): Promise<Recipe> => {
         const db = await connectToDatabase();
         const now = new Date();

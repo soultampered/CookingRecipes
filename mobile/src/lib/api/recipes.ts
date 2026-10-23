@@ -14,7 +14,7 @@ export function createRecipe(data: NewRecipe) {
 	return apiFetch<Recipe>('/recipes', { method: 'POST', body: JSON.stringify(data) });
 }
 
-export function updateRecipe(id: string, patch: Partial<Recipe>) {
+export function updateRecipe(id: string, patch: Partial<Recipe> & { editNote?: string }) {
 	return apiFetch<Recipe>(`/recipes/${id}`, { method: 'PATCH', body: JSON.stringify(patch) });
 }
 
@@ -57,4 +57,21 @@ export function getMissingIngredients(id: string) {
 
 export function getSuggestions() {
 	return apiFetch<Recipe[]>('/recipes/suggestions');
+}
+
+export interface RecipeRevision {
+	_id: string;
+	recipeId: string;
+	before: Pick<Recipe, 'title' | 'description' | 'ingredients' | 'instructions' | 'servings' | 'tags'>;
+	changed: string[];
+	note?: string;
+	editedAt: string;
+}
+
+export function listRevisions(id: string) {
+	return apiFetch<RecipeRevision[]>(`/recipes/${id}/revisions`);
+}
+
+export function restoreRevision(id: string, revisionId: string) {
+	return apiFetch<Recipe>(`/recipes/${id}/revisions/${revisionId}/restore`, { method: 'POST' });
 }
