@@ -5,6 +5,8 @@ import { requireVerified } from "../middleware/requireVerified.middleware.js";
 import { validateJson } from "../middleware/validate.middleware.js";
 import { createInventorySchema, updateInventorySchema, adjustInventorySchema } from "../schemas/inventory.schema.js";
 import { InventoryAdjustError } from "../types/inventory.js";
+import { restockService } from "../services/restock.service.js";
+import { requireFeature } from "../middleware/requireFeature.middleware.js";
 import { appliedAdjustmentModel } from "../models/appliedAdjustment.model.js";
 
 const inventoryRoutes = new Hono<{ Variables: AuthVariables }>();
@@ -37,6 +39,17 @@ inventoryRoutes.get('/', async (c) => {
             return c.json({ error: "Inventory not found" }, 404);
         }
         return c.json({ error: "Failed to fetch inventory" }, 500);
+    }
+});
+
+// Items predicted to run out within ?days= (default 7, max 60).
+inventoryRoutes.get('/restock', requireFeature('restock'), async (c) => {
+    const days = Number(c.req.query('days') ?? 7);
+    if (!Number.isFinite(days) || days < 1 || days > 60) return c.json({ error: 'days must be 1-60' }, 400);
+    try {
+        return c.json(await restockService.predict(c.get('userId'), days), 200);
+    } catch {
+        return c.json({ error: 'Failed to predict restock' }, 500);
     }
 });
 
