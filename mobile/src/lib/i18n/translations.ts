@@ -285,6 +285,12 @@ export const translations = {
 		'prepareSheet.confirm': 'Prepare & update inventory',
 		'prepareSheet.shortWarning': 'Some ingredients are short — lower them or restock first.',
 		'prepareSheet.amountAria': 'Amount of {name} used',
+		'prepareSheet.saveLeftovers': 'Save leftovers to inventory',
+		'prepareSheet.leftoverServings': 'Servings left',
+		'prepareSheet.keepsDays': 'Keeps (days)',
+		'recipeDetail.preparedWithLeftover': 'Prepared — leftovers added to inventory',
+		'recipeDetail.preparedLeftoverFailed': 'Prepared, but leftovers couldn’t be saved. Add them from Inventory.',
+		'inventory.leftoverBadge': 'Leftover',
 
 		'unsaved.title': 'Discard changes?',
 		'unsaved.message': 'You have unsaved changes that will be lost if you leave this page.',
@@ -410,6 +416,7 @@ export const translations = {
 		'category.Condiments': 'Condiments',
 		'category.Oils & Fats': 'Oils & Fats',
 		'category.Beverages': 'Beverages',
+		'category.Leftovers': 'Leftovers',
 		'category.Miscellaneous': 'Miscellaneous',
 
 		'unit.g': 'g',
@@ -715,6 +722,12 @@ export const translations = {
 		'prepareSheet.confirm': 'Préparer et mettre à jour',
 		'prepareSheet.shortWarning': 'Certains ingrédients manquent — réduisez-les ou réapprovisionnez.',
 		'prepareSheet.amountAria': 'Quantité de {name} utilisée',
+		'prepareSheet.saveLeftovers': 'Enregistrer les restes dans l’inventaire',
+		'prepareSheet.leftoverServings': 'Portions restantes',
+		'prepareSheet.keepsDays': 'Se conserve (jours)',
+		'recipeDetail.preparedWithLeftover': 'Préparé — restes ajoutés à l’inventaire',
+		'recipeDetail.preparedLeftoverFailed': 'Préparé, mais les restes n’ont pas pu être enregistrés. Ajoutez-les depuis l’inventaire.',
+		'inventory.leftoverBadge': 'Reste',
 
 		'unsaved.title': 'Abandonner les modifications ?',
 		'unsaved.message':
@@ -848,6 +861,7 @@ export const translations = {
 		'category.Condiments': 'Condiments',
 		'category.Oils & Fats': 'Huiles et matières grasses',
 		'category.Beverages': 'Boissons',
+		'category.Leftovers': 'Restes',
 		'category.Miscellaneous': 'Divers',
 
 		'unit.g': 'g',

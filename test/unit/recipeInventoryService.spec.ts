@@ -41,3 +41,13 @@ describe('recipeInventoryService.deductIngredients', () => {
         expect(adjustments.map((a) => a.amount)).toEqual([-2, -0, -3])
     })
 })
+
+describe('recipeInventoryService leftovers', () => {
+    it('reports a failed leftover save instead of throwing after stock was deducted', async () => {
+        const { inventoryService } = await import('../../api/src/services/inventory.service.js')
+        ;(inventoryService as any).createLeftover = vi.fn(async () => { throw new Error('db down') })
+        const result = await recipeInventoryService.deductIngredients('r1', 'u1', { leftovers: { servings: 2, expiresInDays: 3 } })
+        expect(result.leftoverFailed).toBe(true)
+        expect(inventoryService.applyAdjustments).toHaveBeenCalledOnce()
+    })
+})

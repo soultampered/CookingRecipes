@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { features } from '$lib/state/features.svelte';
 	import { untrack } from 'svelte';
 	import { fly, fade } from 'svelte/transition';
 	import { prepareRecipe, type PrepareResult } from '$lib/api/recipes';
@@ -30,6 +31,10 @@
 	let amounts = $state<number[]>(untrack(() => recipe.ingredients.map((i) => roundQuantity(i.quantity * scale))));
 	let submitting = $state(false);
 
+	let saveLeftovers = $state(false);
+	let leftoverServings = $state(1);
+	let leftoverDays = $state(3);
+
 	function stockOf(id: string) {
 		return inventory[id]?.quantity;
 	}
@@ -54,6 +59,9 @@
 			const result = await prepareRecipe(recipe._id, {
 				// scale still sets servings for the nutrition log.
 				scale,
+				leftovers: saveLeftovers
+					? { servings: Math.max(0.5, Number(leftoverServings) || 1), expiresInDays: Math.max(0, Math.round(Number(leftoverDays) || 0)) }
+					: undefined,
 				overrides: recipe.ingredients.map((ing, i) => ({
 					inventoryItemId: ing.inventoryItemId,
 					index: i,
@@ -113,6 +121,25 @@
 			</li>
 		{/each}
 	</ul>
+
+	{#if features.has('leftovers')}
+		<label class="leftover-toggle">
+			<input type="checkbox" bind:checked={saveLeftovers} />
+			{t('prepareSheet.saveLeftovers')}
+		</label>
+		{#if saveLeftovers}
+			<div class="leftover-fields">
+				<label>
+					{t('prepareSheet.leftoverServings')}
+					<input type="number" inputmode="decimal" min="0.5" step="0.5" bind:value={leftoverServings} />
+				</label>
+				<label>
+					{t('prepareSheet.keepsDays')}
+					<input type="number" inputmode="numeric" min="0" max="60" bind:value={leftoverDays} />
+				</label>
+			</div>
+		{/if}
+	{/if}
 
 	{#if shortIndexes.length > 0}
 		<p class="warning">{t('prepareSheet.shortWarning')}</p>
@@ -206,6 +233,33 @@
 	}
 	li.short .amount input {
 		border-color: var(--bad);
+	}
+	.leftover-toggle {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: var(--text-sm);
+		font-weight: 600;
+	}
+	.leftover-fields {
+		display: flex;
+		gap: 0.6rem;
+	}
+	.leftover-fields label {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		font-size: var(--text-xs);
+		color: var(--ink-soft);
+	}
+	.leftover-fields input {
+		padding: 0.4rem;
+		border: 1px solid var(--line);
+		border-radius: 6px;
+		background: var(--paper);
+		color: var(--ink);
+		font: inherit;
 	}
 	.warning {
 		margin: 0;

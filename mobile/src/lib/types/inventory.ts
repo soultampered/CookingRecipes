@@ -17,6 +17,7 @@ export const INVENTORY_CATEGORIES = [
 	'Condiments',
 	'Oils & Fats',
 	'Beverages',
+	'Leftovers',
 	'Miscellaneous'
 ] as const;
 export type InventoryCategory = (typeof INVENTORY_CATEGORIES)[number];
@@ -33,6 +34,7 @@ export interface Inventory {
 	userId: string;
 	notes?: string;
 	lowStockThreshold?: number;
+	leftoverOfRecipeId?: string;
 }
 
 export type NewInventory = Omit<Inventory, '_id' | 'createdAt' | 'updatedAt' | 'userId'>;

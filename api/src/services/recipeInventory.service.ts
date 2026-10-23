@@ -1,7 +1,7 @@
 import { inventoryService} from "./inventory.service.js";
 import { recipeService} from "./recipes.service.js";
 import { nutritionService } from "./nutrition.service.js";
-import type { MissingIngredient, RecipeIngredient } from "../types/recipe.js";
+import type { MissingIngredient, Recipe, RecipeIngredient } from "../types/recipe.js";
 import type { Inventory, InventoryAdjustment } from "../types/inventory.js";
 
 export interface PrepareOptions {
@@ -9,12 +9,16 @@ export interface PrepareOptions {
     scale?: number;
     // Amount actually used per ingredient; wins over scale. index beats inventoryItemId.
     overrides?: { inventoryItemId: string; index?: number; quantity: number }[];
+    leftovers?: { servings: number; expiresInDays: number };
 }
 
 export interface PrepareResult {
     adjustments: InventoryAdjustment[];
     updatedInventory: Inventory[];
     preparationId?: string;
+    leftover?: Inventory;
+    // Leftovers failed to save; the prepare succeeded.
+    leftoverFailed?: boolean;
 }
 
 export const recipeInventoryService = {
@@ -24,7 +28,7 @@ export const recipeInventoryService = {
         const scale = options.scale ?? 1;
         if (!recipe.ingredients?.length) {
             const preparationId = await nutritionService.logPreparation(userId, recipe, scale);
-            return { adjustments: [], updatedInventory: [], preparationId };
+            return { adjustments: [], updatedInventory: [], preparationId, ...(await this.saveLeftover(userId, recipe, options)) };
         }
 
         const byIndex = new Map<number, number>();
@@ -41,7 +45,19 @@ export const recipeInventoryService = {
 
         const updatedInventory = await inventoryService.applyAdjustments(userId, adjustments);
         const preparationId = await nutritionService.logPreparation(userId, recipe, scale);
-        return { adjustments, updatedInventory, preparationId };
+        return { adjustments, updatedInventory, preparationId, ...(await this.saveLeftover(userId, recipe, options)) };
+    },
+
+    // Never throws: stock is already deducted, and a retry would deduct twice.
+    async saveLeftover(userId: string, recipe: Recipe, options: PrepareOptions): Promise<{ leftover?: Inventory; leftoverFailed?: boolean }> {
+        if (!options.leftovers) return {};
+        const { servings, expiresInDays } = options.leftovers;
+        try {
+            return { leftover: await inventoryService.createLeftover(userId, recipe._id.toString(), recipe.title, servings, expiresInDays) };
+        } catch (err) {
+            console.error("Failed to save leftover:", err);
+            return { leftoverFailed: true };
+        }
     },
 
     async getMissingIngredients(recipeId: string): Promise<MissingIngredient[]> {

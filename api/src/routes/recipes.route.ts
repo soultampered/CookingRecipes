@@ -102,6 +102,7 @@ recipeRoutes.post('/:id/prepare', async (c) => {
     const raw = featuresService.isOn('saferPrepare', c.get('userId')) ? await c.req.json().catch(() => ({})) : {};
     const parsed = prepareRecipeSchema.safeParse(raw ?? {});
     if (!parsed.success) return c.json({ error: 'Invalid request body' }, 400);
+    if (!featuresService.isOn('leftovers', c.get('userId'))) delete parsed.data.leftovers;
     let existing;
     try {
         existing = await recipeService.getRecipeById(c.req.param('id'));

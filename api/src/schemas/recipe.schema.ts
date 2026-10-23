@@ -41,5 +41,12 @@ export const prepareRecipeSchema = z.object({
         // index = position in recipe.ingredients; the same item can be listed twice.
         .array(z.object({ inventoryItemId: objectIdString, index: z.number().int().nonnegative().optional(), quantity: z.number().finite().nonnegative() }))
         .max(200)
+        .optional(),
+    // Saves part of the batch as an inventory item.
+    leftovers: z
+        .object({
+            servings: z.number().finite().positive().max(1000),
+            expiresInDays: z.number().int().min(0).max(60)
+        })
         .optional()
 });
