@@ -11,6 +11,7 @@ import featuresRoute from "./routes/features.route.js";
 import nutritionRoute from "./routes/nutrition.route.js";
 import collectionRoute from "./routes/recipeCollection.route.js";
 import publicRoute, { publicPages } from "./routes/public.route.js";
+import pricesRoute from "./routes/prices.route.js";
 
 const app = new Hono<{ Variables: SecureHeadersVariables }>();
 
@@ -53,6 +54,7 @@ app.route('/users', usersRoute);
 app.route('/features', featuresRoute);
 app.route('/nutrition', nutritionRoute);
 app.route('/collections', collectionRoute);
+app.route('/prices', pricesRoute);
 // No auth: /public/recipes/:token and /r/:token.
 app.route('/public', publicRoute);
 app.route('/', publicPages);

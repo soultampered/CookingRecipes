@@ -15,6 +15,10 @@ vi.mock('../../api/src/services/foodCategory.service.js', () => ({
     categorizeItemName: vi.fn(async () => 'Dairy')
 }))
 
+vi.mock('../../api/src/services/priceHistory.service.js', () => ({
+    priceHistoryService: { suggestedPrice: vi.fn(async () => undefined) }
+}))
+
 import { shoppingListModel } from '../../api/src/models/index.js'
 import { shoppingListService } from '../../api/src/services/shoppingList.service.js'
 

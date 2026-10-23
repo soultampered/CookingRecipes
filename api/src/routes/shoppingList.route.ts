@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { shoppingListService } from "../services/shoppingList.service.js"
 import { shoppingListInventoryService } from "../services/shoppingListInventory.service.js"
+import { priceHistoryService } from "../services/priceHistory.service.js";
 import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
 import { featuresService } from "../services/features.service.js";
 import { requireVerified } from "../middleware/requireVerified.middleware.js";
@@ -129,6 +130,9 @@ shoppingListRoute.patch('/:id/items/:itemId', async (c) => {
         const updated = await shoppingListService.toggleItemChecked(c.req.param('id'), c.req.param('itemId'));
 
         const item = updated.items.find((i) => i._id?.toString() === c.req.param('itemId'));
+        if (item?.checked && item.price != null && featuresService.isOn('priceWatch', c.get('userId'))) {
+            await priceHistoryService.record(c.get('userId'), item.name, item.price, updated.store, `${c.req.param('id')}:${item._id}`);
+        }
         if (item?.checked) {
             try {
                 await shoppingListInventoryService.addCheckedItemToInventory(c.get('userId'), item);
