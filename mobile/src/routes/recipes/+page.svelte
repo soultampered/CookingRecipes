@@ -16,10 +16,12 @@
 	import EditModeToggle from '$lib/components/EditModeToggle.svelte';
 	import { deleteCollection } from '$lib/api/collections';
 	import MealPrepSheet from '$lib/components/MealPrepSheet.svelte';
+	import ImportRecipeSheet from '$lib/components/ImportRecipeSheet.svelte';
 	import type { Recipe } from '$lib/types/recipe';
 	import type { PageProps } from './$types';
 
 	let showMealPrep = $state(false);
+	let showImport = $state(false);
 
 	let { data }: PageProps = $props();
 
@@ -125,6 +127,7 @@
 				{#if features.has('mealPrep')}<button type="button" class="btn-outline" onclick={() => (showMealPrep = true)}>{t('mealPrep.button')}</button>{/if}
 			{/if}
 			<a class="btn-outline" href="/recipes/suggestions">{t('recipes.suggestions')}</a>
+			{#if features.has('recipeImport')}<button type="button" class="btn-outline" onclick={() => (showImport = true)}>{t('import.button')}</button>{/if}
 			<a class="btn-outline" href="/recipes/new">{t('recipes.newRecipe')}</a>
 		</div>
 	</div>
@@ -247,6 +250,10 @@
 	{/if}
 </div>
 </PullToRefresh>
+
+{#if showImport}
+	<ImportRecipeSheet onClose={() => (showImport = false)} />
+{/if}
 
 {#if showMealPrep}
 	<MealPrepSheet recipes={orderedRecipes.length ? orderedRecipes : data.recipes} onClose={() => (showMealPrep = false)} />

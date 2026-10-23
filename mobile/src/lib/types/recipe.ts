@@ -37,6 +37,7 @@ export interface Recipe {
 	rating?: number | null;
 	shareToken?: string | null;
 	photoId?: string | null;
+	sourceUrl?: string;
 }
 
 export type NewRecipe = Omit<Recipe, '_id' | 'createdAt' | 'updatedAt'>;
