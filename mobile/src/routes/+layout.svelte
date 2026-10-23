@@ -1,12 +1,12 @@
 <script lang="ts">
 	import '../app.css';
-	import favicon from '$lib/assets/favicon.svg';
 	import NavBar from '$lib/components/NavBar.svelte';
 	import Toast from '$lib/components/Toast.svelte';
 	import { page, navigating } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { App as CapacitorApp } from '@capacitor/app';
+	import { Capacitor } from '@capacitor/core';
 	import { fade } from 'svelte/transition';
 	import { theme } from '$lib/state/theme.svelte';
 	import { categoryOrder } from '$lib/state/categoryOrder.svelte';
@@ -20,7 +20,7 @@
 	import { unitSystem } from '$lib/state/unitSystem.svelte';
 	import { textScale } from '$lib/state/textScale.svelte';
 	import { keyboardInset } from '$lib/state/keyboardInset.svelte';
-	import { locale } from '$lib/i18n/index.svelte';
+	import { locale, t } from '$lib/i18n/index.svelte';
 	import { onboarding } from '$lib/state/onboarding.svelte';
 	import SkeletonList from '$lib/components/SkeletonList.svelte';
 	import { session } from '$lib/state/session.svelte';
@@ -46,6 +46,11 @@
 		textScale.restore();
 		locale.restore();
 		onboarding.restore();
+
+		// Deep links + hardware back are native-only.
+		if (!Capacitor.isNativePlatform()) {
+			return keyboardInset.watch();
+		}
 
 		// STO-74: the home-screen widget is a static deep link (no native data/auth access
 		// of its own — see ShoppingListWidget's design note) into stokpot://widget-quick-add.
@@ -95,6 +100,9 @@
 		else features.clear();
 	});
 
+	// Web is view-only until webEditing (2.6).
+	let webReadOnly = $derived(!Capacitor.isNativePlatform() && !!session.user && !features.has('webEditing'));
+
 	const noNavRoutes = ['/', '/welcome', '/verify-email', '/forgot-password'];
 	let showNav = $derived(!noNavRoutes.includes(page.url.pathname));
 
@@ -121,9 +129,6 @@
 	);
 </script>
 
-<svelte:head>
-	<link rel="icon" href={favicon} />
-</svelte:head>
 
 {#if showNavProgress}
 	<div class="nav-progress" aria-hidden="true"></div>
@@ -131,6 +136,9 @@
 
 <div class="app-shell">
 	<main style:padding-bottom="{keyboardInset.current}px">
+		{#if webReadOnly}
+			<p class="web-readonly" role="status">{t('web.readOnly')}</p>
+		{/if}
 		{#if showListSkeleton}
 			<div class="skeleton-overlay" in:fade={{ duration: 100 }}>
 				<SkeletonList />
@@ -151,6 +159,14 @@
 <Toast />
 
 <style>
+	.web-readonly {
+		margin: 0;
+		padding: 0.5rem 1rem;
+		background: var(--warn-soft);
+		color: var(--ink);
+		font-size: var(--text-sm);
+		text-align: center;
+	}
 	.app-shell {
 		/* The nav bar used to be `position: fixed`, which iOS/WKWebView can leave visually
 		   displaced after the on-screen keyboard dismisses (a well-documented WebKit quirk —
@@ -208,6 +224,18 @@
 		}
 		100% {
 			left: 100%;
+		}
+	}
+	/* Desktop: sidebar nav instead of the bottom tab bar. */
+	@media (min-width: 900px) {
+		.app-shell {
+			flex-direction: row;
+		}
+		.app-shell :global(nav) {
+			order: -1;
+		}
+		main {
+			flex: 1;
 		}
 	}
 </style>

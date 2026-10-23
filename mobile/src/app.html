@@ -4,6 +4,11 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 		<meta name="text-scale" content="scale" />
+		<!-- Installable as a web app -->
+		<link rel="manifest" href="%sveltekit.assets%/manifest.webmanifest" />
+		<link rel="icon" type="image/png" sizes="32x32" href="%sveltekit.assets%/icons/icon-32.png" />
+		<link rel="apple-touch-icon" href="%sveltekit.assets%/icons/icon-180.png" />
+		<meta name="theme-color" content="#3f9c7c" />
 		<style>
 			/* Static, framework-free — the app is ssr:false and the root load() blocks on
 			   session restore (which can be a Render cold start, up to ~50s), so nothing

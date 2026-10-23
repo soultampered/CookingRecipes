@@ -5,6 +5,7 @@
 // label is translated, the stored value never changes.
 export const translations = {
 	en: {
+		'web.readOnly': 'The web version is view-only for now. Make changes in the Stokpot app.',
 		'nav.dashboard': 'Dashboard',
 		'nav.recipes': 'Recipes',
 		'nav.inventory': 'Inventory',
@@ -615,6 +616,7 @@ export const translations = {
 		'unit.pcs': 'pcs'
 	},
 	fr: {
+		'web.readOnly': 'La version web est en lecture seule pour l’instant. Faites vos modifications dans l’app Stokpot.',
 		'nav.dashboard': 'Tableau de bord',
 		'nav.recipes': 'Recettes',
 		'nav.inventory': 'Inventaire',

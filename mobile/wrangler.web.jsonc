@@ -1,0 +1,11 @@
+// STO-83: the same SvelteKit build served as a web/desktop app (Cloudflare static assets,
+// like legal/). Set VITE_API_BASE_URL at build time and add this site's origin to the API's
+// CORS_ORIGIN — see docs/web-companion.md.
+{
+	"name": "stokpot-web",
+	"compatibility_date": "2026-10-01",
+	"assets": {
+		"directory": "./build",
+		"not_found_handling": "single-page-application"
+	}
+}

@@ -13,6 +13,9 @@ class KeyboardInsetState {
 	current = $state(0);
 
 	watch() {
+		// Browsers have no keyboard plugin events.
+		if (!Capacitor.isNativePlatform()) return () => {};
+
 		// WKWebView-specific: stop iOS from scrolling its native UIScrollView to keep the
 		// focused input above the keyboard (that scroll is what used to drag the nav bar).
 		if (Capacitor.getPlatform() === 'ios') {
