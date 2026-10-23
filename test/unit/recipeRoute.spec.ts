@@ -11,12 +11,24 @@ vi.mock('../../api/src/middleware/requireVerified.middleware.js', () => ({
 
 const recipes: Record<string, any> = {
     '123': { _id: '123', userId: 'u1', name: 'Example Recipe', ingredients: [{ _id: 'inv1', quantity: 2 }] },
-    '456': { _id: '456', userId: 'u2', name: 'Someone Else', ingredients: [] }
+    '456': { _id: '456', userId: 'u2', name: 'Someone Else', ingredients: [] },
+    '789': { _id: '789', userId: 'u3', householdId: 'h1', shareToken: 'owner-public-link', name: 'Family Chili', ingredients: [{ inventoryItemId: 'a'.repeat(24), quantity: 1 }] }
 }
+
+// u1 and u3 share household h1; u2 is outside it.
+vi.mock('../../api/src/models/household.model.js', () => ({
+    householdModel: {
+        findById: vi.fn(async (id: string) => (id === 'h1' ? { _id: 'h1', memberIds: ['u1', 'u3'] } : null)),
+        findForUser: vi.fn(async (userId: string) => (['u1', 'u3'].includes(userId) ? [{ _id: 'h1' }] : []))
+    }
+}))
+vi.mock('../../api/src/models/inventory.model.js', () => ({
+    inventoryModel: { findByIds: vi.fn(async () => [{ _id: 'a'.repeat(24), name: 'Beans' }]) }
+}))
 
 vi.mock('../../api/src/services/recipes.service.js', () => ({
     recipeService: {
-        getAllRecipes: vi.fn(async (userId: string) => Object.values(recipes).filter(r => r.userId === userId)),
+        getAccessibleRecipes: vi.fn(async (userId: string) => Object.values(recipes).filter(r => r.userId === userId)),
         createRecipe: vi.fn(async (recipe: any) => ({ ...recipe, _id: '2' })),
         getRecipeById: vi.fn(async (id: string) => {
             if (!recipes[id]) throw new Error('NOT_FOUND')
@@ -89,6 +101,25 @@ describe('Recipe routes', () => {
     it('GET /recipes/:id returns 403 for another user\'s recipe', async () => {
         const res = await app.request('/recipes/456')
         expect(res.status).toBe(403)
+    })
+
+    it('GET /recipes/:id lets a household member read a shared recipe, names only', async () => {
+        const res = await app.request('/recipes/789')
+        expect(res.status).toBe(200)
+        const body = await res.json()
+        expect(body.ingredientNames).toEqual({ ['a'.repeat(24)]: 'Beans' })
+        expect(body.shareToken).toBeUndefined()
+    })
+
+    it('PATCH /recipes/:id refuses a household member who isn\'t the owner', async () => {
+        const res = await app.request('/recipes/789', json('PATCH', { title: 'Mine now' }))
+        expect(res.status).toBe(403)
+    })
+
+    it('PATCH /recipes/:id refuses moving a recipe into a household the caller isn\'t in', async () => {
+        const res = await app.request('/recipes/123', json('PATCH', { householdId: 'b'.repeat(24) }))
+        expect(res.status).toBe(403)
+        expect(recipeService.updateRecipe).not.toHaveBeenCalled()
     })
 
     it('PATCH /recipes/:id updates a recipe', async () => {

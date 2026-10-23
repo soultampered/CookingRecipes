@@ -30,6 +30,7 @@ export const createRecipeSchema = z.object({
     difficulty: z.enum(["easy", "medium", "hard"]),
     favorite: z.boolean().optional(),
     photoId: z.string().regex(/^[0-9a-f]{32}$/).nullable().optional(),
+    householdId: z.string().regex(/^[0-9a-fA-F]{24}$/).nullable().optional(),
     rating: z.number().int().min(1).max(5).nullable().optional()
 });
 

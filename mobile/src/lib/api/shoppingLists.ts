@@ -56,6 +56,7 @@ export interface PlannedItem {
 	toBuy: number;
 	recipes: string[];
 	unitMismatch: boolean;
+	notInPantry?: boolean;
 }
 
 export type RecipeRequest = { recipeId: string; scale?: number };

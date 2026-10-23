@@ -7,6 +7,7 @@ export interface Household {
 	isOwner: boolean;
 	members: { _id: string; username: string; displayName?: string }[];
 	inviteCode?: string | null;
+	inviteExpiresAt?: string | null;
 }
 
 export function listHouseholds() {
@@ -23,4 +24,24 @@ export function renameHousehold(id: string, name: string) {
 
 export function deleteHousehold(id: string) {
 	return apiFetch<void>(`/households/${id}`, { method: 'DELETE' });
+}
+
+export function createInvite(id: string) {
+	return apiFetch<Household>(`/households/${id}/invite`, { method: 'POST' });
+}
+
+export function revokeInvite(id: string) {
+	return apiFetch<Household>(`/households/${id}/invite`, { method: 'DELETE' });
+}
+
+export function joinHousehold(code: string) {
+	return apiFetch<Household>('/households/join', { method: 'POST', body: JSON.stringify({ code }) });
+}
+
+export function leaveHousehold(id: string) {
+	return apiFetch<void>(`/households/${id}/leave`, { method: 'POST' });
+}
+
+export function removeMember(id: string, memberId: string) {
+	return apiFetch<Household>(`/households/${id}/members/${memberId}`, { method: 'DELETE' });
 }

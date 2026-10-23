@@ -7,6 +7,7 @@ export interface Household {
     ownerId: string;
     memberIds: string[]; // always includes ownerId
     inviteCode?: string | null;
+    inviteExpiresAt?: Date | null;
     createdAt?: Date;
     updatedAt?: Date;
 }

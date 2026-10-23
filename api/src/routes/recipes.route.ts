@@ -14,6 +14,8 @@ import { featuresService } from "../services/features.service.js";
 import { requireFeature } from "../middleware/requireFeature.middleware.js";
 import { recipeShareService } from "../services/recipeShare.service.js";
 import { photoService } from "../services/photo.service.js";
+import { accessService } from "../services/access.service.js";
+import { inventoryModel } from "../models/inventory.model.js";
 
 const recipeRoutes = new Hono<{ Variables: AuthVariables }>();
 
@@ -65,8 +67,10 @@ recipeRoutes.post('/import', requireFeature('recipeImport'), importLimiter, vali
 
 recipeRoutes.get('/', async (c) => {
     try {
-        const recipes = await recipeService.getAllRecipes(c.get('userId'));
-        return c.json(recipes, 200);
+        const userId = c.get('userId');
+        const recipes = await recipeService.getAccessibleRecipes(userId);
+        // A member sees a shared recipe, not its owner's public link.
+        return c.json(recipes.map((r) => (r.userId === userId ? r : { ...r, shareToken: undefined })), 200);
     } catch (err) {
         if ((err as Error).message === 'NOT_FOUND') {
             return c.json({ error: 'Recipe not found' }, 404);
@@ -83,8 +87,14 @@ recipeRoutes.get('/suggestions', async (c) => {
 recipeRoutes.get('/:id', async (c) => {
     try {
         const recipe = await recipeService.getRecipeById(c.req.param('id'));
-        if (recipe.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
-        return c.json(recipe, 200);
+        if (!(await accessService.canAccess(c.get('userId'), recipe))) return c.json({ error: 'Forbidden' }, 403);
+        if (recipe.userId === c.get('userId')) return c.json(recipe, 200);
+        // Members get ingredient names, not the owner's inventory.
+        const items = await inventoryModel.findByIds(
+            recipe.ingredients.map((i) => i.inventoryItemId).filter((id) => /^[0-9a-f]{24}$/i.test(id))
+        );
+        const ingredientNames = Object.fromEntries(items.map((i) => [i._id.toString(), i.name]));
+        return c.json({ ...recipe, shareToken: undefined, ingredientNames }, 200);
     } catch (err) {
         if ((err as Error).message === 'NOT_FOUND') {
             return c.json({ error: 'Recipe not found' }, 404);
@@ -100,6 +110,9 @@ recipeRoutes.patch('/:id', validateJson(updateRecipeSchema), async (c) => {
         const { editNote, ...rest } = c.req.valid('json');
         const body = releasedFields(rest, c.get('userId'));
         if (body.photoId && body.photoId !== existing.photoId) await photoService.assertOwned(body.photoId, c.get('userId'));
+        if (body.householdId && !(await accessService.isMember(c.get('userId'), body.householdId))) {
+            return c.json({ error: 'Forbidden' }, 403);
+        }
         const updated = await recipeService.updateRecipe(c.req.param('id'), body, editNote);
         if ('photoId' in body && existing.photoId && existing.photoId !== body.photoId) await photoService.remove(existing.photoId);
         return c.json(updated, 200);
@@ -155,7 +168,7 @@ recipeRoutes.delete('/:id/share', async (c) => {
 recipeRoutes.get('/:id/revisions', requireFeature('versionHistory'), async (c) => {
     try {
         const existing = await recipeService.getRecipeById(c.req.param('id'));
-        if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
+        if (!(await accessService.canAccess(c.get('userId'), existing))) return c.json({ error: 'Forbidden' }, 403);
         return c.json(await recipeService.listRevisions(c.req.param('id')), 200);
     } catch {
         return c.json({ error: 'Recipe not found' }, 404);
@@ -187,7 +200,7 @@ recipeRoutes.post('/:id/prepare', async (c) => {
     } catch {
         return c.json({ error: 'Recipe not found', code: 'RECIPE_NOT_FOUND' }, 404);
     }
-    if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
+    if (!(await accessService.canAccess(c.get('userId'), existing))) return c.json({ error: 'Forbidden' }, 403);
     try {
         const result = await recipeInventoryService.deductIngredients(c.req.param('id'), c.get('userId'), parsed.data);
         return c.json({ success: true, ...result });
@@ -199,7 +212,7 @@ recipeRoutes.post('/:id/prepare', async (c) => {
             if (err.message === 'INSUFFICIENT_STOCK') {
                 return c.json({ error: 'Not enough stock to prepare this recipe', code: err.message, itemIds: err.itemIds }, 400);
             }
-            return c.json({ error: 'Forbidden' }, 403);
+            return c.json({ error: "Some ingredients are in a kitchen you don't share", code: err.message, itemIds: err.itemIds }, 403);
         }
         console.error('Failed to prepare recipe:', err);
         return c.json({ error: 'Failed to prepare recipe' }, 500);
@@ -210,6 +223,7 @@ recipeRoutes.post('/:id/prepare', async (c) => {
 recipeRoutes.get('/:id/missing-ingredients', async (c) => {
     try {
         const existing = await recipeService.getRecipeById(c.req.param('id'));
+        // Owner-only: it reads the owner's stock.
         if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
         const missing = await recipeInventoryService.getMissingIngredients(c.req.param('id'));
         return c.json(missing);

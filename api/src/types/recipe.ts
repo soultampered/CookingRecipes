@@ -44,6 +44,8 @@ export interface Recipe {
     shareToken?: string | null;
     photoId?: string | null;
     sourceUrl?: string; // import source
+    householdId?: string | null; // shared with household members
+    sharedBy?: string; // response-only: owner's username on others' recipes
 }
 
 export interface MissingIngredient {

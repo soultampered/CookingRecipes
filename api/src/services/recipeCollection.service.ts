@@ -2,6 +2,7 @@ import { recipeCollectionModel } from "../models/recipeCollection.model.js";
 import { ObjectId } from "mongodb";
 import { recipeModel } from "../models/recipe.model.js";
 import type { RecipeCollection } from "../types/recipeCollection.js";
+import { accessService } from "./access.service.js";
 
 // Throws NOT_FOUND / FORBIDDEN / UNKNOWN_RECIPE.
 async function owned(id: string, userId: string): Promise<RecipeCollection> {
@@ -15,7 +16,9 @@ async function owned(id: string, userId: string): Promise<RecipeCollection> {
 async function assertOwnsRecipes(recipeIds: string[], userId: string): Promise<void> {
     const unique = [...new Set(recipeIds)];
     if (unique.some((id) => !ObjectId.isValid(id))) throw new Error("UNKNOWN_RECIPE");
-    if ((await recipeModel.countOwned(unique, userId)) !== unique.length) throw new Error("UNKNOWN_RECIPE");
+    // Yours, or shared into your household.
+    const householdIds = await accessService.householdIdsFor(userId);
+    if ((await recipeModel.countAccessible(unique, userId, householdIds)) !== unique.length) throw new Error("UNKNOWN_RECIPE");
 }
 
 export const recipeCollectionService = {

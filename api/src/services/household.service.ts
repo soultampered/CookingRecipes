@@ -1,8 +1,24 @@
 import { householdModel } from "../models/household.model.js";
 import { inventoryModel } from "../models/inventory.model.js";
 import { shoppingListModel } from "../models/shoppingList.model.js";
+import { recipeModel } from "../models/recipe.model.js";
 import { userModel } from "../models/user.model.js";
 import type { Household } from "../types/household.js";
+import crypto from "crypto";
+
+// 8 chars, no look-alikes (0/O/1/I/L) ≈ 2^39 codes.
+const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+function newInviteCode(): string {
+    return Array.from({ length: 8 }, () => CODE_ALPHABET[crypto.randomInt(CODE_ALPHABET.length)]).join("");
+}
+// Matches Apple/Google family sharing's 6. Raise if needed.
+const MAX_MEMBERS = 6;
+// A code posted once in a group chat shouldn't work forever.
+const INVITE_TTL_MS = 3 * 24 * 60 * 60 * 1000;
+
+function inviteLive(h: Household): boolean {
+    return !!h.inviteCode && (!h.inviteExpiresAt || h.inviteExpiresAt > new Date());
+}
 
 export interface HouseholdView {
     _id: string;
@@ -11,6 +27,7 @@ export interface HouseholdView {
     isOwner: boolean;
     members: { _id: string; username: string; displayName?: string }[];
     inviteCode?: string | null;
+    inviteExpiresAt?: string | null;
 }
 
 async function owned(id: string, userId: string): Promise<Household> {
@@ -33,8 +50,9 @@ async function view(h: Household, userId: string): Promise<HouseholdView> {
         ownerId: h.ownerId,
         isOwner: h.ownerId === userId,
         members,
-        // Only the owner sees the code.
-        inviteCode: h.ownerId === userId ? (h.inviteCode ?? null) : undefined
+        // Only the owner sees the code, and only while it's live.
+        inviteCode: h.ownerId === userId ? (inviteLive(h) ? h.inviteCode : null) : undefined,
+        inviteExpiresAt: h.ownerId === userId && inviteLive(h) ? (h.inviteExpiresAt?.toISOString() ?? null) : undefined
     };
 }
 
@@ -57,7 +75,51 @@ export const householdService = {
         await owned(id, userId);
         await inventoryModel.moveHousehold(id, userId);
         await shoppingListModel.moveHousehold(id, userId);
+        // Else canAccess() checks a deleted household and locks owners out.
+        await recipeModel.unshareFromHousehold(id);
         await householdModel.delete(id);
+    },
+
+    async createInvite(id: string, userId: string): Promise<HouseholdView> {
+        await owned(id, userId);
+        return view(
+            (await householdModel.update(id, { inviteCode: newInviteCode(), inviteExpiresAt: new Date(Date.now() + INVITE_TTL_MS) }))!,
+            userId
+        );
+    },
+
+    async revokeInvite(id: string, userId: string): Promise<HouseholdView> {
+        await owned(id, userId);
+        return view((await householdModel.update(id, { inviteCode: null, inviteExpiresAt: null }))!, userId);
+    },
+
+    async join(userId: string, code: string): Promise<HouseholdView> {
+        const household = await householdModel.findByInviteCode(code.trim().toUpperCase());
+        if (!household) throw new Error("INVALID_CODE");
+        if (!inviteLive(household)) throw new Error("EXPIRED_CODE");
+        if (!household.memberIds.includes(userId)) {
+            if (household.memberIds.length >= MAX_MEMBERS) throw new Error("FULL");
+            await householdModel.addMember(household._id!.toString(), userId);
+        }
+        return view((await householdModel.findById(household._id!.toString()))!, userId);
+    },
+
+    // Leaving keeps the household's data; the member just loses access.
+    async leave(id: string, userId: string): Promise<void> {
+        const household = await householdModel.findById(id);
+        if (!household || !household.memberIds.includes(userId)) throw new Error("NOT_FOUND");
+        if (household.ownerId === userId) throw new Error("OWNER_CANNOT_LEAVE");
+        await householdModel.removeMember(id, userId);
+        // Their recipes leave with them.
+        await recipeModel.unshareFromHousehold(id, userId);
+    },
+
+    async removeMember(id: string, userId: string, memberId: string): Promise<HouseholdView> {
+        const household = await owned(id, userId);
+        if (memberId === household.ownerId) throw new Error("OWNER_CANNOT_LEAVE");
+        await householdModel.removeMember(id, memberId);
+        await recipeModel.unshareFromHousehold(id, memberId);
+        return view((await householdModel.findById(id))!, userId);
     },
 
     // Account deletion: hand owned households to the next member, or delete them if alone.

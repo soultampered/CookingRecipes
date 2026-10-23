@@ -19,6 +19,7 @@ export type DifficultyLevel = 'easy' | 'medium' | 'hard';
 
 export interface Recipe {
 	_id: string;
+	userId?: string;
 	title: string;
 	description?: string;
 	ingredients: RecipeIngredient[];
@@ -38,6 +39,9 @@ export interface Recipe {
 	shareToken?: string | null;
 	photoId?: string | null;
 	sourceUrl?: string;
+	householdId?: string | null;
+	sharedBy?: string;
+	ingredientNames?: Record<string, string>; // shared recipes only
 }
 
 export type NewRecipe = Omit<Recipe, '_id' | 'createdAt' | 'updatedAt'>;
