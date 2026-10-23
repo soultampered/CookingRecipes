@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { shoppingListService } from "../services/shoppingList.service.js"
 import { shoppingListInventoryService } from "../services/shoppingListInventory.service.js"
 import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
+import { featuresService } from "../services/features.service.js";
 import { requireVerified } from "../middleware/requireVerified.middleware.js";
 import { validateJson } from "../middleware/validate.middleware.js";
 import {
@@ -24,9 +25,16 @@ shoppingListRoute.get('/', async (c) => {
     }
 });
 
+// Prices and budgets are ignored until the budget flag (2.3).
+function withoutPrices<T extends { budget?: unknown; price?: unknown; items?: { price?: unknown }[] }>(body: T, userId: string): T {
+    if (featuresService.isOn('budget', userId)) return body;
+    const { budget, price, ...rest } = body;
+    return { ...rest, ...(rest.items ? { items: rest.items.map(({ price, ...item }) => item) } : {}) } as T;
+}
+
 shoppingListRoute.post('/', validateJson(createShoppingListSchema), async (c) => {
     try {
-        const body = c.req.valid('json');
+        const body = withoutPrices(c.req.valid('json'), c.get('userId'));
         const created = await shoppingListService.createShoppingList({
             ...body,
             userId: c.get('userId')
@@ -57,12 +65,15 @@ shoppingListRoute.patch('/:id', validateJson(updateShoppingListSchema), async (c
     try {
         const existing = await shoppingListService.getShoppingListById(c.req.param('id'));
         if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
-        const body = c.req.valid('json');
+        const body = withoutPrices(c.req.valid('json'), c.get('userId'));
         const updated = await shoppingListService.updateShoppingList(c.req.param('id'), body);
         return c.json(updated, 200);
     } catch (err) {
         if ((err as Error).message === 'NOT_FOUND') {
             return c.json({ error: 'Shopping list not found' }, 404);
+        }
+        if ((err as Error).message === 'LIST_CHANGED') {
+            return c.json({ error: 'This list was changed elsewhere', code: 'LIST_CHANGED' }, 409);
         }
         return c.json({ error: 'Failed to update shopping list' }, 500);
     }
@@ -86,7 +97,7 @@ shoppingListRoute.post('/:id/items', validateJson(addShoppingListItemSchema), as
     try {
         const existing = await shoppingListService.getShoppingListById(c.req.param('id'));
         if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
-        const body = c.req.valid('json');
+        const body = withoutPrices(c.req.valid('json'), c.get('userId'));
         const updated = await shoppingListService.addItem(c.req.param('id'), body);
         return c.json(updated, 201);
     } catch (err) {

@@ -20,6 +20,14 @@ export function updateShoppingList(id: string, patch: Partial<ShoppingList>) {
 	});
 }
 
+// Whole-array writes get 409 LIST_CHANGED if the list changed since it was loaded.
+export function updateListItems(list: ShoppingList, items: ShoppingListItem[]) {
+	return apiFetch<ShoppingList>(`/shopping-lists/${list._id}`, {
+		method: 'PATCH',
+		body: JSON.stringify({ items, ifUpdatedAt: list.updatedAt })
+	});
+}
+
 export function deleteShoppingList(id: string) {
 	return apiFetch<void>(`/shopping-lists/${id}`, { method: 'DELETE' });
 }
