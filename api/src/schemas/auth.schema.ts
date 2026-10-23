@@ -38,6 +38,16 @@ export const refreshTokenSchema = z.object({
     refreshToken: z.string().min(1)
 });
 
+export const verifyLoginCodeSchema = z.object({
+    challengeId: z.string().min(1).max(100),
+    code: z.string().trim().regex(/^\d{6}$/)
+});
+
+export const setTwoFactorSchema = z.object({
+    enabled: z.boolean(),
+    password: passwordField
+});
+
 // Without the current token nothing is flagged current.
 export const listSessionsSchema = z.object({
     refreshToken: z.string().min(1).optional()

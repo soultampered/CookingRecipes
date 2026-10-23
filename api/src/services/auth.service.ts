@@ -53,6 +53,10 @@ async function issueTokenPair(
     return { accessToken: signAccessToken(userId, familyId), refreshToken: entry.token };
 }
 
+type AuthResult = { accessToken: string; refreshToken: string; user: Omit<User, "password"> };
+// With 2FA on, login returns a challenge instead of tokens.
+export type LoginResult = AuthResult | { twoFactorRequired: true; challengeId: string };
+
 export interface SessionSummary {
     id: string;
     createdAt?: Date;
@@ -92,11 +96,19 @@ function lockoutMinutesFor(failedAttempts: number): number {
     return Math.min(2 ** (failedAttempts - LOCKOUT_THRESHOLD), LOCKOUT_MAX_MINUTES);
 }
 
+// Constant-time compare.
+function sameCode(expected: string | null | undefined, given: string): boolean {
+    if (!expected) return false;
+    const a = Buffer.from(expected);
+    const b = Buffer.from(given);
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
 function generateCode(): { code: string; expiresAt: Date } {
     // Plaintext by design: unlike the password hash, this code is single-use, expires in
     // 10 minutes, and only useful to someone who already has DB access — at which point
     // they could just flip emailVerified directly. Hashing it adds no real protection here.
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const code = crypto.randomInt(100000, 1000000).toString();
     const expiresAt = new Date(Date.now() + CODE_TTL_MS);
     return { code, expiresAt };
 }
@@ -140,7 +152,7 @@ export const authService = {
         identifier: string,
         password: string,
         userAgent?: string
-    ): Promise<{ accessToken: string; refreshToken: string; user: Omit<User, "password"> }> {
+    ): Promise<LoginResult> {
         const user = await userModel.findByUsernameOrEmail(identifier);
         if (!user) throw new Error("INVALID_CREDENTIALS");
 
@@ -166,9 +178,69 @@ export const authService = {
             await userModel.update(userId, { failedLoginAttempts: 0, lockedUntil: null });
         }
 
+        if (user.twoFactorEnabled) {
+            const { code, expiresAt } = generateCode();
+            const challengeId = crypto.randomBytes(24).toString("hex");
+            try {
+                await emailService.sendLoginCode(user.email, code);
+            } catch (err) {
+                console.error("Failed to send login code:", err);
+                throw new Error("CODE_SEND_FAILED");
+            }
+            await userModel.update(userId, {
+                loginChallenge: challengeId,
+                loginCode: code,
+                loginCodeExpiresAt: expiresAt,
+                loginCodeAttempts: 0
+            });
+            return { twoFactorRequired: true, challengeId };
+        }
+
         const { accessToken, refreshToken } = await issueTokenPair(userId, userAgent);
         await securityEventService.record(userId, "login_success");
         return { accessToken, refreshToken, user: stripPassword(user) };
+    },
+
+    async verifyLoginCode(challengeId: string, code: string, userAgent?: string): Promise<AuthResult> {
+        // Claim an attempt atomically before comparing, so parallel guesses can't beat the cap.
+        const user = await userModel.claimLoginCodeAttempt(challengeId, MAX_CODE_ATTEMPTS);
+        if (!user) {
+            const existing = await userModel.findByLoginChallenge(challengeId);
+            if (!existing) throw new Error("INVALID_CODE");
+            // Burn the challenge: a new code needs the password again.
+            await userModel.update(existing._id!.toString(), { loginChallenge: null, loginCode: null, loginCodeExpiresAt: null });
+            throw new Error("TOO_MANY_ATTEMPTS");
+        }
+        const userId = user._id!.toString();
+
+        if (!user.loginCodeExpiresAt || user.loginCodeExpiresAt < new Date()) {
+            throw new Error("CODE_EXPIRED");
+        }
+        if (!sameCode(user.loginCode, code)) {
+            await securityEventService.record(userId, "login_2fa_failed");
+            throw new Error("INVALID_CODE");
+        }
+
+        const updated = await userModel.update(userId, {
+            loginChallenge: null,
+            loginCode: null,
+            loginCodeExpiresAt: null,
+            loginCodeAttempts: 0
+        });
+        const { accessToken, refreshToken } = await issueTokenPair(userId, userAgent);
+        await securityEventService.record(userId, "login_success", { twoFactor: true });
+        return { accessToken, refreshToken, user: stripPassword(updated) };
+    },
+
+    // Password re-check: a stolen unlocked phone can't turn 2FA off.
+    async setTwoFactor(userId: string, enabled: boolean, password: string): Promise<Omit<User, "password">> {
+        const user = await userModel.findById(userId);
+        if (!(await bcrypt.compare(password, user.password))) throw new Error("INVALID_CREDENTIALS");
+        // Codes go here; an unverified address could lock the user out.
+        if (enabled && !user.emailVerified) throw new Error("EMAIL_NOT_VERIFIED");
+        const updated = await userModel.update(userId, { twoFactorEnabled: enabled });
+        await securityEventService.record(userId, enabled ? "two_factor_enabled" : "two_factor_disabled");
+        return stripPassword(updated);
     },
 
     async getCurrentUser(userId: string): Promise<Omit<User, "password">> {
