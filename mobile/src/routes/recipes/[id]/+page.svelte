@@ -8,6 +8,7 @@
 	import { features } from '$lib/state/features.svelte';
 	import RecipeRating from '$lib/components/RecipeRating.svelte';
 	import { printOrShareRecipe } from '$lib/utils/printRecipe';
+	import CollectionPicker from '$lib/components/CollectionPicker.svelte';
 	import { formatQuantity } from '$lib/utils/quantity';
 	import { convert, toSystem, type UnitSystem } from '$lib/utils/unitConversion';
 	import { unitSystem } from '$lib/state/unitSystem.svelte';
@@ -106,6 +107,7 @@
 	);
 
 	let showPrepareSheet = $state(false);
+	let showCollections = $state(false);
 
 	// Before saferPrepare (2.4), Prepare is one tap for the whole recipe.
 	let quickPreparing = $state(false);
@@ -277,6 +279,7 @@
 		<div class="header-actions">
 			{#if features.has('print')}<button type="button" class="btn-outline" onclick={handlePrint}>{t('recipeDetail.print')}</button>{/if}
 			{#if features.has('versionHistory')}<a href={`/recipes/${data.recipe._id}/history`} class="btn-outline">{t('recipeDetail.history')}</a>{/if}
+			{#if features.has('collections')}<button type="button" class="btn-outline" onclick={() => (showCollections = true)}>{t('collections.add')}</button>{/if}
 			<a href={`/recipes/${data.recipe._id}/edit`} class="btn-outline">{t('recipeDetail.edit')}</a>
 		</div>
 	</div>
@@ -415,6 +418,16 @@
 		</button>
 	</div>
 </div>
+
+{#if showCollections}
+	<CollectionPicker
+		recipeId={data.recipe._id}
+		onClose={() => {
+			showCollections = false;
+			invalidate('app:recipes');
+		}}
+	/>
+{/if}
 
 {#if showPrepareSheet}
 	<PrepareSheet

@@ -9,6 +9,7 @@ import usersRoute from "./routes/users.route.js";
 import authRoute from "./routes/auth.route.js";
 import featuresRoute from "./routes/features.route.js";
 import nutritionRoute from "./routes/nutrition.route.js";
+import collectionRoute from "./routes/recipeCollection.route.js";
 
 const app = new Hono<{ Variables: SecureHeadersVariables }>();
 
@@ -50,6 +51,7 @@ app.route('/shopping-lists', shoppingListRoute);
 app.route('/users', usersRoute);
 app.route('/features', featuresRoute);
 app.route('/nutrition', nutritionRoute);
+app.route('/collections', collectionRoute);
 
 // This page has no scripts and one small server-authored inline <style> block (no user
 // input reflected into it), so the tightest CSP that still lets the style render is
