@@ -154,7 +154,7 @@
 					{c.name} · {c.recipeIds.length}
 				</button>
 			{/each}
-			{#if activeCollection}
+			{#if activeCollection && writes.allowed}
 				<button type="button" class="collection-delete" onclick={() => (deletingCollection = true)}>
 					{t('collections.delete')}
 				</button>

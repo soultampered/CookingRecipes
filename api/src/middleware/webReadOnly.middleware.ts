@@ -10,6 +10,8 @@ const READS = new Set(["GET", "HEAD", "OPTIONS"]);
 export const webReadOnly: MiddlewareHandler = async (c, next) => {
     const origin = c.req.header("Origin");
     if (READS.has(c.req.method) || !origin || APP_ORIGINS.has(origin) || c.req.path.startsWith("/auth/")) return next();
+    // Building an Instacart link is a POST but changes nothing.
+    if (/^\/shopping-lists\/[^/]+\/instacart$/.test(c.req.path)) return next();
     if (featuresService.isOn("webEditing", userIdFromAuthHeader(c.req.header("Authorization")))) return next();
     return c.json({ error: "The web version is view-only for now. Make changes in the Stokpot app.", code: "WEB_READ_ONLY" }, 403);
 };

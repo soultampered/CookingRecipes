@@ -31,3 +31,12 @@ describe('webReadOnly', () => {
         expect((await call('DELETE', '/recipes/1', 'https://app.stokpot.ca')).status).toBe(200)
     })
 })
+
+describe('webReadOnly exemptions', () => {
+    it('lets the Instacart link through (a POST that writes nothing)', async () => {
+        featuresService.setOverrides({ webEditing: false })
+        expect((await call('POST', '/shopping-lists/abc/instacart', 'https://app.stokpot.ca')).status).toBe(200)
+        expect((await call('POST', '/shopping-lists/abc/items', 'https://app.stokpot.ca')).status).toBe(403)
+        featuresService.setOverrides(null)
+    })
+})
