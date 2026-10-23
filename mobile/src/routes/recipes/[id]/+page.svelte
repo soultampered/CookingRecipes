@@ -8,6 +8,19 @@
 	import { features } from '$lib/state/features.svelte';
 	import RecipeRating from '$lib/components/RecipeRating.svelte';
 	import { formatQuantity } from '$lib/utils/quantity';
+	import { convert, toSystem, type UnitSystem } from '$lib/utils/unitConversion';
+	import { unitSystem } from '$lib/state/unitSystem.svelte';
+	import type { RecipeIngredient } from '$lib/types/recipe';
+
+	const UNIT_SYSTEMS: UnitSystem[] = ['original', 'metric', 'imperial'];
+
+	// Display-only conversion of the scaled amount.
+	function displayAmount(ing: RecipeIngredient): string {
+		const quantity = ing.quantity * scale;
+		if (!ing.unit) return formatQuantity(quantity);
+		const shown = toSystem(quantity, ing.unit, features.has('unitToggle') ? unitSystem.current : 'original');
+		return `${formatQuantity(shown.quantity)} ${tRaw('unit', shown.unit)}`;
+	}
 	import { listShoppingLists, addItem } from '$lib/api/shoppingLists';
 	import { ApiError } from '$lib/api/client';
 	import { toast } from '$lib/state/toast.svelte';
@@ -74,16 +87,19 @@
 		return quantity * scale;
 	}
 
-	// Shortages against the scaled amounts.
-	function shortBy(inventoryItemId: string, quantity: number): number {
-		return scaled(quantity) - (data.inventory[inventoryItemId]?.quantity ?? 0);
+	// Shortages against the scaled amounts, in the stock unit when convertible.
+	function shortBy(ing: RecipeIngredient): number {
+		const stock = data.inventory[ing.inventoryItemId];
+		const need = scaled(ing.quantity);
+		const needInStockUnit = ing.unit && stock ? (convert(need, ing.unit, stock.unit) ?? need) : need;
+		return needInStockUnit - (stock?.quantity ?? 0);
 	}
 
 	let missing = $derived<MissingIngredient[]>(
 		data.recipe.ingredients.flatMap((ing): MissingIngredient[] => {
-			const short = shortBy(ing.inventoryItemId, ing.quantity);
+			const short = shortBy(ing);
 			if (short <= 0) return [];
-			const unit = ing.unit ?? data.inventory[ing.inventoryItemId]?.unit;
+			const unit = data.inventory[ing.inventoryItemId]?.unit ?? ing.unit;
 			return [{ name: inventoryName(ing.inventoryItemId), needed: Math.round(short * 100) / 100, unit }];
 		})
 	);
@@ -279,6 +295,22 @@
 		</div>
 	{/if}
 
+	{#if features.has('unitToggle')}
+		<div class="units-row" role="group" aria-label={t('units.label')}>
+			{#each UNIT_SYSTEMS as system (system)}
+				<button
+					type="button"
+					class="unit-btn"
+					class:active={unitSystem.current === system}
+					aria-pressed={unitSystem.current === system}
+					onclick={() => unitSystem.set(system)}
+				>
+					{t(`units.${system}`)}
+				</button>
+			{/each}
+		</div>
+	{/if}
+
 	<div class="field-label ingredients-label">
 		<span>{t('recipeDetail.ingredients')}</span>
 		{#if data.recipe.ingredients.length > 0}
@@ -300,12 +332,12 @@
 			>
 				<span class="ingredient-check" aria-hidden="true">{gathered.has(i) ? '✓' : ''}</span>
 				<span class="ingredient-text">{inventoryName(ingredient.inventoryItemId)}</span>
-				<span class="qty" class:qty-short={shortBy(ingredient.inventoryItemId, ingredient.quantity) > 0}>
-					{formatQuantity(scaled(ingredient.quantity))}{ingredient.unit ? ` ${tRaw('unit', ingredient.unit)}` : ''}
-					{#if shortBy(ingredient.inventoryItemId, ingredient.quantity) > 0}
+				<span class="qty" class:qty-short={shortBy(ingredient) > 0}>
+					{displayAmount(ingredient)}
+					{#if shortBy(ingredient) > 0}
 						<span class="short-note">
 							{t('recipeDetail.shortBy', {
-								amount: formatQuantity(shortBy(ingredient.inventoryItemId, ingredient.quantity))
+								amount: `${formatQuantity(shortBy(ingredient))} ${tRaw('unit', data.inventory[ingredient.inventoryItemId]?.unit ?? ingredient.unit ?? 'pcs')}`
 							})}
 						</span>
 					{/if}
@@ -555,6 +587,25 @@
 	.ingredient-row.gathered .ingredient-text {
 		color: var(--ink-soft);
 		text-decoration: line-through;
+	}
+	.units-row {
+		display: flex;
+		gap: 0.3rem;
+	}
+	.unit-btn {
+		border: 1px solid var(--line);
+		border-radius: 999px;
+		background: var(--paper-raised);
+		color: var(--ink);
+		font: inherit;
+		font-size: var(--text-xs);
+		padding: 0.25rem 0.6rem;
+		cursor: pointer;
+	}
+	.unit-btn.active {
+		background: var(--ink);
+		border-color: var(--ink);
+		color: var(--paper-raised);
 	}
 	.per-serving {
 		margin: 0;
