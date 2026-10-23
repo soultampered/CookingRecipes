@@ -6,34 +6,59 @@ import { emailService } from "./email.service.js";
 import { securityEventService } from "./securityEvent.service.js";
 import { isPasswordStrong } from "./passwordPolicy.js";
 import { signingSecret } from "./jwtSecrets.js";
-import type { NewUser, User } from "../types/user.js";
+import { tokenRevocation } from "./tokenRevocation.js";
+import type { NewUser, RefreshTokenEntry, User } from "../types/user.js";
 
 const ACCESS_TOKEN_TTL = "15m";
+const ACCESS_TOKEN_TTL_MS = 15 * 60 * 1000;
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
-function signAccessToken(userId: string): string {
-    return jwt.sign({ userId }, signingSecret, { expiresIn: ACCESS_TOKEN_TTL });
+// sid = session (token family), so revoking a session cuts its access token too.
+function signAccessToken(userId: string, familyId: string): string {
+    return jwt.sign({ userId, sid: familyId }, signingSecret, { expiresIn: ACCESS_TOKEN_TTL });
 }
 
-function generateRefreshToken(familyId: string): {
-    token: string;
-    familyId: string;
-    expiresAt: Date;
-    used: boolean;
-} {
+function revokeSessionTokens(familyIds: (string | undefined)[]): void {
+    tokenRevocation.revokeSessions(familyIds.filter((id): id is string => !!id), Date.now() + ACCESS_TOKEN_TTL_MS);
+}
+
+// Display-only, so cap it.
+function cleanUserAgent(userAgent?: string): string | undefined {
+    return userAgent ? userAgent.slice(0, 300) : undefined;
+}
+
+function generateRefreshToken(
+    familyId: string,
+    session: { createdAt: Date; userAgent?: string }
+): RefreshTokenEntry {
+    const now = new Date();
     return {
         token: crypto.randomBytes(32).toString("hex"),
         familyId,
-        expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
-        used: false
+        expiresAt: new Date(now.getTime() + REFRESH_TOKEN_TTL_MS),
+        used: false,
+        createdAt: session.createdAt,
+        lastUsedAt: now,
+        userAgent: session.userAgent
     };
 }
 
-async function issueTokenPair(userId: string): Promise<{ accessToken: string; refreshToken: string }> {
+async function issueTokenPair(
+    userId: string,
+    userAgent?: string
+): Promise<{ accessToken: string; refreshToken: string }> {
     const familyId = crypto.randomUUID();
-    const entry = generateRefreshToken(familyId);
+    const entry = generateRefreshToken(familyId, { createdAt: new Date(), userAgent: cleanUserAgent(userAgent) });
     await userModel.addRefreshToken(userId, entry);
-    return { accessToken: signAccessToken(userId), refreshToken: entry.token };
+    return { accessToken: signAccessToken(userId, familyId), refreshToken: entry.token };
+}
+
+export interface SessionSummary {
+    id: string;
+    createdAt?: Date;
+    lastUsedAt?: Date;
+    userAgent?: string;
+    current: boolean;
 }
 
 const CODE_TTL_MS = 10 * 60 * 1000;
@@ -78,7 +103,8 @@ function generateCode(): { code: string; expiresAt: Date } {
 
 export const authService = {
     async register(
-        data: Pick<NewUser, "username" | "email" | "password">
+        data: Pick<NewUser, "username" | "email" | "password">,
+        userAgent?: string
     ): Promise<{ accessToken: string; refreshToken: string; user: Omit<User, "password"> }> {
         if (!isPasswordStrong(data.password)) throw new Error("WEAK_PASSWORD");
 
@@ -105,14 +131,15 @@ export const authService = {
             console.error("Failed to send verification email:", err);
         }
 
-        const { accessToken, refreshToken } = await issueTokenPair(created._id!.toString());
+        const { accessToken, refreshToken } = await issueTokenPair(created._id!.toString(), userAgent);
         await securityEventService.record(created._id!.toString(), "register");
         return { accessToken, refreshToken, user: stripPassword(created) };
     },
 
     async login(
         identifier: string,
-        password: string
+        password: string,
+        userAgent?: string
     ): Promise<{ accessToken: string; refreshToken: string; user: Omit<User, "password"> }> {
         const user = await userModel.findByUsernameOrEmail(identifier);
         if (!user) throw new Error("INVALID_CREDENTIALS");
@@ -139,7 +166,7 @@ export const authService = {
             await userModel.update(userId, { failedLoginAttempts: 0, lockedUntil: null });
         }
 
-        const { accessToken, refreshToken } = await issueTokenPair(userId);
+        const { accessToken, refreshToken } = await issueTokenPair(userId, userAgent);
         await securityEventService.record(userId, "login_success");
         return { accessToken, refreshToken, user: stripPassword(user) };
     },
@@ -276,6 +303,7 @@ export const authService = {
             refreshTokens: [],
             mustResetPassword: false
         });
+        revokeSessionTokens((user.refreshTokens ?? []).map((t) => t.familyId));
         await securityEventService.record(user._id!.toString(), "password_reset_completed");
     },
 
@@ -295,6 +323,7 @@ export const authService = {
             // the whole family and require a fresh password before the account is usable
             // again, rather than just quietly rejecting this one request.
             await userModel.removeRefreshTokenFamily(userId, entry.familyId);
+            revokeSessionTokens([entry.familyId]);
             await userModel.update(userId, { mustResetPassword: true });
             console.warn(`Refresh token reuse detected for user ${userId} — family ${entry.familyId} revoked`);
             await securityEventService.record(userId, "token_reuse_detected", { familyId: entry.familyId });
@@ -306,10 +335,13 @@ export const authService = {
         }
 
         await userModel.markRefreshTokenUsed(userId, refreshToken);
-        const newEntry = generateRefreshToken(entry.familyId);
+        const newEntry = generateRefreshToken(entry.familyId, {
+            createdAt: entry.createdAt ?? new Date(),
+            userAgent: entry.userAgent
+        });
         await userModel.addRefreshToken(userId, newEntry);
 
-        return { accessToken: signAccessToken(userId), refreshToken: newEntry.token };
+        return { accessToken: signAccessToken(userId, entry.familyId), refreshToken: newEntry.token };
     },
 
     async revokeRefreshToken(userId: string, refreshToken: string): Promise<void> {
@@ -317,6 +349,40 @@ export const authService = {
         const entry = user.refreshTokens?.find((t) => t.token === refreshToken);
         if (!entry) return;
         await userModel.removeRefreshTokenFamily(userId, entry.familyId);
+    },
+
+    // One row per family (its live token). Older tokens lack createdAt/userAgent.
+    async listSessions(userId: string, currentRefreshToken?: string): Promise<SessionSummary[]> {
+        const user = await userModel.findById(userId);
+        const now = new Date();
+        const currentFamily = user.refreshTokens?.find((t) => t.token === currentRefreshToken)?.familyId;
+        return (user.refreshTokens ?? [])
+            .filter((t) => !t.used && t.expiresAt > now)
+            .map((t) => ({
+                id: t.familyId,
+                createdAt: t.createdAt,
+                lastUsedAt: t.lastUsedAt,
+                userAgent: t.userAgent,
+                current: t.familyId === currentFamily
+            }))
+            .sort((a, b) => Number(b.current) - Number(a.current) || (b.lastUsedAt?.getTime() ?? 0) - (a.lastUsedAt?.getTime() ?? 0));
+    },
+
+    async revokeSession(userId: string, familyId: string): Promise<void> {
+        const user = await userModel.findById(userId);
+        if (!user.refreshTokens?.some((t) => t.familyId === familyId)) throw new Error("NOT_FOUND");
+        await userModel.removeRefreshTokenFamily(userId, familyId);
+        revokeSessionTokens([familyId]);
+        await securityEventService.record(userId, "session_revoked", { familyId });
+    },
+
+    async revokeOtherSessions(userId: string, currentRefreshToken: string): Promise<void> {
+        const user = await userModel.findById(userId);
+        const current = user.refreshTokens?.find((t) => t.token === currentRefreshToken);
+        if (!current) throw new Error("NOT_FOUND");
+        await userModel.removeOtherRefreshTokenFamilies(userId, current.familyId);
+        revokeSessionTokens((user.refreshTokens ?? []).map((t) => t.familyId).filter((id) => id !== current.familyId));
+        await securityEventService.record(userId, "session_revoked", { others: true });
     },
 
     async listSecurityEvents(userId: string) {

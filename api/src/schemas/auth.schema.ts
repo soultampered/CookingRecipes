@@ -37,3 +37,8 @@ export const resetPasswordSchema = z.object({
 export const refreshTokenSchema = z.object({
     refreshToken: z.string().min(1)
 });
+
+// Without the current token nothing is flagged current.
+export const listSessionsSchema = z.object({
+    refreshToken: z.string().min(1).optional()
+});
