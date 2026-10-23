@@ -1,6 +1,7 @@
 import { inventoryService} from "./inventory.service.js";
 import { recipeService} from "./recipes.service.js";
 import { nutritionService } from "./nutrition.service.js";
+import { convert } from "./unitConversion.js";
 import type { MissingIngredient, Recipe, RecipeIngredient } from "../types/recipe.js";
 import type { Inventory, InventoryAdjustment } from "../types/inventory.js";
 
@@ -21,6 +22,12 @@ export interface PrepareResult {
     leftoverFailed?: boolean;
 }
 
+// Recipe amount in the stock unit; null if unconvertible.
+function neededInStockUnit(ingredient: RecipeIngredient, stock: Inventory): number | null {
+    if (!ingredient.unit || !stock.unit) return ingredient.quantity;
+    return convert(ingredient.quantity, ingredient.unit, stock.unit);
+}
+
 export const recipeInventoryService = {
     async deductIngredients(recipeId: string, userId: string, options: PrepareOptions = {}): Promise<PrepareResult> {
         const recipe = await recipeService.getRecipeById(recipeId);
@@ -37,9 +44,19 @@ export const recipeInventoryService = {
             if (o.index != null) byIndex.set(o.index, o.quantity);
             else byItem.set(o.inventoryItemId, o.quantity);
         }
+        // Overrides are in the stock unit; convert the default from the recipe unit when possible.
+        const stock = new Map(
+            (await inventoryService.getInventoryItemsByIds(recipe.ingredients.map((i) => i.inventoryItemId.toString()))).map((s) => [
+                s._id.toString(),
+                s
+            ])
+        );
         const adjustments: InventoryAdjustment[] = recipe.ingredients.map((item, i) => {
             const id = item.inventoryItemId.toString();
-            const used = byIndex.get(i) ?? byItem.get(id) ?? item.quantity * scale;
+            const override = byIndex.get(i) ?? byItem.get(id);
+            const stockUnit = stock.get(id)?.unit;
+            const raw = item.quantity * scale;
+            const used = override ?? (item.unit && stockUnit ? (convert(raw, item.unit, stockUnit) ?? raw) : raw);
             return { id, amount: -Math.round(used * 1000) / 1000 };
         });
 
@@ -74,12 +91,18 @@ export const recipeInventoryService = {
         for (const ingredient of recipe.ingredients) {
             const stock = inventoryMap.get(ingredient.inventoryItemId.toString());
             const available = stock?.quantity ?? 0;
+            const needed = stock ? neededInStockUnit(ingredient, stock) : ingredient.quantity;
 
-            if (available < ingredient.quantity) {
+            // Unconvertible units: only flag when there's no stock at all.
+            if (needed === null) {
+                if (available <= 0) missing.push({ name: stock!.name, needed: ingredient.quantity, unit: ingredient.unit });
+                continue;
+            }
+            if (available < needed) {
                 missing.push({
                     name: stock?.name ?? "Unknown",
-                    needed: ingredient.quantity - available,
-                    unit: ingredient.unit ?? stock?.unit,
+                    needed: Math.round((needed - available) * 100) / 100,
+                    unit: stock?.unit ?? ingredient.unit,
                 });
             }
         }
@@ -94,7 +117,9 @@ export const recipeInventoryService = {
         const makeable = recipes.filter(recipe =>
             recipe.ingredients.every(ingredient => {
                 const stock = inventoryMap.get(ingredient.inventoryItemId.toString());
-                return stock && stock.quantity >= ingredient.quantity;
+                if (!stock) return false;
+                const needed = neededInStockUnit(ingredient, stock);
+                return needed === null ? stock.quantity > 0 : stock.quantity >= needed;
             })
         );
         // Favorites first, then rating; unrated = 3, so disliked recipes sink below it.
