@@ -22,6 +22,8 @@
 	import { locale } from '$lib/i18n/index.svelte';
 	import { onboarding } from '$lib/state/onboarding.svelte';
 	import SkeletonList from '$lib/components/SkeletonList.svelte';
+	import { session } from '$lib/state/session.svelte';
+	import { features } from '$lib/state/features.svelte';
 
 	let { children } = $props();
 
@@ -72,11 +74,23 @@
 		// does that and tracks the live keyboard height so fixed/padded UI can stay clear of it.
 		const stopKeyboardWatch = keyboardInset.watch();
 
+		// Flags can flip while backgrounded.
+		const resumeHandle = CapacitorApp.addListener('resume', () => {
+			if (session.user) features.refresh();
+		});
+
 		return () => {
+			resumeHandle.then((h) => h.remove());
 			urlOpenHandle.then((h) => h.remove());
 			backButtonHandle.then((h) => h.remove());
 			stopKeyboardWatch();
 		};
+	});
+
+	// Flags are per user: load on sign-in, drop on sign-out.
+	$effect(() => {
+		if (session.user?._id) features.refresh();
+		else features.clear();
 	});
 
 	const noNavRoutes = ['/', '/welcome', '/verify-email', '/forgot-password'];

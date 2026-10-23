@@ -12,3 +12,6 @@ services:
         sync: false
       - key: RESEND_API_KEY
         sync: false
+      # GrowthBook SDK key for the production environment.
+      - key: GROWTHBOOK_CLIENT_KEY
+        sync: false
