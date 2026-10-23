@@ -4,6 +4,7 @@ import type { User } from '$lib/types/user';
 import { getCurrentUser } from '$lib/api/auth';
 import { setAuthToken, setRefreshToken } from '$lib/api/client';
 import { markAuthReady } from './authReady';
+import { activePantry } from './activePantry.svelte';
 import { onForceLogout, onTokensRefreshed } from './authEvents';
 import { toast } from './toast.svelte';
 import { t } from '../i18n/index.svelte';
@@ -76,7 +77,11 @@ class SessionState {
 		this.user = null;
 		setAuthToken(null);
 		setRefreshToken(null);
-		await Promise.all([SecureStorage.removeItem(TOKEN_KEY), SecureStorage.removeItem(REFRESH_TOKEN_KEY)]);
+		await Promise.all([
+			SecureStorage.removeItem(TOKEN_KEY),
+			SecureStorage.removeItem(REFRESH_TOKEN_KEY),
+			activePantry.clear()
+		]);
 	}
 }
 

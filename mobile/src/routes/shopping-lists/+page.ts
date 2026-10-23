@@ -1,6 +1,9 @@
 import { listShoppingLists } from '$lib/api/shoppingLists';
+import { activePantry, pantryRestored } from '$lib/state/activePantry.svelte';
 
 export const load = async ({ depends }) => {
 	depends('app:shopping-lists');
-	return { lists: await listShoppingLists() };
+	depends('app:pantry');
+	await pantryRestored;
+	return { lists: await activePantry.load(listShoppingLists) };
 };

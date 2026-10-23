@@ -2,6 +2,7 @@
 	import { t } from '$lib/i18n/index.svelte';
 	import { onboarding } from '$lib/state/onboarding.svelte';
 	import OnboardingWalkthrough from '$lib/components/OnboardingWalkthrough.svelte';
+	import PantrySwitcher from '$lib/components/PantrySwitcher.svelte';
 	import { expirySettings } from '$lib/state/expirySettings.svelte';
 	import { daysUntil, expiringItems } from '$lib/utils/expiry';
 	import { features } from '$lib/state/features.svelte';
@@ -34,7 +35,10 @@
 {/if}
 
 <div class="page">
-	<h1>{t('dashboard.title')}</h1>
+	<div class="title-block">
+		<h1>{t('dashboard.title')}</h1>
+		<PantrySwitcher />
+	</div>
 
 	<a class="card" href="/recipes">
 		<div class="card-header">

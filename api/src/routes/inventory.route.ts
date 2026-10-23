@@ -10,6 +10,13 @@ import { requireFeature } from "../middleware/requireFeature.middleware.js";
 import { appliedAdjustmentModel } from "../models/appliedAdjustment.model.js";
 import { photoService } from "../services/photo.service.js";
 import { featuresService } from "../services/features.service.js";
+import { accessService } from "../services/access.service.js";
+import { inventoryModel } from "../models/inventory.model.js";
+
+// ?household=<id> picks a pantry; absent = personal.
+function pantryParam(value: string | undefined): string | null {
+    return value && /^[0-9a-fA-F]{24}$/.test(value) ? value : null;
+}
 
 const inventoryRoutes = new Hono<{ Variables: AuthVariables }>();
 
@@ -27,6 +34,9 @@ inventoryRoutes.post('/', validateJson(createInventorySchema), async (c) => {
     try {
         const body = withoutPhoto(c.req.valid('json'), c.get('userId'));
         if (body.photoId) await photoService.assertOwned(body.photoId, c.get('userId'));
+        if (body.householdId && !(await accessService.isMember(c.get('userId'), body.householdId))) {
+            return c.json({ error: 'Forbidden' }, 403);
+        }
         const newInventory = await inventoryService.createInventory({ ...body, userId: c.get('userId') });
         return c.json(newInventory, 201);
     } catch (err) {
@@ -43,7 +53,13 @@ inventoryRoutes.get('/', async (c) => {
     const userId = c.get('userId');
     const category = c.req.query('category');
     try {
-        const items = await inventoryService.getAllInventory(userId, category);
+        // ?household=all → every pantry the user can reach (recipe ingredient picker).
+        if (c.req.query('household') === 'all') {
+            return c.json(await inventoryModel.findAccessible(userId, await accessService.householdIdsFor(userId)), 200);
+        }
+        const household = pantryParam(c.req.query('household'));
+        if (household && !(await accessService.isMember(userId, household))) return c.json({ error: 'Forbidden' }, 403);
+        const items = await inventoryService.getAllInventory(userId, category, household);
         return c.json(items, 200);
     } catch (err) {
         if ((err as Error).message === "NOT_FOUND") {
@@ -58,7 +74,9 @@ inventoryRoutes.get('/restock', requireFeature('restock'), async (c) => {
     const days = Number(c.req.query('days') ?? 7);
     if (!Number.isFinite(days) || days < 1 || days > 60) return c.json({ error: 'days must be 1-60' }, 400);
     try {
-        return c.json(await restockService.predict(c.get('userId'), days), 200);
+        const household = pantryParam(c.req.query('household'));
+        if (household && !(await accessService.isMember(c.get('userId'), household))) return c.json({ error: 'Forbidden' }, 403);
+        return c.json(await restockService.predict(c.get('userId'), days, household), 200);
     } catch {
         return c.json({ error: 'Failed to predict restock' }, 500);
     }
@@ -85,7 +103,7 @@ inventoryRoutes.post('/adjust', validateJson(adjustInventorySchema), async (c) =
 inventoryRoutes.get('/:id', async (c) => {
     try {
         const item = await inventoryService.getInventoryById(c.req.param('id'));
-        if (item.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
+        if (!(await accessService.canAccess(c.get('userId'), item))) return c.json({ error: 'Forbidden' }, 403);
         return c.json(item);
     } catch (err) {
         if ((err as Error).message === "NOT_FOUND") {
@@ -98,11 +116,17 @@ inventoryRoutes.get('/:id', async (c) => {
 inventoryRoutes.put('/:id', validateJson(updateInventorySchema), async (c) => {
     try {
         const existing = await inventoryService.getInventoryById(c.req.param('id'));
-        if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
+        if (!(await accessService.canAccess(c.get('userId'), existing))) return c.json({ error: 'Forbidden' }, 403);
         const data = withoutPhoto(c.req.valid('json'), c.get('userId'));
         // Only a new photo must be yours.
         if (data.photoId && data.photoId !== existing.photoId) await photoService.assertOwned(data.photoId, c.get('userId'));
-        const item = await inventoryService.updateInventory(c.req.param('id'), data);
+        // Moving between pantries needs membership of the destination too.
+        if (data.householdId && !(await accessService.isMember(c.get('userId'), data.householdId))) {
+            return c.json({ error: 'Forbidden' }, 403);
+        }
+        // Moving a household item to My kitchen makes it the mover's, not its creator's.
+        const toPersonal = 'householdId' in data && !data.householdId && !!existing.householdId;
+        const item = await inventoryService.updateInventory(c.req.param('id'), toPersonal ? { ...data, userId: c.get('userId') } : data);
         if ('photoId' in data && existing.photoId && existing.photoId !== data.photoId) await photoService.remove(existing.photoId);
         return c.json(item);
     } catch (err) {
@@ -117,7 +141,7 @@ inventoryRoutes.put('/:id', validateJson(updateInventorySchema), async (c) => {
 inventoryRoutes.delete('/:id', async (c) => {
     try {
         const existing = await inventoryService.getInventoryById(c.req.param('id'));
-        if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
+        if (!(await accessService.canAccess(c.get('userId'), existing))) return c.json({ error: 'Forbidden' }, 403);
         await inventoryService.deleteInventory(c.req.param('id'));
         await photoService.remove(existing.photoId);
         return c.json({ success: true });

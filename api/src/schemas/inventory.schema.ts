@@ -12,7 +12,8 @@ export const createInventorySchema = z.object({
     category: z.enum(INVENTORY_CATEGORIES).optional(),
     notes: z.string().trim().max(1000).optional(),
     lowStockThreshold: z.number().finite().optional(),
-    photoId: z.string().regex(/^[0-9a-f]{32}$/).nullable().optional()
+    photoId: z.string().regex(/^[0-9a-f]{32}$/).nullable().optional(),
+    householdId: z.string().regex(/^[0-9a-fA-F]{24}$/).nullable().optional()
 });
 
 export const updateInventorySchema = createInventorySchema.partial();

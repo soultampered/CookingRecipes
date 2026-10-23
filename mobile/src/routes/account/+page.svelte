@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { features } from '$lib/state/features.svelte';
 	import { goto } from '$app/navigation';
 	import { logout } from '$lib/api/auth';
 	import { deleteUser } from '$lib/api/users';
@@ -9,6 +10,7 @@
 	import ActiveSessions from '$lib/components/ActiveSessions.svelte';
 	import TwoFactorSetting from '$lib/components/TwoFactorSetting.svelte';
 	import ExportData from '$lib/components/ExportData.svelte';
+	import HouseholdsManager from '$lib/components/HouseholdsManager.svelte';
 	import { toast } from '$lib/state/toast.svelte';
 	import { ApiError } from '$lib/api/client';
 	import { categoryOrder } from '$lib/state/categoryOrder.svelte';
@@ -191,6 +193,7 @@
 		</div>
 	</div>
 
+	{#if features.has('households')}<HouseholdsManager />{/if}
 	<TwoFactorSetting />
 	<ActiveSessions />
 	<ExportData />

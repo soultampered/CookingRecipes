@@ -1,8 +1,8 @@
 import { apiFetch } from './client';
 import type { NewShoppingList, ShoppingList, ShoppingListItem } from '$lib/types/shoppingList';
 
-export function listShoppingLists() {
-	return apiFetch<ShoppingList[]>('/shopping-lists');
+export function listShoppingLists(household?: string | null) {
+	return apiFetch<ShoppingList[]>(`/shopping-lists${household ? `?household=${household}` : ''}`);
 }
 
 export function getShoppingList(id: string) {
@@ -60,14 +60,17 @@ export interface PlannedItem {
 
 export type RecipeRequest = { recipeId: string; scale?: number };
 
-export function previewFromRecipes(recipes: RecipeRequest[]) {
+export function previewFromRecipes(recipes: RecipeRequest[], householdId?: string | null) {
 	return apiFetch<PlannedItem[]>('/shopping-lists/from-recipes/preview', {
 		method: 'POST',
-		body: JSON.stringify({ recipes })
+		body: JSON.stringify({ recipes, householdId })
 	});
 }
 
-export function createFromRecipes(recipes: RecipeRequest[], options: { name?: string; listId?: string } = {}) {
+export function createFromRecipes(
+	recipes: RecipeRequest[],
+	options: { name?: string; listId?: string; householdId?: string | null } = {}
+) {
 	return apiFetch<ShoppingList>('/shopping-lists/from-recipes', {
 		method: 'POST',
 		body: JSON.stringify({ recipes, ...options })

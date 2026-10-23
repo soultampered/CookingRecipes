@@ -21,6 +21,7 @@ export interface ShoppingList {
 	items: ShoppingListItem[];
 	budget?: number | null;
 	store?: string | null;
+	householdId?: string | null;
 }
 
 export type NewShoppingList = Omit<ShoppingList, '_id' | 'createdAt' | 'updatedAt' | 'userId'>;

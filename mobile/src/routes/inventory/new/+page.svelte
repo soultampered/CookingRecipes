@@ -4,6 +4,7 @@
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import { unsavedChangesGuard } from '$lib/utils/unsavedChangesGuard.svelte';
 	import { createInventoryItem } from '$lib/api/inventory';
+	import { activePantry } from '$lib/state/activePantry.svelte';
 	import { ApiError } from '$lib/api/client';
 	import { toast } from '$lib/state/toast.svelte';
 	import { t } from '$lib/i18n/index.svelte';
@@ -16,7 +17,7 @@
 	async function handleSubmit(item: NewInventory) {
 		submitting = true;
 		try {
-			await createInventoryItem(item);
+			await createInventoryItem({ ...item, householdId: activePantry.current });
 			leaveGuard.allowNext();
 			await goto('/inventory');
 		} catch (err) {

@@ -37,6 +37,7 @@ export interface Inventory {
     // Set on leftovers from Prepare.
     leftoverOfRecipeId?: string;
     photoId?: string | null;
+    householdId?: string | null; // null/absent = personal pantry
 }
 
 export interface InventoryAdjustment {
