@@ -3,18 +3,39 @@ import { recipeService} from "./recipes.service.js";
 import type { MissingIngredient, RecipeIngredient } from "../types/recipe.js";
 import type { Inventory, InventoryAdjustment } from "../types/inventory.js";
 
+export interface PrepareOptions {
+    // Multiplies every ingredient (e.g. 6/4).
+    scale?: number;
+    // Amount actually used per ingredient; wins over scale. index beats inventoryItemId.
+    overrides?: { inventoryItemId: string; index?: number; quantity: number }[];
+}
+
+export interface PrepareResult {
+    adjustments: InventoryAdjustment[];
+    updatedInventory: Inventory[];
+}
+
 export const recipeInventoryService = {
-    async deductIngredients(recipeId: string): Promise<Inventory[]> {
+    async deductIngredients(recipeId: string, userId: string, options: PrepareOptions = {}): Promise<PrepareResult> {
         const recipe = await recipeService.getRecipeById(recipeId);
 
-        if (!recipe.ingredients?.length) return [];
+        if (!recipe.ingredients?.length) return { adjustments: [], updatedInventory: [] };
 
-        const adjustments: InventoryAdjustment[] = recipe.ingredients.map(item => ({
-            id: item.inventoryItemId.toString(),
-            amount: -item.quantity,
-        }));
+        const scale = options.scale ?? 1;
+        const byIndex = new Map<number, number>();
+        const byItem = new Map<string, number>();
+        for (const o of options.overrides ?? []) {
+            if (o.index != null) byIndex.set(o.index, o.quantity);
+            else byItem.set(o.inventoryItemId, o.quantity);
+        }
+        const adjustments: InventoryAdjustment[] = recipe.ingredients.map((item, i) => {
+            const id = item.inventoryItemId.toString();
+            const used = byIndex.get(i) ?? byItem.get(id) ?? item.quantity * scale;
+            return { id, amount: -Math.round(used * 1000) / 1000 };
+        });
 
-        return inventoryService.bulkAdjust(adjustments);
+        const updatedInventory = await inventoryService.applyAdjustments(userId, adjustments);
+        return { adjustments, updatedInventory };
     },
 
     async getMissingIngredients(recipeId: string): Promise<MissingIngredient[]> {

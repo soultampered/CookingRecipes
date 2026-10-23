@@ -70,6 +70,24 @@ export const inventoryModel = {
         return result.deletedCount > 0;
     },
 
+    // Atomic: only decrements if enough stock is there at write time.
+    decrementIfAvailable: async (id: string, amount: number): Promise<boolean> => {
+        const db = await connectToDatabase();
+        const result = await db.collection<Inventory>("inventory").updateOne(
+            { _id: new ObjectId(id), quantity: { $gte: amount } },
+            { $inc: { quantity: -amount }, $set: { updatedAt: new Date() } }
+        );
+        return result.modifiedCount === 1;
+    },
+
+    increment: async (id: string, amount: number): Promise<void> => {
+        const db = await connectToDatabase();
+        await db.collection<Inventory>("inventory").updateOne(
+            { _id: new ObjectId(id) },
+            { $inc: { quantity: amount }, $set: { updatedAt: new Date() } }
+        );
+    },
+
     deleteAllByUserId: async (userId: string): Promise<number> => {
         const db = await connectToDatabase();
         const result = await db.collection<Inventory>("inventory").deleteMany({ userId });

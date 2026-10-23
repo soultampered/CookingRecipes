@@ -4,7 +4,9 @@ import { recipeInventoryService } from "../services/recipeInventory.service.js"
 import { authMiddleware, type AuthVariables } from "../middleware/auth.middleware.js";
 import { requireVerified } from "../middleware/requireVerified.middleware.js";
 import { validateJson } from "../middleware/validate.middleware.js";
-import { createRecipeSchema, updateRecipeSchema } from "../schemas/recipe.schema.js";
+import { createRecipeSchema, updateRecipeSchema, prepareRecipeSchema } from "../schemas/recipe.schema.js";
+import { InventoryAdjustError } from "../types/inventory.js";
+import { featuresService } from "../services/features.service.js";
 
 const recipeRoutes = new Hono<{ Variables: AuthVariables }>();
 
@@ -85,20 +87,30 @@ recipeRoutes.delete('/:id', async (c) => {
 });
 
 recipeRoutes.post('/:id/prepare', async (c) => {
+    // Parsed by hand so an older build's bodyless POST still works.
+    // Before saferPrepare: the old whole-recipe deduction.
+    const raw = featuresService.isOn('saferPrepare', c.get('userId')) ? await c.req.json().catch(() => ({})) : {};
+    const parsed = prepareRecipeSchema.safeParse(raw ?? {});
+    if (!parsed.success) return c.json({ error: 'Invalid request body' }, 400);
+    let existing;
     try {
-        const existing = await recipeService.getRecipeById(c.req.param('id'));
-        if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
-        const result = await recipeInventoryService.deductIngredients(c.req.param('id'));
-        return c.json({ success: true, updatedInventory: result });
+        existing = await recipeService.getRecipeById(c.req.param('id'));
+    } catch {
+        return c.json({ error: 'Recipe not found', code: 'RECIPE_NOT_FOUND' }, 404);
+    }
+    if (existing.userId !== c.get('userId')) return c.json({ error: 'Forbidden' }, 403);
+    try {
+        const result = await recipeInventoryService.deductIngredients(c.req.param('id'), c.get('userId'), parsed.data);
+        return c.json({ success: true, ...result });
     } catch (err) {
-        const message = (err as Error).message;
-        // NOT_FOUND here means either the recipe itself or one of its ingredients'
-        // inventory items — deductIngredients doesn't distinguish which.
-        if (message === 'NOT_FOUND') {
-            return c.json({ error: 'Recipe or inventory item not found' }, 404);
-        }
-        if (message === 'INSUFFICIENT_STOCK') {
-            return c.json({ error: 'Not enough stock to prepare this recipe' }, 400);
+        if (err instanceof InventoryAdjustError) {
+            if (err.message === 'INGREDIENT_NOT_FOUND') {
+                return c.json({ error: 'An ingredient is no longer in your inventory', code: err.message, itemIds: err.itemIds }, 404);
+            }
+            if (err.message === 'INSUFFICIENT_STOCK') {
+                return c.json({ error: 'Not enough stock to prepare this recipe', code: err.message, itemIds: err.itemIds }, 400);
+            }
+            return c.json({ error: 'Forbidden' }, 403);
         }
         console.error('Failed to prepare recipe:', err);
         return c.json({ error: 'Failed to prepare recipe' }, 500);

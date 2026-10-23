@@ -25,3 +25,11 @@ export function updateInventoryItem(id: string, patch: Partial<Inventory>) {
 export function deleteInventoryItem(id: string) {
 	return apiFetch<{ success: true }>(`/inventory/${id}`, { method: 'DELETE' });
 }
+
+// All-or-nothing; undoes a prepare. Reuse adjustmentId on retry.
+export function adjustInventory(adjustments: { id: string; amount: number }[], adjustmentId?: string) {
+	return apiFetch<Inventory[]>('/inventory/adjust', {
+		method: 'POST',
+		body: JSON.stringify({ adjustments, adjustmentId })
+	});
+}

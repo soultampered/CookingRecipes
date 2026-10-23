@@ -15,3 +15,13 @@ export const createInventorySchema = z.object({
 });
 
 export const updateInventorySchema = createInventorySchema.partial();
+
+// Prepare-undo. All-or-nothing.
+export const adjustInventorySchema = z.object({
+    adjustments: z
+        .array(z.object({ id: z.string().regex(/^[0-9a-fA-F]{24}$/), amount: z.number().finite() }))
+        .min(1)
+        .max(200),
+    // Idempotency key: a repeat changes nothing.
+    adjustmentId: z.uuid().optional()
+});

@@ -40,4 +40,11 @@ export interface InventoryAdjustment {
     amount: number;
 }
 
+// Thrown by applyAdjustments with the blocking items.
+export class InventoryAdjustError extends Error {
+    constructor(code: "INSUFFICIENT_STOCK" | "INGREDIENT_NOT_FOUND" | "FORBIDDEN", public itemIds: string[]) {
+        super(code);
+    }
+}
+
 export type NewInventory = Omit<Inventory, "_id" | "createdAt" | "updatedAt">;

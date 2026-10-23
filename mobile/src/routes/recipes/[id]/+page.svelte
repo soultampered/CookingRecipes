@@ -1,6 +1,11 @@
 <script lang="ts">
 	import { goto, invalidate } from '$app/navigation';
-	import { deleteRecipe, getMissingIngredients, prepareRecipe } from '$lib/api/recipes';
+	import { deleteRecipe, type PrepareResult } from '$lib/api/recipes';
+	import { adjustInventory } from '$lib/api/inventory';
+	import PrepareSheet from '$lib/components/PrepareSheet.svelte';
+	import { prepareRecipe } from '$lib/api/recipes';
+	import { features } from '$lib/state/features.svelte';
+	import { formatQuantity } from '$lib/utils/quantity';
 	import { listShoppingLists, addItem } from '$lib/api/shoppingLists';
 	import { ApiError } from '$lib/api/client';
 	import { toast } from '$lib/state/toast.svelte';
@@ -43,10 +48,82 @@
 		else if (dx > 0 && prevId) goto(`/recipes/${prevId}`);
 	}
 
-	let preparing = $state(false);
 	let deleting = $state(false);
 	let confirmingDelete = $state(false);
-	let missing = $state<MissingIngredient[] | null>(null);
+
+	// View-time scaling: by serving if set, else ×0.5.
+	let baseServings = $derived(data.recipe.servings ?? null);
+	let targetServings = $state(data.recipe.servings ?? 1);
+	let multiplier = $state(1);
+	let scale = $derived(!features.has('saferPrepare') ? 1 : baseServings ? targetServings / baseServings : multiplier);
+	$effect(() => {
+		// Reset when swiping to another recipe.
+		data.recipe._id;
+		targetServings = data.recipe.servings ?? 1;
+		multiplier = 1;
+	});
+
+	function stepScale(direction: 1 | -1) {
+		if (baseServings) targetServings = Math.max(1, targetServings + direction);
+		else multiplier = Math.max(0.5, multiplier + direction * 0.5);
+	}
+
+	function scaled(quantity: number) {
+		return quantity * scale;
+	}
+
+	// Shortages against the scaled amounts.
+	function shortBy(inventoryItemId: string, quantity: number): number {
+		return scaled(quantity) - (data.inventory[inventoryItemId]?.quantity ?? 0);
+	}
+
+	let missing = $derived<MissingIngredient[]>(
+		data.recipe.ingredients.flatMap((ing): MissingIngredient[] => {
+			const short = shortBy(ing.inventoryItemId, ing.quantity);
+			if (short <= 0) return [];
+			const unit = ing.unit ?? data.inventory[ing.inventoryItemId]?.unit;
+			return [{ name: inventoryName(ing.inventoryItemId), needed: Math.round(short * 100) / 100, unit }];
+		})
+	);
+
+	let showPrepareSheet = $state(false);
+
+	// Before saferPrepare (2.4), Prepare is one tap for the whole recipe.
+	let quickPreparing = $state(false);
+	async function startPrepare() {
+		if (features.has('saferPrepare')) {
+			showPrepareSheet = true;
+			return;
+		}
+		quickPreparing = true;
+		try {
+			await onPrepared(await prepareRecipe(data.recipe._id));
+		} catch (err) {
+			toast.push(err instanceof ApiError ? err.message : t('recipeDetail.errorPrepare'));
+		} finally {
+			quickPreparing = false;
+		}
+	}
+
+	async function onPrepared(result: PrepareResult) {
+		showPrepareSheet = false;
+		await invalidate(`app:recipe:${data.recipe._id}`);
+		const undo = result.adjustments.map((a) => ({ id: a.id, amount: -a.amount }));
+		// One id per prepare, so Undo can't add stock twice.
+		const undoId = crypto.randomUUID();
+		toast.push(t('recipeDetail.prepared'), 'info', {
+			label: t('recipeDetail.undo'),
+			run: async () => {
+				try {
+					await adjustInventory(undo, undoId);
+					toast.push(t('recipeDetail.undone'), 'info');
+					await invalidate(`app:recipe:${data.recipe._id}`);
+				} catch (err) {
+					toast.push(err instanceof ApiError ? err.message : t('recipeDetail.errorUndo'));
+				}
+			}
+		});
+	}
 
 	let addingMissingToList = $state(false);
 	let shoppingLists = $state<ShoppingList[] | null>(null);
@@ -103,23 +180,6 @@
 		return data.inventoryNames[id] ?? t('recipeDetail.unknownIngredient');
 	}
 
-	async function handlePrepare() {
-		preparing = true;
-		missing = null;
-		try {
-			await prepareRecipe(data.recipe._id);
-			toast.push(t('recipeDetail.prepared'), 'info');
-			await invalidate(`app:recipe:${data.recipe._id}`);
-		} catch (err) {
-			try {
-				missing = await getMissingIngredients(data.recipe._id);
-			} catch {
-				toast.push(err instanceof ApiError ? err.message : t('recipeDetail.errorPrepare'));
-			}
-		} finally {
-			preparing = false;
-		}
-	}
 
 	async function confirmDelete() {
 		deleting = true;
@@ -174,6 +234,29 @@
 		<p class="description">{data.recipe.description}</p>
 	{/if}
 
+	{#if features.has('saferPrepare')}
+		<div class="scale-row">
+			<span class="scale-label">{baseServings ? t('recipeDetail.servings') : t('recipeDetail.scale')}</span>
+			<div class="scale-stepper">
+				<button type="button" onclick={() => stepScale(-1)} aria-label={t('recipeDetail.decreaseServings')}>−</button>
+				<span class="scale-value">{baseServings ? targetServings : `×${formatQuantity(multiplier)}`}</span>
+				<button type="button" onclick={() => stepScale(1)} aria-label={t('recipeDetail.increaseServings')}>+</button>
+			</div>
+			{#if scale !== 1}
+				<button
+					type="button"
+					class="scale-reset"
+					onclick={() => {
+						targetServings = data.recipe.servings ?? 1;
+						multiplier = 1;
+					}}
+				>
+					{t('recipeDetail.resetScale')}
+				</button>
+			{/if}
+		</div>
+	{/if}
+
 	<div class="field-label ingredients-label">
 		<span>{t('recipeDetail.ingredients')}</span>
 		{#if data.recipe.ingredients.length > 0}
@@ -195,7 +278,16 @@
 			>
 				<span class="ingredient-check" aria-hidden="true">{gathered.has(i) ? '✓' : ''}</span>
 				<span class="ingredient-text">{inventoryName(ingredient.inventoryItemId)}</span>
-				<span class="qty">{ingredient.quantity}{ingredient.unit ? ` ${tRaw('unit', ingredient.unit)}` : ''}</span>
+				<span class="qty" class:qty-short={shortBy(ingredient.inventoryItemId, ingredient.quantity) > 0}>
+					{formatQuantity(scaled(ingredient.quantity))}{ingredient.unit ? ` ${tRaw('unit', ingredient.unit)}` : ''}
+					{#if shortBy(ingredient.inventoryItemId, ingredient.quantity) > 0}
+						<span class="short-note">
+							{t('recipeDetail.shortBy', {
+								amount: formatQuantity(shortBy(ingredient.inventoryItemId, ingredient.quantity))
+							})}
+						</span>
+					{/if}
+				</span>
 			</button>
 		{/each}
 	</div>
@@ -212,11 +304,11 @@
 		{/each}
 	</ol>
 
-	<button type="button" class="primary" onclick={handlePrepare} disabled={preparing}>
-		{preparing ? t('recipeDetail.preparing') : t('recipeDetail.prepare')}
+	<button type="button" class="primary" disabled={quickPreparing} onclick={startPrepare}>
+		{t('recipeDetail.prepare')}
 	</button>
 
-	{#if missing && missing.length > 0}
+	{#if missing.length > 0}
 		<div class="banner">
 			<strong>
 				{t(missing.length === 1 ? 'recipeDetail.cantPrepare_one' : 'recipeDetail.cantPrepare_other', {
@@ -245,6 +337,17 @@
 		</button>
 	</div>
 </div>
+
+{#if showPrepareSheet}
+	<PrepareSheet
+		recipe={data.recipe}
+		{scale}
+		inventory={data.inventory}
+		names={data.inventoryNames}
+		onClose={() => (showPrepareSheet = false)}
+		{onPrepared}
+	/>
+{/if}
 
 {#if addingMissingToList}
 	<div
@@ -430,6 +533,53 @@
 	.ingredient-row.gathered .ingredient-text {
 		color: var(--ink-soft);
 		text-decoration: line-through;
+	}
+	.scale-row {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+	}
+	.scale-label {
+		font-size: var(--text-sm);
+		font-weight: 600;
+	}
+	.scale-stepper {
+		display: flex;
+		align-items: center;
+		border: 1px solid var(--line);
+		border-radius: 8px;
+		overflow: hidden;
+	}
+	.scale-stepper button {
+		border: none;
+		background: var(--paper-raised);
+		color: var(--ink);
+		width: 2rem;
+		height: 2rem;
+		font-size: 1rem;
+		cursor: pointer;
+	}
+	.scale-value {
+		min-width: 2.5rem;
+		text-align: center;
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+	}
+	.scale-reset {
+		border: none;
+		background: none;
+		color: var(--accent);
+		font: inherit;
+		font-size: var(--text-xs);
+		text-decoration: underline;
+		cursor: pointer;
+	}
+	.qty-short {
+		color: var(--bad);
+	}
+	.short-note {
+		display: block;
+		font-size: var(--text-xs);
 	}
 	.qty {
 		color: var(--ink-soft);

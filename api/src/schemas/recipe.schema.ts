@@ -31,3 +31,13 @@ export const createRecipeSchema = z.object({
 });
 
 export const updateRecipeSchema = createRecipeSchema.partial();
+
+// Body optional: older builds POST without one.
+export const prepareRecipeSchema = z.object({
+    scale: z.number().finite().positive().max(100).optional(),
+    overrides: z
+        // index = position in recipe.ingredients; the same item can be listed twice.
+        .array(z.object({ inventoryItemId: objectIdString, index: z.number().int().nonnegative().optional(), quantity: z.number().finite().nonnegative() }))
+        .max(200)
+        .optional()
+});
