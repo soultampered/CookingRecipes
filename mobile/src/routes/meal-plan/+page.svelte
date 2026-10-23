@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { features } from '$lib/state/features.svelte';
 	import { goto, invalidate } from '$app/navigation';
 	import { addToMealPlan, removeFromMealPlan, type MealSlot, MEAL_SLOTS } from '$lib/api/mealPlan';
 	import { ApiError } from '$lib/api/client';
@@ -7,6 +8,7 @@
 	import { addDays, fromLocalISODate, toLocalISODate } from '$lib/utils/dates';
 	import SlotChips from '$lib/components/SlotChips.svelte';
 	import PullToRefresh from '$lib/components/PullToRefresh.svelte';
+	import MealPrepSheet from '$lib/components/MealPrepSheet.svelte';
 	import type { PageProps } from './$types';
 
 	// The week's planned recipes, Mon–Sun.
@@ -27,6 +29,23 @@
 	}
 	function shiftWeek(n: number) {
 		goto(`/meal-plan?week=${toLocalISODate(addDays(start, n * 7))}`);
+	}
+
+	// Prefill meal prep with the week (repeats add up).
+	let showShopping = $state(false);
+	let weekRequests = $derived.by(() => {
+		const scales = new Map<string, number>();
+		for (const e of data.entries) {
+			const recipe = data.recipes.find((r) => r._id === e.recipeId);
+			const scale = e.servings && recipe?.servings ? e.servings / recipe.servings : 1;
+			scales.set(e.recipeId, (scales.get(e.recipeId) ?? 0) + scale);
+		}
+		return [...scales].map(([recipeId, scale]) => ({ recipeId, scale }));
+	});
+	let weekRecipes = $derived(data.recipes.filter((r) => weekRequests.some((w) => w.recipeId === r._id)));
+
+	function shortDate(iso: string) {
+		return fromLocalISODate(iso).toLocaleDateString(locale.current, { month: 'short', day: 'numeric' });
 	}
 
 	let pickingDate = $state<string | null>(null);
@@ -64,6 +83,9 @@
 		<div class="header">
 			<h1>{t('mealPlan.title')}</h1>
 		</div>
+		{#if data.entries.length > 0}
+			{#if features.has('mealPrep')}<button type="button" class="shop" onclick={() => (showShopping = true)}>{t('mealPlan.shoppingList')}</button>{/if}
+		{/if}
 		<div class="week-nav">
 			<button type="button" onclick={() => shiftWeek(-1)}>{t('mealPlan.prevWeek')}</button>
 			<button type="button" class="this-week" onclick={() => goto('/meal-plan')}>{t('mealPlan.thisWeek')}</button>
@@ -101,6 +123,16 @@
 	</div>
 </PullToRefresh>
 
+{#if showShopping}
+	<MealPrepSheet
+		recipes={weekRecipes}
+		initial={weekRequests}
+		title={t('mealPlan.shoppingListTitle')}
+		defaultName={t('mealPlan.listName', { from: shortDate(data.from), to: shortDate(data.to) })}
+		onClose={() => (showShopping = false)}
+	/>
+{/if}
+
 {#if pickingDate}
 	<div class="backdrop" role="presentation" onclick={() => (pickingDate = null)} onkeydown={(e) => e.key === 'Escape' && (pickingDate = null)}>
 		<div class="picker" role="dialog" aria-modal="true" tabindex="-1" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
@@ -133,6 +165,16 @@
 	}
 	h1 {
 		margin: 0;
+	}
+	.shop {
+		border: none;
+		border-radius: 10px;
+		background: var(--accent);
+		color: var(--paper-raised);
+		font: inherit;
+		font-weight: 600;
+		padding: 0.6rem;
+		cursor: pointer;
 	}
 	.week-nav {
 		display: flex;
