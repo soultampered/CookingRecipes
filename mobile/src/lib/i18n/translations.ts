@@ -19,6 +19,8 @@ export const translations = {
 		'common.creating': 'Creating…',
 		'common.refreshing': 'Refreshing…',
 		'common.other': 'Other',
+		'common.reorder': 'Reorder',
+		'common.done': 'Done',
 
 		'error.title': 'Something went wrong',
 		'error.fallback': 'That page could not be loaded.',
@@ -369,6 +371,8 @@ export const translations = {
 		'common.creating': 'Création…',
 		'common.refreshing': 'Actualisation…',
 		'common.other': 'Autre',
+		'common.reorder': 'Réorganiser',
+		'common.done': 'Terminé',
 
 		'error.title': "Une erreur s'est produite",
 		'error.fallback': 'Cette page n’a pas pu être chargée.',

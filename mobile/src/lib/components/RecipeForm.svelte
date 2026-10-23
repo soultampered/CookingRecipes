@@ -4,6 +4,7 @@
 	import { UNITS } from '$lib/types/unit';
 	import { t, tRaw } from '$lib/i18n/index.svelte';
 	import { dragToReorder } from '$lib/utils/dragToReorder.svelte';
+	import EditModeToggle from '$lib/components/EditModeToggle.svelte';
 
 	let {
 		initial,
@@ -117,6 +118,8 @@
 	}
 
 	const instructionDrag = dragToReorder();
+	// Steps drag only in Edit mode (textareas go read-only).
+	let reorderingSteps = $state(false);
 
 	function reorderInstructions(fromIndex: number, toIndex: number) {
 		const copy = [...instructionRows];
@@ -316,11 +319,23 @@
 		{t('recipeForm.addIngredient')}
 	</button>
 
-	<div class="field-label">{t('recipeForm.instructions')}</div>
+	<div class="field-head">
+		<div class="field-label">{t('recipeForm.instructions')}</div>
+		{#if instructionRows.length > 1}
+			<EditModeToggle
+				editing={reorderingSteps}
+				onToggle={() => {
+					reorderingSteps = !reorderingSteps;
+					instructionDrag.cancel();
+				}}
+			/>
+		{/if}
+	</div>
 	{#if errors.instructions}<p class="field-error">{errors.instructions}</p>{/if}
 	{#each instructionRows as row, index (row.id)}
 		<div
 			class="instruction-row"
+			class:editing={reorderingSteps}
 			class:dragging={instructionDrag.isDragging(row.id)}
 			use:registerInstructionRef={row.id}
 			style:transform={`translateY(${instructionDrag.offsetFor(
@@ -329,6 +344,7 @@
 			)}px)`}
 			style:touch-action={instructionDrag.isDragging(row.id) ? 'none' : 'auto'}
 			onpointerdown={(e) =>
+				reorderingSteps &&
 				instructionDrag.onPointerDown(
 					e,
 					row.id,
@@ -344,10 +360,11 @@
 			onpointercancel={() => instructionDrag.cancel()}
 		>
 			<span class="step">{index + 1}.</span>
-			<textarea bind:value={row.text} rows="2"></textarea>
+			<textarea bind:value={row.text} rows="2" readonly={reorderingSteps}></textarea>
 			<button
 				type="button"
 				class="remove"
+				disabled={reorderingSteps}
 				onclick={() => removeInstruction(index)}
 				aria-label={t('recipeForm.removeStepAriaLabel', { step: index + 1 })}
 			>
@@ -474,6 +491,18 @@
 		background: var(--paper);
 		border-radius: 8px;
 		transition: transform 0.2s ease;
+	}
+	.instruction-row.editing textarea {
+		pointer-events: none;
+	}
+	.instruction-row.editing {
+		cursor: grab;
+	}
+	.field-head {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 0.5rem;
 	}
 	.instruction-row.dragging {
 		z-index: 10;
