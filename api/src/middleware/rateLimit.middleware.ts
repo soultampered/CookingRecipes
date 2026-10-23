@@ -19,13 +19,19 @@ setInterval(() => {
     }
 }, 10 * 60 * 1000).unref();
 
-// X-Forwarded-For is "client-supplied, ..., what each proxy saw". Only the entries our own
-// proxies appended can be trusted: the first entry is whatever the client sent, so keying
-// on it let anyone reset their limit with a fake header. Render adds one hop, so the last
-// entry is the real client. TRUST_PROXY_HOPS=0 ignores the header (no proxy in front).
+// Prefer CF-Connecting-IP (Cloudflare overwrites it). Else XFF, counting TRUST_PROXY_HOPS from the
+// end: the first entry is client-controlled. 0 = no proxy (local dev).
 const TRUSTED_HOPS = Number(process.env.TRUST_PROXY_HOPS ?? 1);
+// LOG_CLIENT_IP_HEADERS=1 logs the raw IP headers of the first 20 requests.
+let headerLogsLeft = process.env.LOG_CLIENT_IP_HEADERS === "1" ? 20 : 0;
 
-export function clientIp(forwardedFor: string | undefined, socketAddress: string | undefined, hops = TRUSTED_HOPS): string {
+export function clientIp(
+    forwardedFor: string | undefined,
+    socketAddress: string | undefined,
+    hops = TRUSTED_HOPS,
+    cfConnectingIp?: string
+): string {
+    if (cfConnectingIp?.trim()) return cfConnectingIp.trim();
     const parts = forwardedFor?.split(",").map((p) => p.trim()).filter(Boolean) ?? [];
     if (hops > 0 && parts.length >= hops) return parts[parts.length - hops];
     return socketAddress || "unknown";
@@ -38,7 +44,13 @@ function keyFor(c: Parameters<MiddlewareHandler>[0], prefix: string): string {
     } catch {
         // not running on @hono/node-server (tests)
     }
-    return `${prefix}:${clientIp(c.req.header("x-forwarded-for"), socket)}`;
+    const xff = c.req.header("x-forwarded-for");
+    const cf = c.req.header("cf-connecting-ip");
+    if (headerLogsLeft > 0) {
+        headerLogsLeft--;
+        console.log("client-ip headers", { xff, cf, trueClientIp: c.req.header("true-client-ip"), socket });
+    }
+    return `${prefix}:${clientIp(xff, socket, TRUSTED_HOPS, cf)}`;
 }
 
 export function rateLimit(options: { windowMs: number; max: number; prefix: string }): MiddlewareHandler {

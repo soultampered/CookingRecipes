@@ -23,3 +23,13 @@ describe('clientIp', () => {
         expect(clientIp('6.6.6.6, 203.0.113.7, 10.1.1.1', undefined, 2)).toBe('203.0.113.7')
     })
 })
+
+describe('clientIp with Cloudflare', () => {
+    it('prefers CF-Connecting-IP, which Cloudflare sets and overwrites', () => {
+        expect(clientIp('6.6.6.6, 203.0.113.7, 172.68.1.1', '10.0.0.2', 1, '203.0.113.7')).toBe('203.0.113.7')
+    })
+
+    it('falls back to the hop count without it', () => {
+        expect(clientIp('6.6.6.6, 203.0.113.7', '10.0.0.2', 1, undefined)).toBe('203.0.113.7')
+    })
+})
