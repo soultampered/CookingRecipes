@@ -10,5 +10,12 @@ brew install node
 cd "$(dirname "$0")/../../.."
 
 npm install
-npm run build
+# The "App Dev" scheme (Stokpot Dev) talks to the dev API from .env.dev, overriding any workflow
+# VITE_API_BASE_URL. Every other scheme builds as before.
+if [ "$CI_XCODE_SCHEME" = "App Dev" ]; then
+  unset VITE_API_BASE_URL
+  npx vite build --mode dev
+else
+  npm run build
+fi
 npx cap sync ios
