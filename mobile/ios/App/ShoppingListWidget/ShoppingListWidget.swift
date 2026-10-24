@@ -1,6 +1,9 @@
 import WidgetKit
 import SwiftUI
 
+// stokpot, or stokpot-dev in the Dev build so the two apps don't share a scheme.
+private let appURLScheme = Bundle.main.object(forInfoDictionaryKey: "AppURLScheme") as? String ?? "stokpot"
+
 // STO-74: this widget carries no data of its own and makes no network/auth calls of its own —
 // it is purely a home-screen shortcut. Tapping it opens the app via the
 // stokpot://widget-quick-add deep link (see Info.plist's CFBundleURLTypes and
@@ -40,7 +43,7 @@ struct ShoppingListWidgetView: View {
 			}
 			.foregroundColor(.white)
 		}
-		.widgetURL(URL(string: "stokpot://widget-quick-add"))
+		.widgetURL(URL(string: "\(appURLScheme)://widget-quick-add"))
 	}
 }
 

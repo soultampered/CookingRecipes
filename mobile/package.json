@@ -13,6 +13,7 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"cap:sync": "cap sync",
 		"cap:ios": "npm run build && cap sync ios && cap open ios",
+		"cap:ios:dev": "vite build --mode dev && cap sync ios && cap open ios",
 		"cap:android": "npm run build && cap sync android && cap open android",
 		"build:web": "vite build",
 		"deploy:web": "vite build && npx wrangler deploy --config wrangler.web.jsonc"
