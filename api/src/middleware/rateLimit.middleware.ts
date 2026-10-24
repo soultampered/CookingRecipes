@@ -20,8 +20,8 @@ setInterval(() => {
 }, 10 * 60 * 1000).unref();
 
 // Prefer CF-Connecting-IP (Cloudflare overwrites it). Else XFF, counting TRUST_PROXY_HOPS from the
-// end: the first entry is client-controlled. 0 = no proxy (local dev).
-const TRUSTED_HOPS = Number(process.env.TRUST_PROXY_HOPS ?? 1);
+// end. Render's XFF ends "<client>, <Cloudflare edge>, <Render internal>", hence 3. 0 = local dev.
+const TRUSTED_HOPS = Number(process.env.TRUST_PROXY_HOPS ?? 3);
 // LOG_CLIENT_IP_HEADERS=1 logs the raw IP headers of the first 20 requests.
 let headerLogsLeft = process.env.LOG_CLIENT_IP_HEADERS === "1" ? 20 : 0;
 
